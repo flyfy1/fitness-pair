@@ -10,3 +10,9 @@ The landing page is a large interactive playground poster. It persuades through 
 - Broad full-color fields alternate with quiet readable passages. On small screens, the playable stage follows the headline and primary action in document order.
 
 Direction confirmed by the user on 2026-09-13. The finished composition uses a centered two-line headline, a single primary arcade CTA, a panoramic illustration, and a three-game selector immediately below. Pointer movement adds slight parallax; the explicit jump control launches a canvas ball through an arc and announces its landing. The artwork’s top edge fades into the yellow field.
+
+## Voice refinement
+
+Lead with “Games that get you moving” and explain the controls with concrete verbs: squat, stand, jump, tap. The audience is kids and adults taking an active break. Keep game selection direct. Recording and gallery copy names the current state and next action. Avoid fitness guarantees, vague slogans, and playful error metaphors.
+
+Naming and logo exploration is in `design/README.md`; the proposed Hopmodo identity is not yet applied to the live interface. The repository remains `fitness-pair`.
