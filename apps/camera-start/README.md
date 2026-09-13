@@ -14,7 +14,7 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
   observed rise-to-return time should produce a higher arc without noise or pause
   time increasing height.
 - **Loop:** enable camera → stand still → automatic movement setup → raise the left hand for one second
-  (or select Confirm & continue) → three-second countdown → rise and return to control Dino
+  → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
 - **Proof:** production-browser synthetic setup, duration-based animation, obstacle
   clearance, collision, replay, pause/resume, tracking recovery and camera cleanup.
@@ -44,18 +44,24 @@ The desktop primary instruction is 64–112 px, supporting instruction 26–38 p
 and current status 22–34 px. Smaller windows retain large text and a single next
 action. The camera is mirrored and fills the whole viewport; joints cropped out
 of that visible image cannot satisfy calibration or gestures. Both shoulders and
-hips must be visible. Both wrists must be visible for hand confirmation; the
-button works without wrists. The progress indicator has three steps: **Stand → Confirm → Jump**. Standing captures the baseline and sets
+hips must be visible. Both wrists must be visible for hand confirmation. The
+progress indicator has three steps: **Stand → Confirm → Jump**. Standing captures
+the baseline and sets
 the movement range automatically. Raise your **LEFT hand above your shoulder for
-one second**, keeping your right hand down, or select **Confirm & continue** to enter the three-second countdown.
+one second**, keeping your right hand down, to enter the three-second countdown.
+The primary heading says **Raise your LEFT hand** and changes to **Hold your LEFT
+hand up** while progress fills. There is no confirmation button.
 There is no separate Ready step. Right-hand-only and both-hand raises do not confirm.
 
 The existing Dino camera, torso-height recognizer, gesture recognizer and local
 model are reused directly. Only fresh, valid, steady torso tracking gates the
 countdown after confirmation.
 Interrupted tracking clearly states why the countdown stopped and restarts it
-when steady tracking returns. Setup and detection-only mode still recalibrate
-on long torso loss; an active game retains its confirmed reference.
+when steady tracking returns. Once standing completes, setup retains its baseline
+during tracking loss and
+keeps the Confirm step selected. Recovery requires fresh upright tracking in the
+starting spot. Game mode also retains confirmation through interrupted countdowns;
+active detection-only mode still recalibrates on long torso loss.
 
 Camera tracks and the model worker stop on cancellation, errors, page exit,
 hidden tabs, collision and **Finish run** / **Finish test**. Finishing setup keeps
@@ -83,7 +89,8 @@ When setup appears stuck, the most useful events are `height-confirmed`,
 `countdown-started`, `countdown-interrupted` and the following `screen-state` reason.
 For example, `stale-tracking` means frames are at least 250 ms old or missing;
 `not-grounded` means torso height has not returned to its calibrated baseline;
-missing wrists never block standing calibration, button confirmation or the countdown.
+missing wrists never block standing calibration or an already-confirmed countdown,
+but confirmation asks the player to show both hands.
 
 ## Evidence
 
@@ -95,7 +102,8 @@ npm run test:browser --workspace camera-start
 
 Production Chrome checks on isolated port 5192 cover viewport camera coverage and
 large text at 1440×960, 390×844 and 844×390; automatic setup without a jump;
-button confirmation without wrists; live response to small movement; optional body
+left-hand confirmation, clear missing-wrist guidance and no confirmation button;
+live response to small movement; optional body
 overlay visibility and cleanup; noisy takeoff; interrupted countdowns; persisted
 logs; permission recovery and fullscreen. Shared tests verify selected ranges,
 input validation and the unchanged default maximum-calibration mode.
@@ -122,8 +130,10 @@ left untouched. This POC registers no Service Worker.
 The setup POC now opts into debounced recognition. A brief missing-joint or
 geometry rejection keeps the existing step visible for 350 ms, retains the
 baseline and movement scale, and pauses countdown time. Sustained loss shows
-tracking guidance; before gameplay or in detection-only mode, 750 ms of rejected
-observations resets calibration. An active game uses the recovery policy below.
+tracking guidance; the saved setup baseline survives rejected observations, while confirmation and
+countdown remain blocked until valid tracking returns. Active detection-only mode
+still resets calibration after 750 ms of rejection. An active game uses the
+recovery policy below.
 Rejected frames never contribute height, landing evidence or confirmation.
 Three-sample median filtering rejects isolated height spikes, while a 180 ms
 instruction debounce prevents jump/confirm prompts from rapidly alternating.
@@ -155,7 +165,7 @@ this is a relative screen-space scale, not centimeters or a personal maximum.
 The **Live jump response** meter previews movement after baseline capture.
 A coherent rise reaching 12% of this response scale can trigger the animation;
 its final height depends on observed movement duration. Stand upright and raise your
-left hand for one second, or select **Confirm & continue**, to start the countdown.
+left hand for one second to start the countdown.
 
 Each camera session captures a new baseline. The log marks `rangeSource: automatic`
 and the fixed response scale on confirmation, and records overlay toggles.
@@ -290,3 +300,21 @@ an elevated return and 1.4-second worker latency; it checks retained round,
 score, camera stream/worker, no repeated countdown and a subsequent valid jump.
 Recognizer tests cover long gaps, drift, flight timeouts, no invented completion
 and explicit fresh-session reset. Camera tests retain bounded failure cleanup.
+
+
+## Hands-free setup regression
+
+Step two stays selected after baseline capture, including crouching, temporary
+loss of joints and rejected torso geometry. Confirmation progress accumulates only
+while fresh torso tracking can confirm; an invalid pose cannot consume the hand
+command. Returning upright with the left hand still raised starts a new valid
+one-second hold. The right hand must stay down, and both wrists must be visible.
+A small shoulder lift with stable hips can confirm, so raising the hand does not
+require keeping both shoulders at their original height. Camera restart and
+changed image dimensions deliberately acquire a new baseline.
+
+Synthetic browser checks cover these transitions, countdown recovery, no phantom
+jump/start events, and visible hand instructions without a confirmation button at
+1440×960, 390×844 and 844×390. Shared recognizer tests cover missing/rejected frames,
+silent gaps, observed recovery and explicit reset boundaries. These checks do not
+establish human gesture accuracy or readability at the user's physical distance.

@@ -5,7 +5,7 @@ test('Jump Game uses named links and instructions with left-hand confirmation',a
  const entry=page.getByRole('link',{name:'Play Jump Game',exact:true});
  await expect(entry).toHaveAttribute('href','/play/jump-game');await entry.click();
  const dialog=page.getByRole('dialog');
- await expect(dialog.locator('.guide-setup')).toContainText('Confirm & continue');
+ await expect(dialog.locator('.guide-setup')).not.toContainText('Confirm & continue');
  await expect(dialog.locator('.guide-setup')).toContainText('Raise your LEFT hand');
  await dialog.getByRole('link',{name:'Let’s play'}).click();
  await expect(page).toHaveURL('/play/jump-game');

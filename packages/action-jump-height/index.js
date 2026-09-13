@@ -46,10 +46,10 @@ function geometry(frame, mode) {
 
 /** Relative image displacement only: no camera, recording, or model-specific joints. */
 export class JumpHeightRecognizer {
-  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false, robustTracking = false, retainCalibration = false } = {}) {
+  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false, robustTracking = false, retainCalibration = false, retainSetupBaseline = false } = {}) {
     this.manualMaximum = manualMaximum; this.preferUpperBody = preferUpperBody;
     this.quickStart = quickStart; this.robustTracking = robustTracking;
-    this.retainCalibration = retainCalibration;
+    this.retainCalibration = retainCalibration; this.retainSetupBaseline = retainSetupBaseline;
     this.configuredRange = null;
   }
 
@@ -94,11 +94,13 @@ export class JumpHeightRecognizer {
   }
 
   invalidateTracking() {
-    if (!this.retainCalibration || this.stage !== 'ready' || !this.baseline) {
+    const retainSetup = this.retainSetupBaseline && this.manualMaximum
+      && this.configuredRange !== null && this.stage === 'maximum';
+    if (!this.baseline || !(retainSetup || this.retainCalibration && this.stage === 'ready')) {
       this.recalibrate(); return;
     }
-    // Gameplay keeps its confirmed reference, but unseen motion never completes
-    // a jump. Require an observed landing before accepting another takeoff.
+    // Retain the reference, not motion or confirmation evidence. A fresh upright
+    // hold is still required before confirmation or another takeoff.
     this.flight = null; this.landingSince = null; this.armed = false; this.rearmSince = null;
     this.confirmGroundedSince = null; this.filteredRise = 0; this.filterTMs = null;
     this.riseSamples = [0, 0]; this.lastValidTMs = null; this.driftSince = null;
@@ -255,7 +257,13 @@ export class JumpHeightRecognizer {
     const liftThreshold = Math.max(this.quickStart ? .012 : .008, baseline.torso * .035);
     const landThreshold = Math.max(.005, baseline.torso * .025);
     const airborne = rawRise > liftThreshold;
-    const grounded = (!this.robustTracking || rawRise <= landThreshold) && leftRise <= landThreshold && rightRise <= landThreshold && hipRise <= liftThreshold;
+    // Raising a hand can lift a shoulder while the hips remain at the captured
+    // standing height. Automatic setup does not measure a maximum jump, so its
+    // confirmation hold can use stable hips after the torso geometry checks.
+    const confirmingStanding = upperBody && this.stage === 'maximum'
+      && this.manualMaximum && this.configuredRange !== null;
+    const grounded = (!this.robustTracking || rawRise <= landThreshold) && hipRise <= liftThreshold
+      && (confirmingStanding || leftRise <= landThreshold && rightRise <= landThreshold);
     if (grounded && !preparingJump && pose.upright && hipRise >= -liftThreshold) this.confirmGroundedSince ??= frame.tMs;
     else this.confirmGroundedSince = null;
 
