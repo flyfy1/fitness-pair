@@ -93,3 +93,5 @@
 .storage-summary meter { display: block; width: 100%; height: 28px; margin-top: 12px; }
 .storage-summary p { font-size: 14px; line-height: 1.5; }
 @media(max-width: 760px) { .nav { flex-wrap: wrap; gap: 10px 16px; } .nav [data-account-nav] { margin-left: auto; } .nav [data-account-nav]:not(:empty) + .nav-play { display: none; } }
+
+.clip-game-invite{margin:0 0 24px}.clip-game-invite p{margin:8px 0 0;font-size:13px;color:#425277}.clip-card .play-clip-game{background:var(--blue);color:white;border-color:var(--blue)}.clip-card .play-clip-game:hover{background:#1638cf}

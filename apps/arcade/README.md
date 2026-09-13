@@ -89,3 +89,12 @@ accuracy. Run the focused checks after building:
 ```sh
 ARCADE_PORT=5297 npx playwright test --config apps/arcade/playwright.config.js apps/arcade/tests/tracking-loader-ui.spec.js apps/arcade/tests/tracking-preload.spec.js
 ```
+
+
+## Play from a shared clip
+
+Visitors can watch public clips and play without logging in. Gallery cards and
+clip pages link directly to the recorded game's `/play/:id` route with its name.
+The clip page puts this action above the video. Camera permissions and setup
+remain in the game's own start flow. Publishing to Gallery requires Integ.Life
+login and explicit consent; returning from login never automatically publishes.
