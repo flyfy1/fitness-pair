@@ -13,7 +13,7 @@ window.addEventListener('local-clips:changed',event=>{
 });
 const api=accountAPI;
 function playClipGame(clip, className='button primary'){
- const game=games.find(game=>game.id===clip.game&&game.kind==='playable');
+ const game=games.find(game=>(game.id===clip.game||game.aliases?.includes(clip.game))&&game.kind==='playable');
  return game?`<a class="${className}" href="/play/${game.id}">Play ${escape(game.title)} ↗</a>`:'';
 }
 export function mountClipCard(container,clip){

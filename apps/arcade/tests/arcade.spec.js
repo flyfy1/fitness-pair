@@ -181,7 +181,7 @@ test('only the original three games are listed and all tracking assets remain av
  await page.goto('/');
  await expect(page.locator('.game-card')).toHaveCount(3);
  for(const id of ['dino-run','dino-ar','orbit-pop','ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit'])await expect(page.locator(`a[href="/play/${id}"]`)).toHaveCount(0);
- for(const title of ['Motion Quest','Push-up Flight','Ready to Move'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
+ for(const title of ['Motion Quest','Push-up Flight','Jump Game'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
  for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start','ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit']){
   const script=await request.get(`/games/${game}/runtime/pose-worker.js`);expect(script.status()).toBe(200);expect(script.headers()['content-type']).toContain('javascript');expect(await script.text()).toContain('onmessage');
   const wasm=await request.get(`/games/${game}/runtime/wasm/vision_wasm_internal.wasm`);expect(wasm.status()).toBe(200);expect(wasm.headers()['content-type']).toBe('application/wasm');
@@ -209,12 +209,12 @@ test('Push-up Flight demo records the crash sequence and saves automatically',as
 test('guided camera Dino calibrates and saves a replay on manual finish with synthetic camera input',async({page})=>{
  await syntheticCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');
  await expect(game.locator('#feedback')).toContainText('records on this device');
- await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise ONE hand.',{timeout:12000});
+ await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Standing pose captured.',{timeout:12000});
  await game.locator('#primary').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
  await page.waitForTimeout(900);await game.locator('#show-settings').click();await game.locator('#end-run').click();
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
- await expect(page.getByRole('heading',{name:'Ready to Move · my replay'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Jump Game · my replay'})).toBeVisible();
  expect(await page.evaluate(()=>document.querySelector('#game-frame').contentWindow.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
 

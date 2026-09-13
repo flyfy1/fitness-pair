@@ -6,7 +6,7 @@ import { syntheticCamera } from './synthetic-camera.js';
 async function standingSetup(page) {
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
 
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
 }
 
 test('camera fills the window and distant instructions remain large on desktop, portrait and landscape', async ({page})=>{
@@ -21,10 +21,11 @@ test('camera fills the window and distant instructions remain large on desktop, 
   }
 });
 
-test('standing, automatic setup, one-hand confirmation and countdown finish without requiring wrists to reappear', async ({page})=>{
+test('standing, automatic setup and button confirmation finish with wrists out of view', async ({page})=>{
   await syntheticCamera(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?mode=detect');
+  await page.evaluate(()=>{window.poseTest.wristsMissing=true;});
   await standingSetup(page);await page.screenshot({path:'test-results/height-captured.png'});
-  await page.evaluate(()=>{window.poseTest.hand='up';});
+  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>window.cameraSetup.getState().heightConfirmed)).toBe(true);
   await page.evaluate(()=>{window.poseTest.wristsMissing=true;});
   await expect(page.locator('#status')).toHaveText('MOVEMENT CONFIRMED · GET READY');
@@ -33,7 +34,7 @@ test('standing, automatic setup, one-hand confirmation and countdown finish with
   await page.getByRole('button',{name:'Finish test',exact:true}).click();
   expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
   const events=await page.evaluate(()=>window.cameraSetup.getLog());
-  expect(events.some(e=>e.event==='height-confirmed'&&e.via==='gesture')).toBe(true);
+  expect(events.some(e=>e.event==='height-confirmed'&&e.via==='button')).toBe(true);
   expect(events.some(e=>e.event==='countdown-started')).toBe(true);expect(events.some(e=>e.event==='setup-completed')).toBe(true);
   expect(errors).toEqual([]);await page.screenshot({path:'test-results/setup-complete.png'});
 });
@@ -82,7 +83,7 @@ test('permission error is actionable and recorded; native fullscreen can be exit
 test('crouch, takeoff and crouched landing preserve calibration and explain preparation in the log', async({page})=>{
   await syntheticCamera(page);await page.goto('/?mode=detect');
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   await page.evaluate(()=>{window.poseTest.crouch=true;});await page.waitForTimeout(1200);
   await expect(page.locator('#status')).toHaveText('JUMP PREPARATION');
   expect(await page.evaluate(()=>window.cameraSetup.getState().calibration)).toBe('maximum');
@@ -95,7 +96,7 @@ test('crouch, takeoff and crouched landing preserve calibration and explain prep
   expect(await page.evaluate(()=>window.cameraSetup.getState().calibration)).toBe('maximum');
   expect(await page.evaluate(()=>window.cameraSetup.getState().canConfirm)).toBe(false);
   await page.evaluate(()=>{window.poseTest.crouch=false;});
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
   await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const events=await page.evaluate(()=>window.cameraSetup.getLog());
@@ -107,7 +108,7 @@ test('crouch, takeoff and crouched landing preserve calibration and explain prep
 test('mixed takeoff noise preserves the jump step and short countdown loss pauses without restarting', async({page})=>{
   await syntheticCamera(page); await page.goto('/?mode=detect');
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   await page.evaluate(()=>{window.poseTest.crouch=true;});
   await expect(page.locator('#status')).toHaveText('JUMP PREPARATION');
   const jumpLogStart = await page.evaluate(()=>window.cameraSetup.getLog().length);
@@ -115,7 +116,7 @@ test('mixed takeoff noise preserves the jump step and short countdown loss pause
   await expect.poll(()=>page.evaluate(()=>window.poseTest.noiseFrames)).toBe(0);
   await page.waitForTimeout(300);
   await page.evaluate(()=>{window.poseTest.rise=0;});
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   const before = (await page.evaluate(()=>window.cameraSetup.getLog())).slice(jumpLogStart);
   expect(before.some(e=>e.event==='tracking-signal'&&e.to==='tracking-grace')).toBe(true);
   expect(before.some(e=>e.event==='screen-state'&&e.stage==='missing')).toBe(false);
@@ -135,7 +136,7 @@ test('mixed takeoff noise preserves the jump step and short countdown loss pause
 test('a single coherent height spike cannot start setup or inflate the live response', async({page})=>{
   await syntheticCamera(page); await page.goto('/?mode=detect');
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   // Apply a single frame inside the worker's next response, without wall-clock
   // sleeps that could accidentally generate several elevated samples.
   await page.evaluate(()=>{
@@ -144,7 +145,7 @@ test('a single coherent height spike cannot start setup or inflate the live resp
   });
   await page.waitForTimeout(700);
   expect(await page.evaluate(()=>window.cameraSetup.getState().heightConfirmed)).toBe(false);
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
 });
 
@@ -165,7 +166,7 @@ test('automatic setup previews small movement without a slider; skeleton clears 
   await expect.poll(hasInk).toBe(true);
   await page.getByLabel('Skeleton debug view',{exact:true}).uncheck();
   await expect(page.locator('#body-overlay')).toBeHidden();
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
   await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const log = await page.evaluate(()=>window.cameraSetup.getLog());
@@ -233,7 +234,7 @@ test('live detection rejects one-frame noise and cancels unobserved landing afte
   await page.evaluate(()=>{window.poseTest.missing=true;}); await page.waitForTimeout(1200);
   expect(await page.evaluate(()=>window.cameraSetup.getState().testing)).toBe(false);
   await page.evaluate(()=>{window.poseTest.missing=false;window.poseTest.rise=0;});
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
   await expect(page.locator('#jump-count')).toHaveText('0');
   expect(await page.evaluate(()=>window.cameraSetup.getLog().some(e=>e.event==='jump-test-paused'))).toBe(true);
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();

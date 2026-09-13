@@ -14,6 +14,12 @@ for(const [name,directory] of hosts){
   if(name==='motion-quest')await cp(new URL(`../dist/client/games/${name}/runtime/`,import.meta.url),new URL('../dist/client/runtime/',import.meta.url),{recursive:true});
   await rm(new URL(`../dist/client/games/${name}/runtime/`,import.meta.url),{recursive:true,force:true});
 }
+// Keep previously shared standalone game URLs working with canonical assets.
+for(const game of playableGames)for(const alias of game.aliases??[]){
+  const target=new URL(`../dist/client/games/${alias}/`,import.meta.url);
+  await mkdir(target,{recursive:true});
+  await cp(new URL(`../dist/client/games/${game.id}/index.html`,import.meta.url),new URL('index.html',target));
+}
 await mkdir(new URL('../dist/server/',import.meta.url),{recursive:true});
 await mkdir(new URL('../dist/.openai/',import.meta.url),{recursive:true});
 await cp(new URL('../apps/arcade/game-catalog.js',import.meta.url),new URL('../dist/game-catalog.js',import.meta.url));

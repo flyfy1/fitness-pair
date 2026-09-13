@@ -3,7 +3,7 @@ import { syntheticCamera } from './synthetic-camera.js';
 const state = page => page.evaluate(() => window.cameraSetup.getState());
 async function ready(page) {
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
 }
 async function analyser(page) {
   await page.addInitScript(() => {

@@ -4,7 +4,7 @@ const state = page => page.evaluate(()=>window.cameraSetup.getState());
 async function startGame(page, button='Enable camera') {
   await page.getByRole('button',{name:button,exact:true}).click();
   if (button !== 'Resume with camera') {
-    await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+    await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
     await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
   }
   await expect.poll(async()=>(await state(page)).game.status,{timeout:6000}).toBe('running');
@@ -182,4 +182,25 @@ test('jump noise stays smooth; sustained loss and delayed inference recover the 
   expect(logs.some(e=>e.event==='camera-error')).toBe(false);
   await page.getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('button',{name:'Finish run',exact:true}).click();
+});
+
+test('three-step setup starts without wrists or a hand gesture and resets on replay',async({page})=>{
+  await syntheticCamera(page);await page.goto('/');
+  await page.evaluate(()=>{window.poseTest.wristsMissing=true;});
+  await expect(page.locator('.steps span')).toHaveText(['1 · Stand','2 · Confirm','3 · Jump']);
+  await expect(page.locator('.hands-start')).toHaveCount(0);
+  await startGame(page);
+  const firstRound=(await state(page)).game.roundId;
+  expect((await state(page)).jumpCount).toBe(0);
+  await page.getByRole('button',{name:'Pause',exact:true}).click();
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('button',{name:'Finish run',exact:true}).click();
+  await startGame(page,'Play again');
+  expect((await state(page)).game.roundId).not.toBe(firstRound);
+  const events=await page.evaluate(()=>window.cameraSetup.getLog());
+  expect(events.filter(e=>e.event==='height-confirmed').map(e=>e.via)).toEqual(['button','button']);
+  expect(events.filter(e=>e.event==='countdown-started')).toHaveLength(2);
+  expect(events.filter(e=>e.event==='screen-state').some(e=>['maximum','ready'].includes(e.stage))).toBe(false);
+  await page.getByRole('button',{name:'Stop camera',exact:true}).click();
+  expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
