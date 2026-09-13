@@ -1,3 +1,4 @@
+import { helicopterScale } from './projection.js';
 const links = [['Shoulder','Elbow'],['Elbow','Wrist'],['Shoulder','Hip'],['Hip','Knee'],['Knee','Ankle']];
 export function render(ctx, state, { width: w, height: h, pose, pilot, time, mode }) {
   ctx.clearRect(0, 0, w, h);
@@ -24,11 +25,12 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
     }
     ctx.fillStyle='#e4ffea';ctx.font='12px system-ui';ctx.fillText('FLY THROUGH',x-48,gapTop+22);
   }
-  const x=.28*w,y=Math.min(state.y,1.12)*h;
-  const size=Math.max(.7, Math.min(w/900,1.25));
+  const x=state.x*w,y=Math.min(state.y,1.12)*h;
+  const size=helicopterScale(w);
   ctx.save();ctx.translate(x,y);ctx.scale(size,size);
   if (state.status==='crashing') ctx.rotate(Math.min(state.crashSeconds*1.4,1.5));
-  else ctx.rotate(state.velocity*.45);
+  // Anchor the cockpit center exactly on the projected head position.
+  ctx.translate(-15,1);
   ctx.shadowColor='#071f3355';ctx.shadowBlur=20;
   ctx.fillStyle='#f6c77b';ctx.beginPath();ctx.ellipse(0,0,49,29,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.moveTo(-38,-9);ctx.lineTo(-92,-23);ctx.lineTo(-89,1);ctx.lineTo(-38,11);ctx.fill();
