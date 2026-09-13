@@ -31,11 +31,20 @@ No model is asked to imitate a real person or assess exercise performance.
 
 Reference: [OpenAI text-to-speech guide](https://developers.openai.com/api/docs/guides/text-to-speech).
 
-## Current delivery status
+## Resource and playback behavior
 
-Six original musical stingers have been generated and validated for unique hashes,
-non-silent samples and bounded levels. The 18 speech scripts and GPT generation
-requests are prepared, but no GPT speech resources have been generated yet:
-this checkout has no configured OpenAI API credential. The live game has not
-switched to this pack. Activation follows successful generation, audio review,
-and browser recording verification; no deployment occurs from this preparation.
+All 18 speech clips were generated with the pinned GPT model in the catalog.
+The manifest records request hashes, output hashes, model/voice, generation time
+and duration. Six original musical stingers pair with the six speech styles.
+Speech is normalized to -18 LUFS with a -2 dB true-peak target.
+
+A random threshold of 2–5 completed gates starts the next milestone window.
+At least 12 seconds of flight separates encouragement; if the cooldown is still
+active, it waits for a later completed gate. Duplicate frame updates cannot
+trigger a reward. Muting skips due encouragement without queuing it for unmute.
+Milestone voices shuffle through 12 entries before reuse; six endings have their
+own shuffle bag, retained across retries in the same page. Recording retains the
+selected ending speech before the branded replay ending.
+
+Use `--env-name` when an existing secret uses a different environment variable
+name. Only the named variable is read; the secret is never written to a resource.

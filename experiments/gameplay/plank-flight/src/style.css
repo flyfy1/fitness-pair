@@ -88,7 +88,8 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
 @media (max-height: 520px) {
   .hud { top: 12px; left: 16px; right: 16px; }
   .brand { font-size: 20px; margin-bottom: 6px; }
-  .brand small, .mode-note { display: none; }
+  .brand small { display: none; }
+  .mode-note { font-size: 10px; margin: 4px 0; }
   .stats strong { font-size: 24px; }
   .panel { top: 80px; bottom: 175px; transform: none; max-height: none; width: min(460px, 66%); right: 3%; padding: 12px; }
   .panel h2 { font-size: 24px; margin-bottom: 8px; }

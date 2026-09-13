@@ -1,8 +1,13 @@
+import {encouragementPack,createEncouragementSchedule} from './encouragement.js';
 const VOICES=['three','two','one','start','nice','keep-going','finish'];
+const RESOURCES=[...VOICES.map(id=>({id,file:`${id}.wav`})),
+  ...encouragementPack.clips.map(clip=>({id:clip.id,file:`encouragement/${clip.id}.mp3`})),
+  ...encouragementPack.styles.map(style=>({id:`music-${style.id}`,file:`encouragement/music-${style.id}.wav`}))];
 
 /** Original synthesized backing track and local prerecorded speech; no microphone input. */
 export class FlightAudio {
   constructor() {
+    this.encouragement=createEncouragementSchedule();this.lastEncouragement=null;
     this.muted=false;this.context=null;this.nodes=new Set();this.buffers=new Map();
     this.session=null;this.phase=null;this.count=null;this.passed=0;this.nextBeat=0;this.beat=0;
     this.generation=0;this.voiceSerial=0;this.lastCue=null;this.unavailable=false;
@@ -20,11 +25,11 @@ export class FlightAudio {
         this.recording=c.createMediaStreamDestination();limiter.connect(this.recording);
         this.noise=c.createBuffer(1,c.sampleRate*.3,c.sampleRate);
         const data=this.noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
-        this.ready=Promise.all(VOICES.map(async name=>{
+        this.ready=Promise.all(RESOURCES.map(async ({id,file})=>{
           try {
-            const url=new URL(`audio/${name}.wav`,new URL(import.meta.env.BASE_URL,location.href));
+            const url=new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
             const response=await fetch(url);if(!response.ok)return;
-            this.buffers.set(name,await c.decodeAudioData(await response.arrayBuffer()));
+            this.buffers.set(id,await c.decodeAudioData(await response.arrayBuffer()));
           } catch { /* Keep musical cues available if a voice asset cannot load. */ }
         }));
       }
@@ -33,7 +38,7 @@ export class FlightAudio {
     } catch {this.unavailable=true;}
   }
   getAudioStream(){return this.recording?.stream??null;}
-  snapshot(){return {playing:!this.muted&&this.context?.state==='running'&&this.nodes.size>0,muted:this.muted,state:this.context?.state??'idle',lastCue:this.lastCue,voicesReady:this.buffers.size,unavailable:this.unavailable};}
+  snapshot(){return {playing:!this.muted&&this.context?.state==='running'&&this.nodes.size>0,muted:this.muted,state:this.context?.state??'idle',lastCue:this.lastCue,lastEncouragement:this.lastEncouragement,voicesReady:VOICES.filter(id=>this.buffers.has(id)).length,encouragementReady:encouragementPack.clips.filter(clip=>this.buffers.has(clip.id)).length,unavailable:this.unavailable};}
   setMuted(value){this.muted=value;this.stop();if(!value)this.unlock();}
   track(node,gain){
     this.nodes.add(node);node.onended=()=>{this.nodes.delete(node);node.disconnect();gain.disconnect();};
@@ -64,6 +69,17 @@ export class FlightAudio {
     };
     if(this.buffers.has(name))play();else void this.ready?.then(play);
   }
+  encourage(clip,fallback){
+    if(!this.buffers.has(clip.id)){this.voice(fallback);return;}
+    this.lastEncouragement={id:clip.id,text:clip.text,style:clip.style};
+    const buffer=this.buffers.get(`music-${clip.style}`);
+    if(buffer){
+      const source=this.context.createBufferSource(),gain=this.context.createGain();
+      source.buffer=buffer;gain.gain.value=.65;source.connect(gain);gain.connect(this.master);
+      this.track(source,gain);source.start();
+    }
+    this.voice(clip.id);
+  }
   cue(name) {
     this.lastCue=name;
     if(this.muted||this.context?.state!=='running')return;
@@ -72,11 +88,11 @@ export class FlightAudio {
     if(name==='start')for(let i=0;i<4;i++)this.tone([330,440,660,880][i],t+i*.075,.17,.16,'triangle',1100,this.master);
     if(name==='nice'||name==='keep-going')for(let i=0;i<3;i++)this.tone([660,880,1320][i],t+i*.06,.15,.15,'sine',undefined,this.master);
     if(name==='crash'){this.hiss(t,.3,.35);this.tone(380,t,1.1,.25,'sawtooth',35,this.master);return;}
-    if(name==='finish')for(let i=0;i<3;i++)this.tone([261.63,329.63,392][i],t,1,.1,'triangle',undefined,this.master);
+    if(name==='finish'){this.encourage(this.encouragement.finish(),'finish');return;}
     this.voice(name);
   }
   update(state,speed) {
-    if(this.session!==state.sessionId){this.clearNodes();this.session=state.sessionId;this.phase=null;this.count=null;this.passed=0;this.beat=0;}
+    if(this.session!==state.sessionId){this.clearNodes();this.session=state.sessionId;this.phase=null;this.count=null;this.passed=0;this.beat=0;this.encouragement.reset();this.lastEncouragement=null;}
     const status=state.status;
     if(status!==this.phase){
       if(status==='flying')this.cue('start');
@@ -89,7 +105,11 @@ export class FlightAudio {
       const count=Math.max(1,Math.ceil(3-state.countdownSeconds));
       if(count!==this.count){this.count=count;this.cue(({3:'three',2:'two',1:'one'})[count]);}
     }
-    if(status==='flying'&&state.passed>this.passed){this.passed=state.passed;this.cue(this.passed%2?'nice':'keep-going');}
+    if(status==='flying'&&state.passed>this.passed){
+      this.passed=state.passed;
+      const clip=this.encouragement.milestone(state.passed,state.flightSeconds,!this.muted&&this.context?.state==='running');
+      if(clip){this.lastCue='encouragement';this.encourage(clip,'nice');}
+    }
     if(status!=='flying'||this.muted||this.context?.state!=='running')return;
     const now=this.context.currentTime;if(this.nextBeat<now)this.nextBeat=now;
     const interval=60/Math.min(164,132+speed*3)/4;
