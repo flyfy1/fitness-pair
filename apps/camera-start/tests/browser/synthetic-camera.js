@@ -31,7 +31,7 @@ export async function syntheticCamera(page) {
           }
           if (!s.wristsMissing) {
             points[15]={x:.43,y:(['up','both'].includes(s.hand)?.12:.59)-s.rise,visibility:.99};
-            points[16]={x:.57,y:(s.hand==='both'?.12:.59)-s.rise,visibility:.99};
+            points[16]={x:.57,y:(['right','both'].includes(s.hand)?.12:.59)-s.rise,visibility:.99};
           }
         }
         setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:points,time:data.time}});},s.delay);

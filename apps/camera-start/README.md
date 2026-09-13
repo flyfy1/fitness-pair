@@ -13,8 +13,8 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
 - **Risk:** a short body jump must trigger a complete, smooth Dino arc; longer
   observed rise-to-return time should produce a higher arc without noise or pause
   time increasing height.
-- **Loop:** enable camera → stand still → automatic movement setup → select
-  Confirm & continue → three-second countdown → rise and return to control Dino
+- **Loop:** enable camera → stand still → automatic movement setup → raise the left hand for one second
+  (or select Confirm & continue) → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
 - **Proof:** production-browser synthetic setup, duration-based animation, obstacle
   clearance, collision, replay, pause/resume, tracking recovery and camera cleanup.
@@ -44,10 +44,11 @@ The desktop primary instruction is 64–112 px, supporting instruction 26–38 p
 and current status 22–34 px. Smaller windows retain large text and a single next
 action. The camera is mirrored and fills the whole viewport; joints cropped out
 of that visible image cannot satisfy calibration or gestures. Both shoulders and
-hips must be visible. Wrists are not required for setup. The progress indicator has
-three steps: **Stand → Confirm → Jump**. Standing captures the baseline and sets
-the movement range automatically. Select **Confirm & continue** to enter the
-three-second countdown; there is no separate Ready step or hand-start gate.
+hips must be visible. Both wrists must be visible for hand confirmation; the
+button works without wrists. The progress indicator has three steps: **Stand → Confirm → Jump**. Standing captures the baseline and sets
+the movement range automatically. Raise your **LEFT hand above your shoulder for
+one second**, keeping your right hand down, or select **Confirm & continue** to enter the three-second countdown.
+There is no separate Ready step. Right-hand-only and both-hand raises do not confirm.
 
 The existing Dino camera, torso-height recognizer, gesture recognizer and local
 model are reused directly. Only fresh, valid, steady torso tracking gates the
@@ -82,7 +83,7 @@ When setup appears stuck, the most useful events are `height-confirmed`,
 `countdown-started`, `countdown-interrupted` and the following `screen-state` reason.
 For example, `stale-tracking` means frames are at least 250 ms old or missing;
 `not-grounded` means torso height has not returned to its calibrated baseline;
-missing wrists never block setup, confirmation or the countdown.
+missing wrists never block standing calibration, button confirmation or the countdown.
 
 ## Evidence
 
@@ -153,7 +154,8 @@ maximum-jump requirement. The response scale uses 15% of standing torso length;
 this is a relative screen-space scale, not centimeters or a personal maximum.
 The **Live jump response** meter previews movement after baseline capture.
 A coherent rise reaching 12% of this response scale can trigger the animation;
-its final height depends on observed movement duration. Stand upright and select **Confirm & continue** to start the countdown.
+its final height depends on observed movement duration. Stand upright and raise your
+left hand for one second, or select **Confirm & continue**, to start the countdown.
 
 Each camera session captures a new baseline. The log marks `rangeSource: automatic`
 and the fixed response scale on confirmation, and records overlay toggles.
