@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111c19" />
+  <link rel="icon" href="data:," />
+  <title>Ready to Move · Camera setup</title>
+</head>
+<body>
+  <main id="setup" data-stage="off">
+    <video id="camera" muted playsinline aria-label="Your live mirrored camera view"></video>
+    <div class="scrim" aria-hidden="true"></div>
+    <header>
+      <span class="brand">READY TO MOVE <small>CAMERA SETUP POC</small></span>
+      <div class="tools"><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶ Fullscreen</button><button id="show-log" aria-expanded="false">Log</button><button id="stop" hidden>Stop camera</button></div>
+    </header>
+    <nav class="steps" aria-label="Setup progress">
+      <span id="step-standing">1 · Stand</span><span id="step-maximum">2 · Jump</span><span id="step-confirm">3 · Confirm</span><span id="step-ready">4 · Ready</span>
+    </nav>
+    <section class="guidance" aria-label="Current instruction">
+      <p id="status" class="status">LET’S GET YOU READY</p>
+      <h1 id="instruction">Stand back.<br>We’ll guide you.</h1>
+      <p id="detail">One step at a time. Follow the big words.</p>
+      <div id="progress" class="progress" role="progressbar" aria-label="Current step progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><span id="progress-fill"></span></div>
+      <button id="primary" class="primary">Enable camera</button>
+      <p id="feedback" class="feedback">Camera stays on your device. No recording.</p>
+    </section>
+    <aside id="diagnostics" class="diagnostics" aria-label="Runtime diagnostics" hidden>
+      <div><h2>Runtime log · on this device</h2><button id="close-log">Close</button></div>
+      <p>Last 300 state events. No images or body coordinates.</p>
+      <div><button id="export-log">Download log</button><button id="clear-log">Clear log</button></div>
+      <pre id="log-entries"></pre>
+    </aside>
+    <p id="announcement" class="sr-only" aria-live="polite" role="status"></p>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
