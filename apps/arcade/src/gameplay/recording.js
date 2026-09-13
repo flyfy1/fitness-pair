@@ -1,3 +1,4 @@
+import {translateText} from '../../../../packages/gameplay/i18n.js';
 import {createConversationCapture} from './conversation.js';
 import {captureClipThumbnail} from '../clip-thumbnail.js';
 import {startRollingRecorder,REPLAY_SECONDS} from './rolling-media.js';
@@ -77,7 +78,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
    stopTracks();
   }
   async function saveRecording(recorded){
-   const clip={id:crypto.randomUUID(),title:`${game.title} · my replay`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,blob:recorded.blob};
+   const clip={id:crypto.randomUUID(),title:`${game.title} · ${translateText('my replay')}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,blob:recorded.blob};
    clip.conversation=await session.conversationResult;
    clip.thumbnail=recorded.trimmed?recorded.thumbnail:await session.thumbnail;
    if(clip.conversation)clip.conversation.offsetSeconds-=recorded.startSeconds;

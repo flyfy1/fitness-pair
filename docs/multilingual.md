@@ -28,7 +28,7 @@ without recreating game sessions, camera tracks or recording output streams.
 
 ## Translation ownership
 
-`packages/gameplay/translations/zh-CN.json` and `sharing.zh-CN.json` contain records with stable semantic
+The JSON catalogs under `packages/gameplay/translations/` contain records with stable semantic
 `id`, exact English `en`, and Simplified Chinese `zh`. New copy should use a semantic
 ID through `message(id, values)` or `data-i18n`. Existing independently owned hosts
 use the shared DOM adapter to translate their English text and accessible labels
@@ -88,3 +88,30 @@ part of the arcade's translation catalog.
   round is covered by `squat-start.spec.js` and `languages.spec.js` instead.
 - Source and local-browser evidence does not by itself establish deployment;
   confirm the production `/healthz` commit and the public language flow separately.
+
+
+## Follow-up translation audit (2026-09-14)
+
+The initial bilingual checks did not verify every guide step or feedback state.
+The follow-up audit covered all 12 registered game/concept entry routes, all three
+listed illustrated guides, local/shared clip pages, and synthetic account/upload
+states. It also inspected calibration, gameplay, settings and replay after complete
+synthetic Motion Quest, Flight and Jump Game rounds.
+
+Missing guide text is now in `guides.zh-CN.json`. Login, upload, recording,
+conversation and known server feedback is in `feedback.zh-CN.json`; entry-screen
+labels, upload fields and interpolated counters are in the base catalog.
+New automatic replay/share-copy names follow the active language when created.
+Existing saved titles, player-entered titles, brand names, keyboard keys and URLs
+retain their original text. Unknown third-party/browser error text still uses the
+English fallback; the separately hosted identity-provider UI is outside this catalog.
+
+Browser regressions now verify entire visible guide steps and diagrams in Chinese,
+restoration to English, translated account errors, dynamic hit counters and the
+Chinese default name after a completed recorded round. Account/upload checks use
+synthetic local fixtures; they do not publish participant media or social posts.
+
+Validation: 87 unit checks, the complete 11-game build, and 15 bilingual/sharing
+browser checks passed. The audit added 304 catalog records. After the fixes, the
+sampled entry, guide, form and three recorded-round states contained only retained
+brand/game names, key names or user-authored titles among the English candidates.

@@ -2,9 +2,39 @@ import {openReplay} from './open-replay.js';
 import {camera} from './start-camera-fixture.js';
 import {syntheticCamera,confirmWithHand} from '../../camera-start/tests/browser/synthetic-camera.js';
 import {test,expect} from '@playwright/test';
+import {gameGuides} from '../src/game-guides.js';
 
 test.describe('site language',()=>{
  test.use({locale:'zh-CN'});
+ test('all visible guide steps and diagrams translate and restore their English source',async({page})=>{
+  await page.goto('/');
+  for(const id of ['motion-quest','plank-flight','jump-game']){
+   await page.locator('#site-language').selectOption('zh');
+   await page.locator(`a.game-art[href="/play/${id}"]`).click();
+   const dialog=page.locator('dialog[open]'),guide=gameGuides[id];
+   await expect(dialog.locator('.guide-setup h3')).toHaveText(/[\u3400-\u9fff]/);
+   for(const text of [guide.goal,guide.setup,guide.pause,...guide.steps.flat(),...guide.tiles.map(tile=>tile[1])])await expect(dialog).not.toContainText(text);
+   await dialog.locator('.guide-close').click();
+   await page.locator('#site-language').selectOption('en');
+   await page.locator(`a.game-art[href="/play/${id}"]`).click();
+   for(const text of [guide.goal,guide.setup,guide.pause,...guide.steps.flat()])await expect(dialog).toContainText(text);
+   await dialog.locator('.guide-close').click();
+  }
+ });
+ test('login and account failures follow the selected language',async({page})=>{
+  await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:null}}));
+  await page.goto('/shared?login=expired');
+  await expect(page.locator('[data-account-body]')).not.toContainText('Your login attempt expired. Please start again.');
+  await page.locator('#site-language').selectOption('en');
+  await expect(page.locator('[data-account-body]')).toContainText('Your login attempt expired. Please start again.');
+  await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:{email:'synthetic@example.test'}}}));
+  await page.route('**/api/account/clips',route=>route.fulfill({status:503,json:{error:'The gallery could not load. Please retry.'}}));
+  await page.locator('#site-language').selectOption('zh');await page.reload();
+  await expect(page.locator('[data-account-body] .empty-state')).toBeVisible();
+  await expect(page.locator('[data-account-body]')).not.toContainText('The gallery could not load. Please retry.');
+  await page.locator('#site-language').selectOption('en');
+  await expect(page.locator('[data-account-body]')).toContainText('The gallery could not load. Please retry.');
+ });
  test('browser default, full menus, guide, game and library follow the saved choice',async({page})=>{
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang','zh-CN');
@@ -85,6 +115,8 @@ test.describe('site language',()=>{
    if(rep<5)await page.waitForTimeout(1050);
   }
   await expect(game.locator('#victory')).toBeVisible();
+  await expect(game.locator('#arena-subtitle')).toContainText('已命中 5 / 5 次');
+  await expect(page.locator('#local-result h3').first()).toHaveText('Motion Quest · 我的回放',{timeout:20000});
   await expect(page.locator('#local-result video')).toBeVisible({timeout:20000});
   expect(await game.locator('body').evaluate(()=>window.startWorker.terminated&&window.startStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
   await openReplay(page.locator('#local-result video'));

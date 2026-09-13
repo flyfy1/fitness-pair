@@ -4,7 +4,9 @@ import {readLanguage,saveLanguage,subscribeLanguage,preferredLanguage,normalizeL
 import baseCatalog from '../packages/gameplay/translations/zh-CN.json' with {type:'json'};
 
 import sharingCatalog from '../packages/gameplay/translations/sharing.zh-CN.json' with {type:'json'};
-const catalog=[...baseCatalog,...sharingCatalog];
+import guidesCatalog from '../packages/gameplay/translations/guides.zh-CN.json' with {type:'json'};
+import feedbackCatalog from '../packages/gameplay/translations/feedback.zh-CN.json' with {type:'json'};
+const catalog = [...baseCatalog, ...sharingCatalog, ...guidesCatalog, ...feedbackCatalog];
 const stateKey=Symbol.for('hopmodo.language.preference');
 test('browser preference, explicit choice, unsupported languages and storage denial',()=>{
  const originalNavigator=Object.getOwnPropertyDescriptor(globalThis,'navigator');

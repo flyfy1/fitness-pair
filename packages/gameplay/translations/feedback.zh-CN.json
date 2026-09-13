@@ -9,7 +9,7 @@
   {"id":"feedback.clip.thumbnailSaved","en":"Thumbnail saved. Your original video is unchanged.","zh":"缩略图已保存，原始视频未更改。"},
   {"id":"feedback.clip.deleteFailed","en":"Could not delete this clip. Please retry.","zh":"无法删除此片段，请重试。"},
   {"id":"feedback.clip.preparingDownload","en":"Preparing your download with a Hopmodo banner and ending. Keep this tab open.","zh":"正在准备带有 Hopmodo 横幅和结尾的下载文件。请保持此标签页打开。"},
-  {"id":"feedback.clip.downloadReady","en":"Download ready. Your preview and gallery upload keep the original video without promotional branding.","zh":"下载已就绪。预览和作品展廊上传仍使用不带宣传品牌的原始视频。"},
+  {"id":"feedback.clip.downloadReady","en":"Download ready. Your preview and gallery upload keep the original video without promotional branding.","zh":"下载已就绪。预览和作品展廊上传仍使用不带宣传标识的原始视频。"},
   {"id":"feedback.clip.downloadCancelled","en":"Download cancelled. Your original replay is safe.","zh":"下载已取消，原始回放完好无损。"},
   {"id":"feedback.clip.preparingShortCopy","en":"Preparing the final 55 seconds of gameplay without a promotional banner or ending. Keep this tab open; nothing is uploaded.","zh":"正在准备最后 55 秒的游戏内容，不含宣传横幅或结尾。请保持此标签页打开；不会上传任何内容。"},
   {"id":"feedback.clip.copyReady","en":"Share copy ready at the top. Preview it, then choose whether to publish it.","zh":"分享副本已在顶部就绪。请先预览，再决定是否发布。"},

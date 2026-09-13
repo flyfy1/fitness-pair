@@ -1,3 +1,4 @@
+import {translateText} from '../../../packages/gameplay/i18n.js';
 import {captureClipThumbnail} from './clip-thumbnail.js';
 import {loadRecordingLogo,drawClipEnding,drawDownloadFrame} from './clip-compositor.js';
 import {startVideoRecorder,recordedBlob} from './video-format.js';
@@ -103,7 +104,7 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{},includeConv
   });
   const encoded=await output;encoded.thumbnail=await thumbnail;localSignal.throwIfAborted();
   if(!fullLength&&!fitsWebsiteShare(encoded))throw new Error('The share copy exceeded the website limits. Your full replay is still saved.');
-  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · ${fullLength?'with conversation':'share copy'}`,game:clip.game,createdAt:Date.now(),width:canvas.width,height:canvas.height,source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio||!!voiceBuffer,conversationEmbedded:!!voiceBuffer||!!clip.conversationEmbedded,gameTitle:clip.gameTitle,brand:clip.brand,website:clip.website,shareCopy:!fullLength,branded:brandedDownload||clip.branded!==false,playbackRate:(clip.playbackRate||1)*playbackRate,endingSeconds:brandedDownload?3:fullLength?(clip.endingSeconds??3)/playbackRate:0,hasEnding:brandedDownload||(fullLength&&!!clip.hasEnding),finalScore:clip.finalScore,...encoded};
+  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · ${translateText(fullLength?'with conversation':'share copy')}`,game:clip.game,createdAt:Date.now(),width:canvas.width,height:canvas.height,source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio||!!voiceBuffer,conversationEmbedded:!!voiceBuffer||!!clip.conversationEmbedded,gameTitle:clip.gameTitle,brand:clip.brand,website:clip.website,shareCopy:!fullLength,branded:brandedDownload||clip.branded!==false,playbackRate:(clip.playbackRate||1)*playbackRate,endingSeconds:brandedDownload?3:fullLength?(clip.endingSeconds??3)/playbackRate:0,hasEnding:brandedDownload||(fullLength&&!!clip.hasEnding),finalScore:clip.finalScore,...encoded};
  }finally{
   clearTimeout(deadline);clearTimeout(endTimer);cancelAnimationFrame(raf);
   if(recorder){recorder.ondataavailable=recorder.onstop=recorder.onerror=null;if(recorder.state!=='inactive')recorder.stop();}
