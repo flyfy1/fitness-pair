@@ -63,3 +63,57 @@ recognizer, and completes five repetitions. Decoded MP4 frames at multiple times
 check movement, camera pixels, guardian, HUD and branding. This is synthetic
 software evidence, not real participant footage or recognition accuracy evidence.
 The separate first-load model timeout is owned by the game-loading task.
+
+## Full replays and website share copies
+
+Local capture retains the full round up to the 100 MiB safety limit. Website
+publication remains an access-code-gated pilot with a 60-second / 20-MiB cap.
+“Make short share copy” re-encodes up to the final 55 seconds of gameplay and adds
+an independent three-second branded ending at 1.8 Mbps. Two seconds of headroom
+accommodate recorder timing; actual produced size and elapsed capture duration
+are checked before the copy can be offered for publication. Existing end cards
+are excluded when known. The original and its ID are retained; the copy gets a
+new local ID and its own management key only upon publication.
+
+This native browser conversion is justified by the full-round/gateway mismatch.
+It needs no app dependency, worker service or video upload. A supported MP4
+encoder produces MP4; otherwise the same explicit WebM fallback applies. Copying
+a video does not fix an unavailable MP4 encoder. Preparation takes playback time
+(up to about a minute), can be cancelled, stops on page exit/backgrounding, and
+has bounded read, playback-stall and total-operation timeouts. Capture tracks,
+timers and object URLs are released on success and failure.
+
+The new preview is focused after generation. It remains local until a separate
+publication form is submitted with the upload code and explicit consent. Native
+file sharing sends the file to the operating system only on a player click.
+Website publication retains the management key locally before uploading, then
+returns `/clips/:id`; the site streams private media with byte-range support.
+
+### Validation
+
+- 57 unit/contract tests, including gateway/local size-duration boundary agreement.
+- Six gateway tests, including mocked GCP storage, authorization, retries, ranges
+  and revocation. These use test-generated credentials and no real GCP service.
+- Synthetic browser tests cover local generation, preview, cancellation,
+  background cleanup, explicit publication and returned-byte playback through a
+  simulated website API. The recording tests cover all five game adapters.
+- A real 70-second synthetic MP4 source produced a decoded MP4 share copy between
+  56 and 60 seconds, below 20 MiB, with the branded ending; the original survived
+  reload. This was a real browser encode/decode test, not a mocked recorder.
+
+The optional long-media check uses `HOPMODO_LONG_CLIP=/absolute/path/to/synthetic.mp4`
+with `npx playwright test -c apps/arcade/playwright.config.js share-copy.spec.js`.
+It is skipped when the fixture is absent. To reproduce without participant data,
+run `recording-camera.spec.js`, use its `decoded-camera-0.png` output as a looped
+FFmpeg input (`-loop 1 -i <synthetic-png> -t 70 -r 12 -c:v libx264 -pix_fmt yuv420p
+-movflags +faststart <ignored-output.mp4>`), and pass that file. FFmpeg is used
+only to generate this optional test fixture; it is not a product dependency or
+part of the shipping conversion path.
+
+### Live GCP status
+
+The bucket name is configured, but no usable private key/runtime credential was
+supplied. The supplied setup ZIP contained no usable credential. No credential
+stores or organization policy were changed. Live upload, actual GCP playback,
+object lifecycle and revocation remain unverified. Passing mocks and browser
+codec checks do not establish a working live cloud share link.
