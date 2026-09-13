@@ -4,7 +4,8 @@ A separate, camera-first alternative to [Dino Run](../../../apps/dino-run/README
 The mirrored video fills the window. The player stays in that video, with a virtual
 runway, incoming cacti, a glowing collision marker, scores and entry cues
 drawn over the same scene. **Debug · show body skeleton** toggles named-joint bones
-and points; it is off by default and never hides the person or stops recognition.
+and points plus a compact tracking status (stage, rejection reason and input age);
+it is off by default and never hides the person or stops recognition.
 The original Dino app remains the baseline; this experiment is its separate second
 gameplay experience, not a mode switch added to the original app.
 
@@ -40,13 +41,15 @@ the existing checksum-verified Lite model into ignored `public/runtime/`.
 Runtime camera processing stays local; video and landmarks are not saved.
 
 1. Keep the camera fixed, stand centered and leave room above your head. Select
-   **Enable camera**, then **jump once to start**. The host automatically captures
-   a short standing reference (250 ms); a clear upward movement starts play while
+   **Enable camera**, wait for **Jump now to start**, then jump once. The host automatically captures
+   a short standing reference (250 ms). Until it is ready, the UI says **Stand
+   comfortably for a moment**. Coherent shoulder and hip rise starts play while
    you are still airborne. There is no maximum-height measurement, landing wait,
    confirmation button or countdown.
-2. The runway anchors to the pre-jump foot position with full-body tracking. With
-   only shoulders and hips visible, the UI labels **upper body / torso movement**
-   and the marker anchors to the pre-jump waist position instead.
+2. Detection always uses shoulders and hips, so bent knees, missing ankles and
+   stationary foot predictions cannot block entry. The runway still anchors to
+   visible pre-jump feet; if feet are unavailable, it anchors to the waist.
+   Detection and visual anchoring are independent.
 3. Jump in place to lift the glowing marker over orange cacti. Its filled box is
    the player's collision area; each cactus's solid central trunk is its collision
    area. Arms and glow are decorative. Movement level uses a body-proportion scale,
@@ -78,8 +81,8 @@ anchor and adjusts the spawn boundary; it does not reset the session or score.
 This is **2D video-overlay AR**, not world-tracked 3D AR. The camera view is center
 cropped to fill the viewport, which can crop limbs near the edges; stay centered.
 Sideways movement does not steer the lane, and significant position/scale drift
-invalidates the standing reference. The recognizer may switch from full-body to upper-body
-tracking and require a fresh reference and jump when legs disappear. The marker is a game proxy,
+invalidates the standing reference. The AR host keeps torso detection selected even when legs appear or disappear.
+A new position reset selects the visible-foot or waist anchor again. The marker is a game proxy,
 not whole-body collision or a foot-contact/physical jump measurement. Upper-body
 motion cannot establish that the feet left the floor. No enjoyment, physical
 accuracy, exercise-quality, calorie or latency claim follows from synthetic tests.
@@ -115,3 +118,18 @@ infer recognition accuracy from score. Participant recordings require prior cons
 **Decision:** retain as a runnable POC for human comparison, not as a replacement
 for the baseline. Human timing, crop/framing comfort, body-to-marker registration
 and enjoyment remain unverified. No public deployment is configured by this work.
+
+### Missed-start regression (2026-09-13)
+
+The old UI displayed “Jump once” even while its standing-reference gate was still
+blocked. Its full-body preference required reliable knees/ankles, and projected
+shoulder/hip-width jitter could repeatedly reset standing. A new synthetic test
+reproduced the width-jitter failure before the fix (`stand-still` never advanced).
+AR now opts into `quickStart: true, preferUpperBody: true`; quick torso mode ignores
+projected width changes but retains torso-length, upright-pose, vertical-motion,
+confidence, freshness and position guards. Ordinary/default recognition is unchanged.
+Browser coverage adds unstable standing → accurate preparation message → width
+jitter plus bent knees/stuck feet → coherent torso lift → actual running state.
+The live browser was camera-off after losing focus; no private trial was recorded,
+so the exact cause of the reported human attempt remains unconfirmed. Human retry
+is still required to verify this correction on the user's framing and movement.

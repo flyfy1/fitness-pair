@@ -6,6 +6,21 @@ import { JumpHeightRecognizer } from '../index.js';
 // Artificial, named 2D geometry. These fixtures are not participant evidence.
 const session = { sessionId: 'synthetic-jump-session', source: { kind: 'synthetic', id: 'jump-height-geometry/1' } };
 
+test('quick torso entry tolerates lateral joint-width noise while coherent rise still starts it', () => {
+  const h = harness(frame => {
+    // Synthetic 2D landmark jitter: widths change, torso length and height do not.
+    frame.joints.leftShoulder.x += frame.seq % 2 ? .016 : 0;
+    frame.joints.rightHip.x -= frame.seq % 2 ? .014 : 0;
+    frame.joints.leftKnee.x += .08;
+    frame.joints.rightKnee.x -= .08;
+  }, { quickStart: true, preferUpperBody: true });
+  assert.equal(h.hold(10).at(-1).cue, 'jump-to-start');
+  assert.equal(h.hold(3,.025).at(-1).calibrated,true);
+  assert.equal(h.hold(8).at(-1).heightRatio,0);
+  const shrug=h.hold(5,0,frame=>{frame.joints.leftShoulder.y-=.02;frame.joints.rightShoulder.y-=.02;});
+  assert.ok(shrug.every(f=>f.heightRatio===0));
+});
+
 test('quick start accepts a small coherent lift before landing, using body scale rather than jump peak', () => {
   for (const upper of [false, true]) {
     const h = harness(frame => { if (upper) for (const side of ['left','right']) {

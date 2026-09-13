@@ -8,11 +8,18 @@ export function videoProjection(image, width, height) {
 }
 
 export function anchorFromPose(frame, action) {
-  const names = action.trackingMode === 'full-body' ? ['leftAnkle', 'rightAnkle'] : ['leftHip', 'rightHip'];
+  // Visual anchoring is independent of detection: unreliable feet must never
+  // block torso controls. Use feet when visible, otherwise use the waist.
+  const feetVisible = ['leftAnkle', 'rightAnkle'].every(name => {
+    const p = frame.joints[name];
+    return p && p.confidence !== null && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y > .015 && p.y < .985;
+  });
+  const mode = feetVisible ? 'full-body' : 'upper-body';
+  const names = feetVisible ? ['leftAnkle', 'rightAnkle'] : ['leftHip', 'rightHip'];
   const points = names.map(name => frame.joints[name]);
   if (points.some(p => !p || p.confidence === null || p.confidence < .6) || !(action.peakRise > 0)) return null;
   return { image: { ...frame.image }, x: (points[0].x + points[1].x) / 2,
-    y: (points[0].y + points[1].y) / 2, peakRise: action.peakRise, mode: action.trackingMode };
+    y: (points[0].y + points[1].y) / 2, peakRise: action.peakRise, mode };
 }
 
 export function sceneGeometry(anchor, width, height) {

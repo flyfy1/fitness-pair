@@ -153,7 +153,7 @@ export class JumpHeightRecognizer {
     const baseline = this.baseline;
     const upperBody = this.trackingMode === 'upper-body';
     const scaleChanged = Math.abs(pose.torso / baseline.torso - 1) > (upperBody ? .12 : .2)
-      || upperBody && (Math.abs(pose.shoulderWidth / baseline.shoulderWidth - 1) > .12
+      || upperBody && !this.quickStart && (Math.abs(pose.shoulderWidth / baseline.shoulderWidth - 1) > .12
         || Math.abs(pose.hipWidth / baseline.hipWidth - 1) > .12);
     const bentTorso = upperBody && !pose.upright;
     const movedSideways = Math.abs(pose.centerX - baseline.centerX) > .12;
@@ -259,10 +259,13 @@ export class JumpHeightRecognizer {
 
   stand(frame, pose) {
     const anchor = this.standingAnchor;
+    // Narrow projected joint widths fluctuate strongly with landmark jitter or
+    // a slight turn. Quick torso entry relies on torso length/position instead.
+    const quickTorso = this.quickStart && this.trackingMode === 'upper-body';
     const stable = pose.upright && (!anchor || Math.abs(pose.hipY - anchor.hipY) < .012
       && Math.abs(pose.shoulderY - anchor.shoulderY) < .012
-      && Math.abs(pose.shoulderWidth / anchor.shoulderWidth - 1) < .08
-      && Math.abs(pose.hipWidth / anchor.hipWidth - 1) < .08
+      && (quickTorso || Math.abs(pose.shoulderWidth / anchor.shoulderWidth - 1) < .08
+        && Math.abs(pose.hipWidth / anchor.hipWidth - 1) < .08)
       && (this.trackingMode === 'upper-body' || Math.abs(pose.leftAnkleY - anchor.leftAnkleY) < .01
         && Math.abs(pose.rightAnkleY - anchor.rightAnkleY) < .01)
       && Math.abs(pose.centerX - anchor.centerX) < .015

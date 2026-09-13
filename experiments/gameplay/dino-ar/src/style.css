@@ -8,4 +8,6 @@ footer{left:36px;right:36px;bottom:20px;display:grid;grid-template-columns:1fr a
 @media(max-height:640px) and (min-width:701px){#arena{min-height:420px}header{top:14px}#settings{top:85px}#welcome{top:23%}h1{font-size:36px;margin:10px 0}#welcome p{font-size:12px}.steps{margin-top:10px}footer{bottom:12px;gap:8px}h2{font-size:18px}}
 /* Keep controls above the foot runway, where they cannot conceal incoming cacti. */
 .floor-lane footer{top:250px;bottom:auto}.floor-lane .status{max-width:440px}
+#tracking-detail{font-size:10px;color:#d4dfd1;line-height:1.5;max-width:260px}
 @media(max-width:700px){.floor-lane footer{top:195px}.floor-lane .status{max-width:100%}}
+@media(max-width:700px){.floor-lane.show-debug footer{top:260px}}

@@ -23,7 +23,11 @@ standing torso length (minimum 0.04 image height), not the player's personal
 maximum. The initial lift emits no completion; its eventual valid landing may
 emit one. Existing loss, drift, source/session and completion-ID guards still
 apply. Upper-body movement is still a proxy, not confirmed physical takeoff.
-The default and manual-maximum modes below remain unchanged.
+The AR host also selects `preferUpperBody: true` so leg confidence cannot block
+entry. Quick torso mode ignores projected shoulder/hip-width jitter when holding
+the reference and tracking, while torso length, vertical stability, upright pose,
+confidence and sideways-position guards remain active. The default and
+manual-maximum modes below remain unchanged.
 
 1. Use a fixed, front-facing camera with room above the head. Keep both shoulders
    and both hips visible at minimum. Full-body tracking is preferred when knees

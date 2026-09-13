@@ -7,7 +7,7 @@ import { anchorFromPose, drawSkeleton, drawWorld } from './scene.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner(); runner.setControlMode('motion');
-const recognizer = new JumpHeightRecognizer({ quickStart: true });
+const recognizer = new JumpHeightRecognizer({ quickStart: true, preferUpperBody: true });
 let action = null, pose = null, groundPose = null, anchor = null, cameraState = 'off';
 let awaiting = false, lastPoseAt = 0, lastFrame = 0, lastPaint = 0;
 let message = '', error = '', previousStatus = 'ready';
@@ -41,7 +41,6 @@ const camera = new PoseCamera({
       else if (action.stage === 'standing') groundPose = null;
     }
     if (!fresh || action.phase === 'missing' || !action.calibrated) {
-
       if (runner.status === 'running') pause('Tracking changed. Stand steady, then choose Resume run.');
     } else {
       if (!anchor && groundPose) anchor = anchorFromPose(groundPose, action);
@@ -85,12 +84,17 @@ function paint() {
   }
   $('welcome').hidden = camera.active || runner.status !== 'ready';
   $('arena').classList.toggle('floor-lane', !!anchor && anchor.mode === 'full-body');
+  $('arena').classList.toggle('show-debug', $('debug').checked);
   $('score').textContent = String(runner.score).padStart(5, '0');
   $('cleared').textContent = runner.passed;
   $('stop').hidden = !camera.active; $('recalibrate').hidden = !camera.running;
   $('tracking').textContent = cameraState === 'ready'
-    ? action?.trackingMode === 'upper-body' ? 'Local · upper body / torso movement' : 'Local · full body tracking'
+    ? 'Local · shoulder + hip movement'
     : `Camera ${cameraState} · local processing`;
+  $('tracking-detail').hidden = !$('debug').checked;
+  $('tracking-detail').textContent = camera.running
+    ? `Stage: ${action?.stage ?? 'standing'} · ${action?.quality ?? 'waiting-for-pose'} · Input age: ${lastPoseAt ? Math.round(performance.now() - lastPoseAt) + ' ms' : 'waiting'}`
+    : 'Camera off';
   let phase = 'READY WHEN YOU ARE', cue = 'Step back. Leave room to jump.';
   let detail = message || 'Keep shoulders and hips visible. Full body is best.';
   let button = 'Enable camera', disabled = false;
@@ -100,16 +104,25 @@ function paint() {
     detail = `${runner.score} points · ${runner.passed} cacti cleared. Camera is off.`; button = 'Jump & run again';
   } else if (running) {
     phase = 'YOU ARE IN THE GAME'; cue = 'Lift your marker over the cacti.';
-    detail = action?.trackingMode === 'upper-body' ? 'Torso movement controls the marker at your waist.' : 'Jump in place. The glowing marker follows your height.';
+    detail = anchor?.mode === 'upper-body' ? 'Torso movement controls the marker at your waist.' : 'Jump in place. The glowing marker follows your height.';
     button = 'Pause';
   } else if (camera.active) {
     phase = 'JUMP TO START'; disabled = true; button = 'Waiting for your jump…';
     if (cameraState === 'requesting') { cue = 'Allow camera access.'; detail = 'Your video stays on this device.'; }
     else if (cameraState === 'loading') { cue = 'Loading local tracking…'; detail = 'Keep the camera fixed and leave space above your head.'; }
+    else if (lastPoseAt && performance.now() - lastPoseAt >= 250) {
+      phase = 'WAITING FOR TRACKING'; cue = 'Tracking is catching up.';
+      detail = 'Waiting for a fresh camera result before detecting your jump.';
+    }
     else if (action?.phase === 'missing') { cue = action.cue === 'land-and-hold' ? 'Land and stand steady.' : 'Keep shoulders and hips in view.'; detail = 'Tracking is paused. Return to your starting position.'; }
+    else if (!action || action.stage === 'standing') {
+      phase = 'FINDING YOUR POSITION'; cue = 'Stand comfortably for a moment.';
+      detail = 'Keep both shoulders and hips visible. Wait for “Jump now”.';
+      button = 'Finding your position…';
+    }
     else if (!action?.calibrated) {
-      cue = 'Jump once to start.';
-      detail = 'A small, clear jump is enough. No maximum jump or countdown.';
+      cue = 'Jump now to start.';
+      detail = 'Lift your shoulders and hips together. Your feet do not need to be visible.';
     } else if (awaiting) {
       cue = 'Return to your starting position.'; detail = 'The run resumes when tracking is steady.';
     } else {
@@ -140,7 +153,8 @@ window.addEventListener('keydown', event => {
 // Compact observability only: no raw camera frames or identifiable landmarks.
 window.dinoAR = Object.freeze({ getState: () => ({ ...runner.snapshot(),
   camera: { state: cameraState, stage: action?.stage ?? 'standing', calibrated: action?.calibrated ?? false,
-    trackingMode: action?.trackingMode ?? null, heightRatio: action?.heightRatio ?? 0, cue: action?.cue ?? null },
+    trackingMode: action?.trackingMode ?? null, heightRatio: action?.heightRatio ?? 0, cue: action?.cue ?? null,
+    quality: action?.quality ?? null, frameAgeMs: lastPoseAt ? Math.round(performance.now() - lastPoseAt) : null },
   debug: $('debug').checked, anchored: !!anchor,
   nextObstacleDistance: runner.obstacles[0] ? runner.obstacles[0].x - 116 : null,
 }) });

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 async function syntheticCamera(page) {
   await page.addInitScript(() => {
     window.testRise = 0; window.testMissing = false; window.testDelay = 0; window.testUpper = false;
+    window.testUnstable = false; window.testWidthNoise = false; window.testFeetStill = false;
     navigator.mediaDevices.getUserMedia = async () => {
       const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
       const c = canvas.getContext('2d');
@@ -20,12 +21,22 @@ async function syntheticCamera(page) {
       return stream;
     };
     window.Worker = class {
-      constructor() { window.testWorker = this; }
+      constructor() { window.testWorker = this; this.seq = 0; }
       postMessage(data) {
         if (data.type === 'init') { setTimeout(()=>this.onmessage?.({data:{type:'ready'}}),0); return; }
-        data.bitmap.close(); const points = [];
+        data.bitmap.close(); const points = []; this.seq++;
         if (!window.testMissing) for (const [ids,x] of [[[11,13,15,23,25,27],.44],[[12,14,16,24,26,28],.56]]) {
           ids.forEach((id,i)=>{if(window.testUpper && i>=4)return; points[id]={x,y:[.25,.34,.43,.48,.68,.88][i]-window.testRise,visibility:.99};});
+        }
+        if (!window.testMissing) {
+          if (window.testFeetStill) for (const id of [25,26,27,28]) if (points[id]) {
+            points[id].y += window.testRise;
+            if (id < 27) points[id].x += id === 25 ? .08 : -.08;
+          }
+          if (window.testWidthNoise && this.seq % 2) {
+            points[11].x += .016; points[24].x -= .014;
+          }
+          if (window.testUnstable && this.seq % 2) for (const point of points) if (point) point.y += .025;
         }
         setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:points,time:data.time}});},window.testDelay);
       }
@@ -113,13 +124,32 @@ test('stale/missing tracking freezes the round and requires explicit resume; rec
 test('portrait full-body runway stays clear of HUD controls and missing tracking clears debug bones',async({page})=>{
   await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/');
   await calibrate(page); await page.getByLabel('Debug · show body skeleton').check();
-  await expect(page.locator('#arena')).toHaveClass('floor-lane');
+  await expect(page.locator('#arena')).toHaveClass(/floor-lane/);
   const controls=await page.locator('footer').boundingBox();
   expect(controls.y+controls.height).toBeLessThan(844*.7);
   await page.screenshot({path:'test-results/ar-mobile-fullbody.png'});
   await page.evaluate(()=>{window.testMissing=true;});
   await expect.poll(async()=>(await state(page)).status).toBe('paused');
   await expect.poll(()=>page.locator('#skeleton').evaluate(c=>c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0))).toBe(false);
+  await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
+});
+
+test('entry shows the real gate and accepts torso lift despite bent knees, stuck feet and lateral joint noise',async({page})=>{
+  await syntheticCamera(page); await page.goto('/');
+  await page.evaluate(()=>{window.testUnstable=true;window.testFeetStill=true;window.testWidthNoise=true;});
+  await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await expect.poll(async()=>(await state(page)).camera.state).toBe('ready');
+  await page.waitForTimeout(450);
+  await expect(page.getByRole('heading',{name:'Stand comfortably for a moment.',exact:true})).toBeVisible();
+  expect((await state(page)).camera.stage).toBe('standing');
+  await page.getByLabel('Debug · show body skeleton').check();
+  await expect(page.locator('#tracking-detail')).toContainText('Stage: standing');
+  await page.evaluate(()=>{window.testUnstable=false;});
+  await expect(page.getByRole('heading',{name:'Jump now to start.',exact:true})).toBeVisible();
+  expect((await state(page)).camera.trackingMode).toBe('upper-body');
+  await page.evaluate(()=>{window.testRise=.025;});
+  await expect.poll(async()=>(await state(page)).status,{timeout:2000,intervals:[30]}).toBe('running');
+  expect((await state(page)).anchored).toBe(true);
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
 });
 
