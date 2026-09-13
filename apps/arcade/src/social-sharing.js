@@ -61,7 +61,8 @@ export function mountShareMessage(container,clip,{local=false,origin=location.or
    actions.append(native);
   }
   if(clip.visibility!=='private')for(const [name,href] of socialLinks(message)){
-   const link=document.createElement('a');link.textContent=name;link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Share on '+name+' (opens a new tab)');actions.append(link);
+   const link=document.createElement('a');link.className='social-share-logo';link.title='Share on '+name;link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Share on '+name+' (opens a new tab)');
+   const logo=document.createElement('img');logo.src='/assets/social/'+({'LinkedIn':'linkedin','X (Twitter)':'twitter-x','Facebook':'facebook'}[name])+'.svg';logo.alt='';logo.width=22;logo.height=22;link.append(logo);actions.append(link);
   }
  }
  panel.append(note,label,actions,status);container.append(panel);
