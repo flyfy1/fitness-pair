@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {build} from 'vite';
+import {validateUpload} from '../server/worker.js';
 
 let helper;
 test.beforeAll(async()=>{
@@ -45,7 +46,17 @@ for(const webm of [false,true])test(`rolling ${webm?'WebM fallback':'MP4'} drops
 });
 
 test('a 96-second recording retains only the latest 90 seconds at original speed',async({page},info)=>{
- test.setTimeout(120000);await prepare(page);
+ test.setTimeout(120000);let uploaded=null;
+ await page.route('**/api/config',route=>route.fulfill({json:{sharingEnabled:true}}));
+ await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:{email:'synthetic@example.test'},csrfToken:'test-only'}}));
+ await page.route('**/api/account/clips',route=>route.fulfill({json:{clips:[],usedBytes:0,limitBytes:2e9}}));
+ await page.route('**/api/clips/*',route=>{
+  const request=route.request(),url=new URL(request.url());
+  const metadata=validateUpload(new Request(url,{headers:request.headers()}),url);
+  uploaded={duration:metadata.duration,size:request.postDataBuffer().length};
+  return route.fulfill({json:{url:'/clips/synthetic-rolling'}});
+ });
+ await prepare(page);
  const result=await page.evaluate(async()=>{
   const {startRollingRecorder}=await import('/__rolling.js');
   const canvas=document.createElement('canvas');canvas.width=160;canvas.height=120;const ctx=canvas.getContext('2d');
@@ -57,10 +68,21 @@ test('a 96-second recording retains only the latest 90 seconds at original speed
   await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=reject;});
   const sample=async time=>{video.currentTime=time;await new Promise(resolve=>video.onseeked=resolve);ctx.drawImage(video,0,0);return [...ctx.getImageData(80,80,1,1).data];};
   const first=await sample(.2),last=await sample(video.duration-.1);URL.revokeObjectURL(video.src);
-  return {segments,duration:saved.duration,decoded:video.duration,start:saved.startSeconds,first,last};
+  await new Promise((resolve,reject)=>{
+   const request=indexedDB.open('fitness-pair-clips',1);request.onsuccess=()=>{const db=request.result,tx=db.transaction('clips','readwrite');
+    tx.objectStore('clips').put({id:crypto.randomUUID(),title:'Motion Quest · synthetic rolling replay',game:'motion-quest',gameTitle:'Motion Quest',source:'synthetic',createdAt:Date.now(),duration:saved.duration,playbackRate:1,branded:false,blob:saved.blob});
+    tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);
+   };request.onerror=()=>reject(request.error);
+  });
+  return {segments,duration:saved.duration,decoded:video.duration,start:saved.startSeconds,first,last,size:saved.blob.size};
  });
  expect(result.segments).toBeLessThanOrEqual(19);expect(result.duration).toBeGreaterThan(88.5);expect(result.duration).toBeLessThanOrEqual(90);
  expect(result.decoded).toBeGreaterThan(88.5);expect(result.decoded).toBeLessThanOrEqual(90.05);expect(result.start).toBeGreaterThan(6.4);
  expect(result.first[1]).toBeGreaterThan(80);expect(result.first[0]).toBeLessThan(30);expect(result.last[2]).toBeGreaterThan(200);
+ await page.reload();const card=page.locator('.clip-card');
+ await card.getByRole('button',{name:'Publish to gallery',exact:true}).click();
+ await card.locator('input[name=consent]').check();await card.getByRole('button',{name:'Publish this clip',exact:false}).click();
+ await expect(card.getByRole('link',{name:'Open your gallery page',exact:false})).toBeVisible();
+ expect(uploaded).toEqual({duration:result.duration,size:result.size});
  await info.attach('synthetic-96-second-recording',{body:JSON.stringify(result),contentType:'application/json'});
 });

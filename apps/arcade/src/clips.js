@@ -118,7 +118,7 @@ async function publishForm(container,clip){
  try{
   const config=await api('/api/config');
   if(!config.sharingEnabled){container.innerHTML='<p class="notice">Gallery sharing isn’t available yet. Your clip stays on this device. You can download it now.</p>';return;}
-  if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 60 seconds / 20 MiB. Make a short share copy, preview it, then publish that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
+  if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 90 seconds / 20 MiB. Make a short share copy, preview it, then publish that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
   if(clip.unsaved){container.innerHTML='<p class="notice">Save or download this clip before leaving the page to log in. It has not been saved on this device yet.</p>';return;}
   const session=await getSession();
   if(!session.user){container.innerHTML=`<div class="publish-form"><h3>Log in to publish your clip.</h3><p>Use your Integ.Life account to manage your shared videos from any device. You get 2 GB of shared storage.</p><a class="button primary" href="${loginURL('/library?publish='+clip.id)}">Log in with Integ.Life ↗</a><p>Your saved video stays on this device. After login, you can review it before publishing.</p></div>`;return;}

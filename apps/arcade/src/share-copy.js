@@ -2,7 +2,7 @@ import {loadRecordingLogo,drawClipEnding,drawDownloadFrame} from './clip-composi
 import {startVideoRecorder,recordedBlob} from './video-format.js';
 import {MAX_BYTES} from './local-clips.js';
 
-export const SHARE_MAX_BYTES=20*1024*1024,SHARE_MAX_SECONDS=60;
+export const SHARE_MAX_BYTES=20*1024*1024,SHARE_MAX_SECONDS=90;
 export const fitsWebsiteShare=clip=>clip.blob.size>0&&clip.blob.size<=SHARE_MAX_BYTES&&Number.isFinite(clip.duration)&&clip.duration>0&&clip.duration<=SHARE_MAX_SECONDS;
 // Keep website copies below the gateway duration limit; exclude legacy endings.
 export function shareWindow(duration,hasEnding,endingSeconds=3){
