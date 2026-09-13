@@ -53,10 +53,10 @@ test('round completion reveals the current replay; returning to the game preserv
  await page.route('**/api/account/clips',r=>r.fulfill({json:{clips:[],usedBytes:0,limitBytes:2e9}}));
  await page.route('**/api/clips/*',r=>{uploaded=r.request().postDataBuffer();return r.fulfill({json:{url:'/clips/test-only'}});});
  await page.route('**/api/posters/*',r=>r.fulfill({json:{ok:true}}));
- await card.getByRole('button',{name:'Publish to gallery',exact:true}).click();
+ await card.getByRole('button',{name:'Upload & share',exact:true}).click();
  await card.locator('input[name=consent]').check();
- await card.getByRole('button',{name:'Publish this clip',exact:false}).click();
- await expect(card.getByRole('link',{name:'Open your gallery page',exact:false})).toBeVisible();
+ await card.getByRole('button',{name:'Upload this clip',exact:false}).click();
+ await expect(card.getByRole('link',{name:'Open shared video',exact:false})).toBeVisible();
  expect(uploaded).toEqual(Buffer.from(originalBytes));
  const before=(await stored(page)).map(c=>c.id).sort();
  const download=page.waitForEvent('download',{timeout:25000});await card.locator('.clip-actions [download]').click();

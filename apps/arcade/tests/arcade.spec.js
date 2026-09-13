@@ -69,7 +69,7 @@ test('synthetic Motion Quest recording saves locally, survives reload, and never
  await page.evaluate(()=>{window.shareMode='unsupported';});await page.getByRole('button',{name:'Share with a friend'}).click();await expect(page.getByText(/This browser cannot share video files directly/)).toBeVisible();
  const downloadEvent=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const download=await downloadEvent;expect(download.suggestedFilename()).toBe('hopmodo-motion-quest.mp4');
  const downloaded=await readFile(await download.path());expect(downloaded.subarray(4,8).toString()).toBe('ftyp');
- await page.getByRole('button',{name:'Publish to gallery'}).click();await expect(page.getByText(/Gallery sharing isn’t available yet/)).toBeVisible();expect(uploads).toEqual([]);
+ await page.getByRole('button',{name:'Upload & share'}).click();await expect(page.getByText(/Gallery sharing isn’t available yet/)).toBeVisible();expect(uploads).toEqual([]);
  await page.getByRole('button',{name:'Delete local clip'}).click();await expect(page.locator('video')).toHaveCount(0);
 });
 test('gallery and missing clips have usable honest states',async({page})=>{

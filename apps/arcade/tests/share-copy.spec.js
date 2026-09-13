@@ -11,13 +11,15 @@ async function previewRound(page){
 
 test('share copy is local, previewed, and uploaded only after explicit publication; clip page plays returned bytes',async({page})=>{
  let uploaded=null,metadata=null,uploadCount=0;
- await page.route('**/api/config',route=>route.fulfill({json:{sharingEnabled:true}}));
+ await page.route('**/api/config',route=>route.fulfill({json:{sharingEnabled:true,anonymous:{usedBytes:0,limitBytes:10e9}}}));
+ await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:null,csrfToken:null}}));
+ await page.route('**/api/posters/*',route=>route.fulfill({json:{url:'/api/posters/synthetic'}}));
  await page.route('**/api/clips/*',async route=>{
   const request=route.request(),url=new URL(request.url());
   if(request.method()==='PUT'){
-   uploadCount++;expect(request.headers()['x-sharing-consent']).toBe('gallery-v1');expect(request.headers().authorization).toBe('Bearer synthetic-upload-code');expect(request.headers()['x-management-key'].length).toBeGreaterThan(32);
+   uploadCount++;expect(request.headers()['x-sharing-consent']).toBe('gallery-v1');expect(request.headers().authorization).toBeUndefined();expect(request.headers()['x-management-key'].length).toBeGreaterThan(32);
    uploaded=request.postDataBuffer();expect(uploaded.subarray(4,8).toString()).toBe('ftyp');expect(uploaded.length).toBeLessThanOrEqual(20*1024*1024);
-   const id=url.pathname.split('/').at(-1);metadata={id,title:url.searchParams.get('title'),game:'motion-quest',source:'synthetic',mime:'video/mp4',duration:Number(url.searchParams.get('duration')),expiresAt:Date.now()+86400000,url:'/clips/'+id};
+   const id=url.pathname.split('/').at(-1);metadata={id,legacy:true,visibility:'public',title:url.searchParams.get('title'),game:'motion-quest',source:'synthetic',mime:'video/mp4',duration:Number(url.searchParams.get('duration')),expiresAt:Date.now()+86400000,url:'/clips/'+id};
    expect(metadata.duration).toBeLessThanOrEqual(60);await route.fulfill({status:201,json:metadata});
   }else await route.fulfill({json:metadata});
  });
@@ -31,11 +33,11 @@ test('share copy is local, previewed, and uploaded only after explicit publicati
  await expect(page.locator('#local-result .clip-card')).toHaveCount(2,{timeout:12000});
  const copy=page.locator('#local-result .clip-card').nth(1);await expect(copy).toContainText('MP4');
  expect(uploadCount).toBe(0);await openReplay(copy.locator('video'));await copy.locator('video').evaluate(v=>v.play());await expect.poll(()=>copy.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
- await copy.getByRole('button',{name:'Publish to gallery',exact:true}).click();
+ await copy.getByRole('button',{name:'Upload & share',exact:true}).click();
  await expect(copy.locator('form')).toBeVisible();expect(uploadCount).toBe(0);
- await copy.getByLabel('Early-access upload code').fill('synthetic-upload-code');await copy.locator('input[name=consent]').check();expect(uploadCount).toBe(0);
- await copy.getByRole('button',{name:'Publish this clip'}).click();await expect(copy.getByRole('link',{name:'Open your gallery page'})).toBeVisible();expect(uploadCount).toBe(1);
- await copy.getByRole('link',{name:'Open your gallery page'}).click();await expect(page.locator('.clip-view video')).toBeVisible();await page.locator('.clip-view video').evaluate(v=>v.play());await expect.poll(()=>page.locator('.clip-view video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
+ await expect(copy.locator('input[name=code]')).toHaveCount(0);await copy.locator('input[name=consent]').check();expect(uploadCount).toBe(0);
+ await copy.getByRole('button',{name:'Upload this clip'}).click();await expect(copy.getByRole('link',{name:'Open shared video'})).toBeVisible();expect(uploadCount).toBe(1);
+ await copy.getByRole('link',{name:'Open shared video'}).click();await expect(page.locator('.clip-view video')).toBeVisible();await openReplay(page.locator('.clip-view video'));await page.locator('.clip-view video').evaluate(v=>v.play());await expect.poll(()=>page.locator('.clip-view video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
  await expect(page.getByRole('button',{name:'Remove shared clip'})).toBeVisible();
  await page.goto('/library');await expect(page.locator('.clip-card')).toHaveCount(2);
 });

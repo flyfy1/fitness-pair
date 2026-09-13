@@ -33,5 +33,6 @@ export function mountClipPreview(container,{src,poster,title,width=640,height=40
 }
 
 export function mountSharedPreview(container,clip){
- return mountClipPreview(container,{src:'/api/media/'+clip.id,poster:'/api/posters/'+clip.id,title:clip.title,width:clip.width,height:clip.height});
+ const query=clip.visibility==='private'?new URL(clip.url,location.origin).search:'';
+ return mountClipPreview(container,{src:'/api/media/'+clip.id+query,poster:'/api/posters/'+clip.id+query,title:clip.title,width:clip.width,height:clip.height});
 }

@@ -18,7 +18,7 @@ Round completion shows a visible preparation message, then automatically focuses
 
 MP4 is preferred and confirmed from actual encoded bytes. Browsers without an available MP4 encoder save clearly labeled WebM files; files are never renamed to claim MP4. See [recording evidence and browser limits](RECORDING.md).
 
-Cloud sharing on `fitness.integ.life` uses Integ.Life login and the VM storage identity. Each account has 2 GB (2,000,000,000 bytes) of shared storage. `/shared` lists that account's publications across devices, shows usage, and lets the owner remove a clip and release its quota. Logging in from a local clip returns to that saved clip for review and explicit consent; it never publishes automatically. Local recordings remain device-local. GPT Sites remains separately configured with sharing disabled. See [account and quota details](server/AUTH.md). The separate teammate sharing experiment remains untouched.
+Cloud sharing on `fitness.integ.life` allows anonymous public uploads within one shared 10 GB (10,000,000,000 bytes) pool. Signed-in Integ.Life accounts each have 2 GB (2,000,000,000 bytes) for public and private videos. Private videos stay out of Gallery; the owner can share a link that friends can watch without logging in. Anyone holding that link can watch and copy it. Uploads that would exceed the applicable quota are rejected; account owners can delete older shared videos to free space. Anonymous removal requires the saved local clip on the publishing browser. `/shared` lists that account's publications across devices, shows usage, and lets the owner remove a clip and release its quota. Logging in from a local clip returns to that saved clip for review and explicit consent; it never publishes automatically. Local recordings remain device-local. GPT Sites remains separately configured with sharing disabled. See [account and quota details](server/AUTH.md). The separate teammate sharing experiment remains untouched.
 
 ## Add a game
 
@@ -102,8 +102,8 @@ ARCADE_PORT=5297 npx playwright test --config apps/arcade/playwright.config.js a
 Visitors can watch public clips and play without logging in. Gallery cards and
 clip pages link directly to the recorded game's `/play/:id` route with its name.
 The clip page puts this action above the video. Camera permissions and setup
-remain in the game's own start flow. Publishing to Gallery requires Integ.Life
-login and explicit consent; returning from login never automatically publishes.
+remain in the game's own start flow. Uploading requires explicit visibility consent; anonymous uploads are public, and
+accounts may select Private. Returning from login never automatically uploads.
 
 
 ## Optional conversation track
@@ -122,7 +122,7 @@ playback speed, preserving the original. It is cancellable and stops when hidden
 The selected version drives preview, download, native file sharing, short copies
 and Gallery publication. Switching off restores the original video immediately.
 Generated versions also appear in My clips after reload. Microphone permission
-is not upload consent; publication still requires login and explicit confirmation.
+is not upload consent; publication still requires explicit confirmation of visibility and permission from everyone shown.
 
 ## Illustrated game instructions
 

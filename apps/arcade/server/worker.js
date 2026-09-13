@@ -10,7 +10,10 @@ async function equal(a,b){const x=await digest(a||''),y=await digest(b||'');let 
 const storageEnabled=env=>!!(env.GCP_BUCKET&&(env.GCP_SERVICE_ACCOUNT_JSON||typeof env.GCP_ACCESS_TOKEN_PROVIDER==='function'));
 const enabled=env=>storageEnabled(env)&&!!env.ACCOUNTS;
 export function validateUpload(request,url){
- if(request.headers.get('X-Sharing-Consent')!=='gallery-v1')throw fail(400,'Confirm gallery sharing before uploading.');
+ const visibility=url.searchParams.get('visibility')||'public';
+ if(!['public','private'].includes(visibility))throw fail(400,'Choose public or private visibility.');
+ // Older public-only gateways reject private-v1 instead of publishing it publicly.
+ if(request.headers.get('X-Sharing-Consent')!==(visibility==='private'?'private-v1':'gallery-v1'))throw fail(400,'Confirm the selected visibility before uploading.');
  const title=(url.searchParams.get('title')||'').trim(),source=url.searchParams.get('source'),game=url.searchParams.get('game'),duration=Number(url.searchParams.get('duration'));
  const mime=(request.headers.get('Content-Type')||'').split(';')[0];
  if(!title||title.length>90||/[\x00-\x1f]/.test(title))throw fail(400,'Use a title of 1–90 characters.');
@@ -18,8 +21,6 @@ export function validateUpload(request,url){
  if(!Number.isFinite(duration)||duration<=0||duration>90)throw fail(400,'Record a clip of 90 seconds or less.');
  if(!['video/mp4','video/webm'].includes(mime))throw fail(415,'Use an MP4 or WebM recording.');
  const length=request.headers.get('Content-Length');if(length!==null&&(!Number.isSafeInteger(Number(length))||Number(length)<=0||Number(length)>MAX_BYTES))throw fail(413,'Clip must be nonempty and no larger than 20 MiB.');
- const visibility=url.searchParams.get('visibility')||'public';
- if(!['public','private'].includes(visibility))throw fail(400,'Choose public or private visibility.');
  return {title,source,game,duration,mime,visibility};
 }
 async function readBounded(request,maxBytes=MAX_BYTES){

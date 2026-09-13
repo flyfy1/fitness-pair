@@ -8,7 +8,7 @@ Set through Sites runtime environment management, never in Git or browser code:
 
 - `GCP_BUCKET`: a dedicated private bucket.
 - `GCP_SERVICE_ACCOUNT_JSON`: secret JSON with a narrowly scoped service account's email and PKCS8 private key. Prefer a future federated identity when available; this portable implementation uses the official signed JWT OAuth flow.
-- On GCP, Integ.Life login replaces the early-access upload code. Each central account owns its publications and receives 2 GB of storage. See [account protocol, quota, and recovery](AUTH.md).
+- On GCP, anonymous public uploads share a 10 GB pool. Each Integ.Life account owns its public/private publications and receives 2 GB of storage. See [account protocol, quota, and recovery](AUTH.md).
 
 The GCP Node adapter uses `GCP_IMPERSONATE_SERVICE_ACCOUNT` instead of a JSON key.
 It injects an internal `GCP_ACCESS_TOKEN_PROVIDER` function; this is server code,
@@ -20,9 +20,9 @@ Grant the service account object create/get/list/delete permissions only on this
 ## Flow
 
 1. Gameplay automatically creates an unbranded local replay of up to the latest 90 seconds in IndexedDB. Recordings stay at normal speed. This upload endpoint accepts up to 90 seconds / 20 MiB.
-2. For an oversized replay, the player first makes a local share copy of up to 55 seconds of final gameplay. The original remains local. The player logs in with Integ.Life, previews the chosen copy and explicitly consents to gallery publication.
-3. Worker verifies account authorization, Origin/CSRF, consent, metadata, bounded body and MP4/WebM magic bytes; reserves actual bytes against the account quota; then uploads private bytes and a publication record. New metadata binds the central account rather than a device management key.
-4. Gallery and `/clips/:id` read publication records. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.
+2. For an oversized replay, the player first makes a local share copy of up to 55 seconds of final gameplay. The original remains local. The player previews the chosen copy and explicitly consents to upload with the displayed visibility. Anonymous uploads are public; logged-in users may choose Private.
+3. Worker verifies account authorization, Origin/CSRF, consent, metadata, bounded body and MP4/WebM magic bytes; reserves actual bytes against the 10 GB anonymous pool or 2 GB account quota; then uploads private bytes and a publication record. New metadata binds the central account rather than a device management key.
+4. Gallery lists public records only. `/clips/:id` reads public records, or private records with an owner session or a separate random sharing token. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.
 5. Deletion removes the publication record first; downloads no longer resolve. Local deletion and public revocation are independent.
 
 The earlier access-code release was verified on GCP; account rollout evidence is tracked separately in [deployment evidence](../deploy/gcp/EVIDENCE.md). Moderation is not implemented. Header checks do not establish video codec safety or actual duration: duration is client-declared. The seven-day lifecycle rule is configured; elapsed-time cleanup has not been observed in this release check. The existing Node/FFmpeg sharing experiment contains deeper media validation and remains unchanged.

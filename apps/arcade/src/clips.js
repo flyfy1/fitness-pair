@@ -21,7 +21,7 @@ function playClipGame(clip, className='button primary'){
 export function mountClipCard(container,clip){
  let copyController=null,thumbnailController=null,selectedClip=clip,mixedClip=null,voicePlayback=null;
  const card=document.createElement('article');card.className='clip-card';card.dataset.clipId=clip.id;card.dataset.createdAt=clip.createdAt;if(clip.unsaved)card.dataset.unsaved='true';const url=objectURL(clip.blob),ownedURLs=[url];
- card.innerHTML=`<h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds${clip.playbackRate===2?' · 2× speed':''} · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-voice-preview checked> Listen to recorded voice in replay</label><label><input type="checkbox" data-conversation> Include conversation in video downloads &amp; sharing</label><p data-conversation-status>Video downloads exclude voice until selected above. The recorded voice stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version. The original video is kept separately.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button><button data-thumbnail ${clip.thumbnail?'hidden':''}>Generate thumbnail</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
+ card.innerHTML=`<h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds${clip.playbackRate===2?' · 2× speed':''} · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-voice-preview checked> Listen to recorded voice in replay</label><label><input type="checkbox" data-conversation> Include conversation in video downloads &amp; sharing</label><p data-conversation-status>Video downloads exclude voice until selected above. The recorded voice stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version. The original video is kept separately.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Upload &amp; share</button><button data-delete>Delete local clip</button><button data-thumbnail ${clip.thumbnail?'hidden':''}>Generate thumbnail</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
  const posterURL=value=>{if(!(value.thumbnail instanceof Blob))return null;const poster=objectURL(value.thumbnail);ownedURLs.push(poster);return poster;};
  const preview=mountClipPreview(card,{src:url,poster:posterURL(clip),title:clip.title,width:clip.width,height:clip.height});
  card.dispose=()=>{thumbnailController?.abort();copyController?.abort();voicePlayback?.dispose();preview.dispose();ownedURLs.forEach(releaseURL);card.remove();};
@@ -135,38 +135,53 @@ async function prepareThumbnail(clip,signal){
 }
 async function publishThumbnail(clip,session){
  await prepareThumbnail(clip);
- await api('/api/posters/'+clip.id,{method:'PUT',headers:{'Content-Type':'image/jpeg','X-CSRF-Token':session.csrfToken,'X-Sharing-Consent':'gallery-v1'},body:clip.thumbnail});
+ await api('/api/posters/'+clip.id,{method:'PUT',headers:{'Content-Type':'image/jpeg',...uploadHeaders(clip,session),'X-Sharing-Consent':'gallery-v1'},body:clip.thumbnail});
+}
+function uploadHeaders(clip,session){
+ return {...(session.csrfToken?{'X-CSRF-Token':session.csrfToken}:{}),...(clip.manageToken?{'X-Management-Key':clip.manageToken}:{})};
 }
 async function publishForm(container,clip){
- container.innerHTML='<p role="status">Checking your account…</p>';
+ container.innerHTML='<p role="status">Checking shared storage…</p>';
  try{
   const config=await api('/api/config');
   if(!config.sharingEnabled){container.innerHTML='<p class="notice">Gallery sharing isn’t available yet. Your clip stays on this device. You can download it now.</p>';return;}
-  if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 90 seconds / 20 MiB. Make a short share copy, preview it, then publish that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
-  if(clip.unsaved){container.innerHTML='<p class="notice">Save or download this clip before leaving the page to log in. It has not been saved on this device yet.</p>';return;}
+  if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 90 seconds / 20 MiB. Make a short share copy, preview it, then upload that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
+  if(clip.unsaved){container.innerHTML='<p class="notice">Save or download this clip before uploading. It has not been saved on this device yet.</p>';return;}
   const session=await getSession();
-  if(!session.user){container.innerHTML=`<div class="publish-form"><h3>Log in to publish your clip.</h3><p>Use your Integ.Life account to manage your shared videos from any device. You get 2 GB of shared storage.</p><a class="button primary" href="${loginURL('/library?publish='+clip.id)}">Log in with Integ.Life ↗</a><p>Your saved video stays on this device. After login, you can review it before publishing.</p></div>`;return;}
   if(clip.shared){
-   try{await api('/api/clips/'+clip.id);await publishThumbnail(clip,session);container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
+   try{const existing=await api('/api/clips/'+clip.id+new URL(clip.sharedURL||'/',location.origin).search);await publishThumbnail(clip,session);container.innerHTML=`<p>Already shared. <a class="text-link" href="${escape(existing.url)}">Open shared video →</a></p>`;return;}
    catch(error){if(error.status!==404)throw error;clip.shared=false;await updateClip(clip);}
   }
-  const account=await api('/api/account/clips'),remaining=Math.max(0,account.limitBytes-account.usedBytes);
-  container.innerHTML=`<form class="publish-form"><h3>Share this clip in the gallery?</h3><p>Publishing as <strong>${escape(session.user.email)}</strong> · <a href="/shared">My shared clips</a></p><label>Clip title<input name="title" maxlength="90" required value="${escape(clip.title)}"></label><p>${storageLabel(clip.blob.size)} to upload · ${storageLabel(remaining)} available of 2 GB</p><label><input type="checkbox" name="consent" required>I agree to publish this clip in the gallery and have permission from everyone shown.</label><p>Anyone with the link can view and copy this clip. You can remove it from My shared clips on any device. Clips expire after 7 days.</p><button class="button primary" type="submit" ${clip.blob.size>remaining?'disabled':''}>Publish this clip ↗</button><p data-status role="status">${clip.blob.size>remaining?'Your shared storage is full. Remove a clip from My shared clips to free space.':''}</p></form>`;
-  const form=container.querySelector('form');
+  const account=session.user?await api('/api/account/clips'):config.anonymous;
+  if(!account)throw new Error('Shared storage is unavailable. Please try again shortly.');
+  const remaining=Math.max(0,account.limitBytes-account.usedBytes),full=clip.blob.size>remaining;
+  const fullMessage=session.user?'Your 2 GB storage is full. Delete older videos from My shared clips to free space.':'The shared 10 GB anonymous storage is full. Log in to use your own 2 GB, or try again later.';
+  container.innerHTML=`<form class="publish-form"><h3>Upload and share this clip?</h3>${session.user?`<p>Uploading as <strong>${escape(session.user.email)}</strong> · <a class="text-link" href="/shared">My shared clips</a></p>`:`<p>Upload without an account: public videos only. Anonymous uploads share a 10 GB pool across all visitors.</p><p><a class="text-link" href="${loginURL('/library?publish='+clip.id)}">Log in with Integ.Life ↗</a> for private links and your own 2 GB.</p>`}<label>Clip title<input name="title" maxlength="90" required value="${escape(clip.title)}"></label>${session.user?'<label>Visibility<select name="visibility"><option value="public">Public — gallery</option><option value="private">Private — link access</option></select></label>':'<p><strong>Public — visible in the gallery</strong></p>'}<p>${storageLabel(clip.blob.size)} to upload · ${storageLabel(remaining)} available ${session.user?'of your 2 GB':'in the shared 10 GB anonymous pool'}</p><p data-visibility-info></p><label><input type="checkbox" name="consent" required>I agree to upload this clip with the visibility shown above and have permission from everyone shown.</label><p>${session.user?'Remove videos from My shared clips on any device.':'Keep this local clip on this browser to remove its public upload later.'} Shared clips expire after 7 days.</p><button class="button primary" type="submit" ${full?'disabled':''}>Upload this clip ↗</button><p data-status role="status">${full?fullMessage:''}</p><div data-cleanup></div></form>`;
+  const form=container.querySelector('form'),visibility=form.elements.visibility;
+  const explainVisibility=()=>{form.querySelector('[data-visibility-info]').textContent=visibility?.value==='private'?'Private: hidden from the public gallery. Anyone with your sharing link can watch and copy it, including friends without an account.':'Public: anyone can find this video in the gallery, watch it and copy it.';form.elements.consent.checked=false;};
+  explainVisibility();if(visibility)visibility.onchange=explainVisibility;
   form.onsubmit=async event=>{
-   event.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Publishing your clip…';
+   event.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Uploading your clip…';
+   const title=String(new FormData(form).get('title')),access=visibility?.value||'public';
+   // Freeze the consented visibility while encoding and uploading.
+   if(visibility)visibility.disabled=true;
    try{
-    const title=String(new FormData(form).get('title'));
+    if(!session.user){
+     clip.manageToken||=crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');
+     const saved=await updateClip(clip);
+     if(!saved.some(item=>item.id===clip.id&&item.manageToken===clip.manageToken))throw new Error('This local clip is no longer saved. Download it before leaving; upload was not started.');
+    }
     await prepareThumbnail(clip);
-    const result=await api(`/api/clips/${clip.id}?title=${encodeURIComponent(title)}&game=${encodeURIComponent(clip.game)}&source=${clip.source}&duration=${clip.duration}`,{method:'PUT',headers:{'Content-Type':clip.blob.type,'X-CSRF-Token':session.csrfToken,'X-Sharing-Consent':'gallery-v1'},body:clip.blob});
-    clip.shared=true;clip.title=title;
-    try{await updateClip(clip);}catch{/* Account ownership persists even if local storage becomes unavailable. */}
+    const result=await api(`/api/clips/${clip.id}?title=${encodeURIComponent(title)}&game=${encodeURIComponent(clip.game)}&source=${clip.source}&duration=${clip.duration}&visibility=${access}`,{method:'PUT',headers:{'Content-Type':clip.blob.type,...uploadHeaders(clip,session),'X-Sharing-Consent':access==='private'?'private-v1':'gallery-v1'},body:clip.blob});
+    clip.shared=true;clip.title=title;clip.sharedURL=result.url;clip.visibility=result.visibility;
+    try{await updateClip(clip);}catch{/* Cloud ownership and device key have already been persisted. */}
     await publishThumbnail(clip,session);
-    container.innerHTML=`<p>Published. <a class="text-link" href="${escape(result.url)}">Open your gallery page →</a> · <a href="/shared">Manage my shared clips</a></p>`;
+    container.innerHTML=`<p>Uploaded. ${result.visibility==='private'?'Private link ready.':'Public in the gallery.'} <a class="text-link" href="${escape(result.url)}">Open shared video →</a>${session.user?' · <a class="text-link" href="/shared">Manage my shared clips</a>':''}</p>`;
    }catch(error){
-    status.textContent=error.message;status.className='error';button.disabled=false;
+    status.textContent=error.message;status.className='error';button.disabled=error.status===413;
+    if(!session.user&&clip.manageToken){const cleanup=form.querySelector('[data-cleanup]');cleanup.innerHTML='<button type="button">Remove unfinished upload</button>';cleanup.querySelector('button').onclick=()=>confirmRemoval(cleanup,async()=>{await removeSharedClip(clip.id,clip.manageToken);clip.shared=false;await publishForm(container,clip);});}
     if(error.status===401){const link=document.createElement('a');link.className='text-link';link.href=loginURL('/library?publish='+clip.id);link.textContent='Log in again →';status.append(' ',link);}
-   }
+   }finally{if(visibility)visibility.disabled=false;}
   };
  }catch(error){container.innerHTML=`<p class="error">${escape(error.message)} Your clip is still on this device.</p>`;}
 }
@@ -185,9 +200,9 @@ export async function renderGallery(container){
 }
 export async function renderClip(container,id){
  container.innerHTML='<p role="status">Loading clip…</p>';
- try{const clip=await api('/api/clips/'+encodeURIComponent(id));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><div class="clip-game-invite">${playClipGame(clip)}<p>No login needed to play.</p></div><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><div data-shared-preview></div><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><div id="remove-confirmation"></div><p id="share-status" role="status"></p></article>`;
+ try{const clip=await api('/api/clips/'+encodeURIComponent(id)+(new URLSearchParams(location.search).has('share')?'?share='+encodeURIComponent(new URLSearchParams(location.search).get('share')):''));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><div class="clip-game-invite">${playClipGame(clip)}<p>No login needed to play.</p></div><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${clip.visibility==='private'?'Private — people with the link can watch':'Public'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><div data-shared-preview></div><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><div id="remove-confirmation"></div><p id="share-status" role="status"></p></article>`;
  mountSharedPreview(container.querySelector('[data-shared-preview]'),clip);
- const url=location.origin+'/clips/'+clip.id,status=container.querySelector('#share-status');document.title=clip.title+' · '+BRAND_NAME;
+ const url=location.origin+(clip.url||'/clips/'+clip.id),status=container.querySelector('#share-status');document.title=clip.title+' · '+BRAND_NAME;
  container.querySelector('#copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(url);status.textContent='Link copied.';}catch{status.textContent='Copy this link: '+url;}};
  const share=container.querySelector('#native-share');share.hidden=!navigator.share;share.onclick=async()=>{try{await navigator.share({title:clip.title,url});}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable. Use Copy link.';}};
  let legacyKey=null;

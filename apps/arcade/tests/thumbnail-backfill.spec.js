@@ -44,8 +44,8 @@ test('publication sends a JPEG and shared surfaces request only posters before p
  });
  await page.route('**/api/media/*',r=>{videoRequests.push(r.request().url());return r.fulfill({contentType:'video/mp4',body:media});});
  await recording(page);
- await page.getByRole('button',{name:'Publish to gallery',exact:true}).click();await page.locator('input[name=consent]').check();
- await page.getByRole('button',{name:'Publish this clip',exact:false}).click();await expect(page.getByRole('link',{name:'Open your gallery page',exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'Upload & share',exact:true}).click();await page.locator('input[name=consent]').check();
+ await page.getByRole('button',{name:'Upload this clip',exact:false}).click();await expect(page.getByRole('link',{name:'Open shared video',exact:false})).toBeVisible();
  expect(poster.length).toBeGreaterThan(100);expect(videoRequests).toHaveLength(0);
  for(const path of ['/gallery','/shared','/clips/'+clip.id]){
   await page.goto(path);const video=page.locator('.clip-preview video');

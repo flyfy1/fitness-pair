@@ -30,7 +30,7 @@ async function fixture(t){
  }});
  const request=(path,options={})=>worker.fetch(new Request('https://arcade.test'+path,options),env);
  const headers=user=>({'Content-Type':'video/webm','Origin':'https://arcade.test','X-Sharing-Consent':'gallery-v1','X-Management-Key':key,...(user?{'X-Test-User':user,'X-CSRF-Token':'csrf'}:{})});
- const upload=(id,user=null,visibility='public')=>request('/api/clips/'+id+'?title=Test&game=motion-quest&source=synthetic&duration=1&visibility='+visibility,{method:'PUT',headers:headers(user),body:video});
+ const upload=(id,user=null,visibility='public')=>request('/api/clips/'+id+'?title=Test&game=motion-quest&source=synthetic&duration=1&visibility='+visibility,{method:'PUT',headers:{...headers(user),'X-Sharing-Consent':visibility==='private'?'private-v1':'gallery-v1'},body:video});
  return {store,objects,request,headers,upload,failMarker:()=>{failMarker=true;},failDelete:()=>{failDelete=true;}};
 }
 
@@ -67,6 +67,7 @@ test('anonymous quota rejects actual incoming bytes, rejects stale sessions, and
 
 test('private metadata, video, thumbnails and ranges require the owner or share token; gallery never reveals them',async t=>{
  const f=await fixture(t),id=randomUUID();
+ assert.equal((await f.request('/api/clips/'+id+'?title=Test&game=motion-quest&source=synthetic&duration=1&visibility=private',{method:'PUT',headers:f.headers(owner),body:video})).status,400);
  const response=await f.upload(id,owner,'private');assert.equal(response.status,201);
  const clip=await response.json(),query=new URL(clip.url,'https://arcade.test').search;
  assert.match(query,/^\?share=[A-Za-z0-9_-]{43}$/);assert.equal(clip.ownerId,undefined);

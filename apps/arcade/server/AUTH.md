@@ -2,10 +2,10 @@
 
 ## MVP card
 
-- Target user: a player who wants to publish and later manage a game clip.
-- Job: use an existing Integ.Life account, publish a local replay, and manage it from another device.
+- Target user: a player who wants to share a game clip, with or without an account.
+- Job: upload a local replay publicly as a guest, or use an Integ.Life account for public/private sharing and management across devices.
 - Riskiest assumption: central login, durable ownership, and storage accounting remain consistent across redirects, retries, and restarts.
-- P1 loop: local clip → Integ.Life login → explicit publication → My shared clips → public playback → owner removal.
+- P1 loop: preview local clip → choose anonymous Public or account Public/Private → consent and upload → share playback link → remove video and release quota.
 - Success proof: protocol and quota tests; a browser login/publication/removal round trip; independent account isolation; actual production storage readback.
 - No-gos: private recording in tests, browser-held central tokens, cross-domain cookies, account merging by email, or silent anonymous fallback after a login expires.
 - Appetite: one account and sharing slice. Editing videos, moderation, billing, and broader social features are deferred.
@@ -118,7 +118,8 @@ a later login. A signed-in attempt with an expired CSRF token returns 401 instea
 of silently becoming a public anonymous upload.
 
 `visibility` defaults to `public` for compatibility. Anonymous private uploads are
-rejected. Private uploads receive a separate random 256-bit share token and never
+rejected. Private uploads require a distinct `private-v1` consent header, so older public-only
+gateways reject them during a version mismatch. They receive a separate random 256-bit share token and never
 appear in the public Gallery. Their metadata, video (including HEAD and Range),
 and poster require either the owner session or the complete `?share=...` link.
 The owner list returns that link for sharing across devices. Anyone who receives
@@ -130,3 +131,17 @@ Synthetic server checks: `node --test apps/arcade/deploy/gcp/*.test.mjs
 apps/arcade/server/*.test.js` covers exact pool boundaries, concurrency, restart,
 legacy inventory, failed writes/deletion retries, account isolation, private media
 and poster access, link forwarding, and owner revocation.
+
+
+Browser evidence for this slice: six Chrome tests use a real local gateway,
+durable quota files, mock identity/storage, and browser-encoded synthetic WebM.
+They cover anonymous upload/playback/device removal, both full-quota notices,
+private upload/owner listing/copied-link playback/revocation, missing-token denial,
+interrupted anonymous cleanup, and 320/390px layout. These are local integration
+checks; they do not establish a deployed release or participant recording evidence.
+
+Rollback boundary: after private publications exist, never restore a gateway that
+predates visibility checks: it would expose private records through the Gallery.
+Older account stores also cannot read anonymous reservations. Preserve the current
+ledger and use a compatible release or disable the Gallery API while recovering.
+Do not reset the ledger or restore stale account state to make old code start.

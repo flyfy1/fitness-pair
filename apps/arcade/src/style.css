@@ -105,3 +105,5 @@
 .clip-preview-play>span:first-child{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--blue);box-shadow:0 2px 16px #0005;font-size:24px;padding-left:4px}
 .clip-preview-play>span:last-child{padding:6px 12px;border-radius:20px;background:#182346e8;font-size:13px;font-weight:700}
 .clip-preview-play:focus-visible{outline-offset:-5px}
+
+.publish-form select{display:block;width:100%;max-width:100%;min-height:44px;margin-top:8px;padding:10px;border:1px solid #425277;border-radius:6px;background:white;font:inherit}.publish-form select:focus-visible{outline:3px solid #ff5433;outline-offset:3px}

@@ -7,7 +7,7 @@ import {once} from 'node:events';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createGateway} from '../deploy/gcp/gateway.mjs';
-import {createAccountStore, ACCOUNT_LIMIT_BYTES} from '../deploy/gcp/account-store.mjs';
+import {createAccountStore, ACCOUNT_LIMIT_BYTES, ANONYMOUS_LIMIT_BYTES} from '../deploy/gcp/account-store.mjs';
 import {createWorker} from '../server/worker.js';
 
 const origin='http://127.0.0.1:5193', issuer='http://127.0.0.1:5194';
@@ -74,13 +74,13 @@ async function localClip(page){
 
 test('login returns to the clip, publishes with consent, isolates accounts, and lets a second device revoke it',async({page,browser})=>{
  await page.goto('/library');const clip=await localClip(page);await page.reload();
- await page.getByRole('button',{name:'Publish to gallery'}).click();
- await expect(page.getByText('Log in to publish your clip.')).toBeVisible();
+ await page.getByRole('button',{name:'Upload & share'}).click();
+ await expect(page.getByText('Upload without an account: public videos only. Anonymous uploads share a 10 GB pool across all visitors.')).toBeVisible();
  await page.getByRole('link',{name:'Log in with Integ.Life'}).click();await page.getByRole('link',{name:'Continue as alice'}).click();
- await expect(page.getByRole('heading',{name:'Share this clip in the gallery?'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Upload and share this clip?'})).toBeVisible();
  await expect(page.locator('input[name="code"]')).toHaveCount(0);
- await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Publish this clip'}).click();
- await expect(page.getByText('Published.',{exact:false})).toBeVisible();
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
+ await expect(page.getByText('Uploaded.',{exact:false})).toBeVisible();
  expect(objects.get('videos/'+clip.id).length).toBe(clip.bytes);expect(objects.get('videos/'+clip.id+'.jpg').length).toBeGreaterThan(100);
  await page.goto('/shared');await expect(page.locator('meter')).toHaveAttribute('value',String(clip.bytes));
  const stranger=await browser.newContext({baseURL:origin}),other=await stranger.newPage();
@@ -101,16 +101,16 @@ test('login returns to the clip, publishes with consent, isolates accounts, and 
 test('full quota blocks the UI and API; a partial upload remains manageable without losing its reservation',async({page})=>{
  await login(page);await page.goto('/library');const clip=await localClip(page),filler=randomUUID();
  await store.reserve(userId('alice'),{id:filler,title:'Synthetic quota reservation',game:'motion-quest',bytes:ACCOUNT_LIMIT_BYTES-clip.bytes+1,createdAt:Date.now(),expiresAt:Date.now()+60000});
- await page.reload();await page.getByRole('button',{name:'Publish to gallery'}).click();
- await expect(page.getByRole('button',{name:'Publish this clip'})).toBeDisabled();
+ await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
+ await expect(page.getByRole('button',{name:'Upload this clip'})).toBeDisabled();
  const result=await page.evaluate(async id=>{
   const session=await(await fetch('/api/auth/session')).json();
   const db=await new Promise(resolve=>{const req=indexedDB.open('fitness-pair-clips',1);req.onsuccess=()=>resolve(req.result);});
   const clip=await new Promise(resolve=>{const req=db.transaction('clips').objectStore('clips').get(id);req.onsuccess=()=>resolve(req.result);});db.close();
   const response=await fetch('/api/clips/'+id+'?title=Quota&game=motion-quest&source=synthetic&duration=1',{method:'PUT',headers:{'Content-Type':clip.blob.type,'X-Sharing-Consent':'gallery-v1','X-CSRF-Token':session.csrfToken},body:clip.blob});return response.status;
  },clip.id);expect(result).toBe(413);expect(objects.has('videos/'+clip.id)).toBe(false);
- await store.release(userId('alice'),filler);await page.reload();await page.getByRole('button',{name:'Publish to gallery'}).click();
- failMarker=true;await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Publish this clip'}).click();
+ await store.release(userId('alice'),filler);await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
+ failMarker=true;await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
  await expect(page.getByText('Publication did not finish.',{exact:false})).toBeVisible();
  await page.goto('/shared');await expect(page.locator('meter')).toHaveAttribute('value',String(clip.bytes));
  await expect(page.getByText('This upload did not finish or is being removed.',{exact:false})).toBeVisible();
@@ -126,4 +126,66 @@ test('mobile login and cancellation stay reachable without horizontal overflow',
  await expect(page.locator('meter')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.setViewportSize({width:320,height:740});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+
+test('anonymous player publishes public video, a friend watches, and the original browser removes it',async({page,browser})=>{
+ await page.goto('/library');const clip=await localClip(page);await page.reload();
+ await page.getByRole('button',{name:'Upload & share'}).click();
+ await expect(page.getByText('Upload without an account:',{exact:false})).toBeVisible();
+ await expect(page.getByRole('combobox')).toHaveCount(0);
+ expect(objects.has('videos/'+clip.id)).toBe(false);
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
+ await expect(page.getByText('Public in the gallery.',{exact:false})).toBeVisible();
+ expect((await store.list(null)).usedBytes).toBe(clip.bytes);
+ expect(objects.get('videos/'+clip.id+'.jpg').length).toBeGreaterThan(100);
+ const friend=await browser.newContext({baseURL:origin}),viewer=await friend.newPage();
+ await viewer.goto('/gallery');await expect(viewer.locator('a[href="/clips/'+clip.id+'"]').first()).toBeVisible();
+ await viewer.goto('/clips/'+clip.id);await viewer.getByRole('button',{name:/Play replay:/}).click();
+ await expect.poll(()=>viewer.locator('video').evaluate(video=>video.currentTime)).toBeGreaterThan(0);
+ await expect(viewer.getByRole('button',{name:'Remove shared clip'})).toBeHidden();
+ await page.goto('/clips/'+clip.id);await page.getByRole('button',{name:'Remove shared clip'}).click();await page.getByRole('button',{name:'Remove shared clip',exact:true}).last().click();
+ await expect(page.getByRole('heading',{name:'SHARED CLIP REMOVED.'})).toBeVisible();
+ expect((await store.list(null)).usedBytes).toBe(0);expect((await viewer.request.get('/api/media/'+clip.id)).status()).toBe(404);
+ await friend.close();
+});
+
+test('private video stays out of the gallery and plays for a friend only with the full copied link',async({page,browser})=>{
+ await login(page);await page.goto('/library');const clip=await localClip(page);await page.reload();
+ await page.getByRole('button',{name:'Upload & share'}).click();
+ await page.getByRole('combobox').selectOption('private');
+ await page.setViewportSize({width:390,height:844});await page.locator('.publish-form').scrollIntoViewIfNeeded();await page.screenshot({path:'.local/private-upload-mobile.png',fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await expect(page.getByText('Private: hidden from the public gallery.',{exact:false})).toBeVisible();
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
+ await expect(page.getByText('Private link ready.',{exact:false})).toBeVisible();
+ const shared=await page.getByRole('link',{name:'Open shared video'}).getAttribute('href');expect(shared).toContain('?share=');
+ await page.goto('/shared');await expect(page.getByText('Private · Link access',{exact:false})).toBeVisible();
+ expect(await page.getByRole('link',{name:'Open shared link'}).getAttribute('href')).toBe(shared);
+ const friend=await browser.newContext({baseURL:origin}),viewer=await friend.newPage();
+ await viewer.goto('/gallery');await expect(viewer.locator('a[href*="'+clip.id+'"]').first()).toHaveCount(0);
+ await viewer.goto('/clips/'+clip.id);await expect(viewer.getByRole('heading',{name:'CLIP UNAVAILABLE.'})).toBeVisible();
+ await viewer.goto(shared);await expect(viewer.locator('.clip-view h1')).toHaveText('Synthetic account clip');
+ await viewer.getByRole('button',{name:/Play replay:/}).click();await expect.poll(()=>viewer.locator('video').evaluate(video=>video.currentTime)).toBeGreaterThan(0);
+ expect(await viewer.locator('video').getAttribute('poster')).toContain('?share=');
+ await viewer.evaluate(()=>{window.copied=null;Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>{window.copied=value;}}});});
+ await viewer.getByRole('button',{name:'Copy link',exact:true}).click();expect(await viewer.evaluate(()=>window.copied)).toBe(origin+shared);
+ await page.getByRole('button',{name:'Remove',exact:true}).click();await page.getByRole('button',{name:'Remove shared clip',exact:true}).click();
+ await expect(page.locator('meter')).toHaveAttribute('value','0');
+ await viewer.reload();await expect(viewer.getByRole('heading',{name:'CLIP UNAVAILABLE.'})).toBeVisible();await friend.close();
+});
+
+test('anonymous full pool explains login recovery and an interrupted upload can be removed from the form',async({page})=>{
+ await page.setViewportSize({width:320,height:740});await page.goto('/library');const clip=await localClip(page),filler=randomUUID();
+ await store.reserve(null,{id:filler,bytes:ANONYMOUS_LIMIT_BYTES,expiresAt:Date.now()+60000});
+ await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
+ await expect(page.getByRole('button',{name:'Upload this clip'})).toBeDisabled();
+ await expect(page.locator('[data-status]')).toContainText('10 GB anonymous storage is full');
+ await page.locator('.publish-form').scrollIntoViewIfNeeded();await page.screenshot({path:'.local/anonymous-full-mobile.png',fullPage:true});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await store.release(null,filler);await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
+ failMarker=true;await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
+ await expect(page.getByRole('button',{name:'Remove unfinished upload'})).toBeVisible();
+ expect((await store.list(null)).usedBytes).toBe(clip.bytes);
+ await page.getByRole('button',{name:'Remove unfinished upload'}).click();await page.getByRole('button',{name:'Remove shared clip',exact:true}).click();
+ await expect.poll(async()=>(await store.list(null)).usedBytes).toBe(0);await expect(page.getByRole('button',{name:'Upload this clip'})).toBeEnabled();
 });

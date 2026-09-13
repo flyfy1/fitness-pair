@@ -47,6 +47,7 @@ for(const webm of [false,true])test(`rolling ${webm?'WebM fallback':'MP4'} drops
 
 test('a 96-second recording retains only the latest 90 seconds at original speed',async({page},info)=>{
  test.setTimeout(120000);let uploaded=null;
+ await page.route('**/api/posters/*',route=>route.fulfill({json:{url:'/api/posters/synthetic'}}));
  await page.route('**/api/config',route=>route.fulfill({json:{sharingEnabled:true}}));
  await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:{email:'synthetic@example.test'},csrfToken:'test-only'}}));
  await page.route('**/api/account/clips',route=>route.fulfill({json:{clips:[],usedBytes:0,limitBytes:2e9}}));
@@ -82,9 +83,9 @@ test('a 96-second recording retains only the latest 90 seconds at original speed
  expect(result.first[1]).toBeGreaterThan(80);expect(result.first[0]).toBeLessThan(30);expect(result.last[2]).toBeGreaterThan(200);
  expect(result.thumbnail[1]).toBeGreaterThan(80);expect(result.thumbnail[0]).toBeLessThan(30);
  await page.reload();const card=page.locator('.clip-card');
- await card.getByRole('button',{name:'Publish to gallery',exact:true}).click();
- await card.locator('input[name=consent]').check();await card.getByRole('button',{name:'Publish this clip',exact:false}).click();
- await expect(card.getByRole('link',{name:'Open your gallery page',exact:false})).toBeVisible();
+ await card.getByRole('button',{name:'Upload & share',exact:true}).click();
+ await card.locator('input[name=consent]').check();await card.getByRole('button',{name:'Upload this clip',exact:false}).click();
+ await expect(card.getByRole('link',{name:'Open shared video',exact:false})).toBeVisible();
  expect(uploaded).toEqual({duration:result.duration,size:result.size});
  await info.attach('synthetic-96-second-recording',{body:JSON.stringify(result),contentType:'application/json'});
 });
