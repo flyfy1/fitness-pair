@@ -6,6 +6,7 @@ The complete Hopmodo landing page and all five mounted games are deployed to
 The GPT Sites deployment and `.openai/hosting.json` are not modified or published
 by this workflow. Default builds retain the GPT Sites address. GCP builds set
 `VITE_SITE_URL=https://fitness.integ.life` for video branding and game share links.
+See [deployment evidence](EVIDENCE.md) for the verified release and limitations.
 
 ## Deploy
 
