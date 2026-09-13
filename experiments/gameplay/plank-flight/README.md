@@ -172,12 +172,17 @@ stopped after cancellation. Tracking loss is not interpreted as workout failure.
 
 ## Full-window play
 
-Phones default to landscape play. Portrait touch screens show a rotation prompt
-before camera or demo entry. The landscape button and game entry request native
-fullscreen/orientation locking where supported; browsers that reject locking keep
-the prompt until the player physically turns the phone. Returning to portrait
-cancels the current flight and stops its camera/worker; turn sideways and start a
-fresh flight. Desktop portrait windows remain supported.
+Phone play follows the device orientation by default. The initial setup screen
+also offers Landscape or Portrait as optional requests. Neither orientation is
+required: unsupported, rejected or pending fullscreen/rotation requests never block
+camera or demo entry. Starting releases any setup orientation lock so players can turn the phone during
+play; the setup controls then disappear.
+
+Rotating between landscape and portrait preserves the current flight and camera
+session. Players can also choose Follow device before starting to release an
+orientation lock. Browser window blur and backgrounding still pause play under
+the existing camera lifecycle rules. WeChat-specific device behavior needs a real
+phone check; browser tests simulate missing, rejected and stalled orientation APIs.
 
 The game fills the current window. Video, body overlay, helicopter and gates share
 one stage; the timer, instructions and controls are overlays. Portrait and landscape

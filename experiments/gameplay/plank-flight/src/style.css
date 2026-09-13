@@ -148,16 +148,11 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
 }
 
 
-.landscape-prompt {
-  position: absolute; inset: 0; z-index: 20; display: grid; place-items: center;
-  padding: max(24px, env(safe-area-inset-top)) 24px; overflow: auto;
-  background: #102c38; text-align: center; touch-action: auto;
-}
-.landscape-prompt > div { max-width: 340px; }
-.landscape-prompt h2 { font: normal 32px/1.15 Georgia, serif; }
-.landscape-prompt p { color: #c2d5d1; line-height: 1.6; }
-.rotate-phone { display: block; font-size: 72px; color: #f3cd8e; }
-
+.orientation-controls { margin: 12px 0; }
+.orientation-controls label { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.orientation-controls select { min-height: 44px; max-width: 100%; font: inherit; padding: 6px; border-radius: 8px; background: #103340; color: #e8f3ec; border: 1px solid #bfd5c580; }
+.orientation-controls select:focus-visible { outline: 3px solid #ffd994; outline-offset: 2px; }
+.orientation-controls p:empty { display: none; }
 
 /* Setup controls disappear on entry; keep guidance near the remaining toolbar. */
 .stage.session-started .cue { bottom: max(94px, calc(env(safe-area-inset-bottom) + 80px)); }

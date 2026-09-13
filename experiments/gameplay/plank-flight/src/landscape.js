@@ -1,33 +1,31 @@
-/** Phone play uses native landscape; unsupported browsers keep a rotation prompt. */
-export function setupLandscape(stage, prompt, button, onPortrait) {
-  const touch = matchMedia('(any-pointer: coarse)');
-  const portrait = matchMedia('(orientation: portrait)');
-  const mobile = () => touch.matches && Math.min(innerWidth,innerHeight)<=600;
-  const blocked = () => mobile() && portrait.matches;
-  let wasBlocked=false, pending=false;
-  const refresh = () => {
-    const waiting=blocked();
-    prompt.hidden=!waiting;
-    for(const child of stage.children)if(child!==prompt)child.inert=waiting;
-    if(waiting&&!wasBlocked) { onPortrait(); button.focus(); }
-    wasBlocked=waiting;
-  };
-  const request = async () => {
-    if(!mobile()||pending)return;
-    pending=true;
+import {t} from './i18n.js';
+
+/** Orientation is a preference, never a prerequisite for camera or demo entry. */
+export function setupOrientation(stage, controls, select, status) {
+  const touch=matchMedia('(any-pointer: coarse)');
+  let pending=false,started=false;
+  const refresh=()=>{controls.hidden=started||!touch.matches;};
+  const unlock=()=>{try{screen.orientation?.unlock?.();}catch{}};
+  select.addEventListener('change',async()=>{
+    if(pending)return;
+    const choice=select.value;
+    unlock();
+    status.textContent='';
+    if(choice==='device')return;
+    pending=true;select.disabled=true;
     try {
-      if(typeof screen.orientation?.lock!=='function')return;
+      if(typeof screen.orientation?.lock!=='function')throw new Error('Orientation lock unavailable');
       if(!document.fullscreenElement)await stage.requestFullscreen?.();
-      await screen.orientation.lock('landscape');
+      if(started)return;
+      await screen.orientation.lock(choice);
+      if(started)unlock();
     } catch {
-      // Physical rotation remains available when native locking is rejected.
-    } finally {pending=false;refresh();}
-  };
-  button.addEventListener('click',request);
-  portrait.addEventListener('change',refresh);
+      unlock();select.value='device';
+      status.textContent=t('Automatic rotation is unavailable. You can still start and play in either orientation.');
+    } finally {pending=false;select.disabled=false;}
+  });
   touch.addEventListener('change',refresh);
-  window.addEventListener('resize',refresh);
-  window.addEventListener('pagehide',()=>{try{screen.orientation?.unlock?.();}catch{}});
+  window.addEventListener('pagehide',unlock);
   refresh();
-  return {blocked,request};
+  return {finishSetup(){started=true;unlock();refresh();}};
 }
