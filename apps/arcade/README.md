@@ -117,3 +117,18 @@ The selected version drives preview, download, native file sharing, short copies
 and Gallery publication. Switching off restores the original video immediately.
 Generated versions also appear in My clips after reload. Microphone permission
 is not upload consent; publication still requires login and explicit confirmation.
+
+## Illustrated game instructions
+
+Every listed game card displays code-native movement illustrations. Clicking its
+art, title or Play now opens a matching instruction dialog before navigation.
+The guide covers the goal, camera setup, three specific control steps, pause and
+finish behavior, and a labeled movement sequence. Let’s play enters the existing
+AR game without changing its controls or recording lifecycle. Direct `/play/`
+links remain available for shared game links and returning players.
+
+The dialog does not open a camera or mount a game. Escape, its close button, and
+the backdrop dismiss it and restore focus/scrolling. Long guides scroll inside
+the dialog, while the heading and entry button remain available. Mobile guides
+stack the person diagrams with readable captions instead of shrinking the text.
+Instructions and diagrams live in `src/game-guides.js` and `src/movement-art.js`.

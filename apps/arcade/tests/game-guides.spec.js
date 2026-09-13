@@ -1,0 +1,32 @@
+import {test,expect} from '@playwright/test';
+import {gameCatalog} from '../game-catalog.js';
+import {gameGuides} from '../src/game-guides.js';
+const listed=gameCatalog.filter(g=>g.listed!==false);
+for(const game of listed)test(`${game.id}: illustrated instructions before entering the game`,async({page},info)=>{
+ await page.addInitScript(()=>{window.cameraRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;throw new Error('No camera in instruction tests');};});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/#arcade');
+ const card=page.locator('.game-card').filter({has:page.getByRole('heading',{name:game.title,exact:true})});
+ await expect(card.locator('svg[role=img]')).toHaveCount(2);
+ if(game.id==='ar-breakout')await page.screenshot({path:info.outputPath('arcade-art.png')});
+ const entry=card.getByRole('link',{name:'Play '+game.title,exact:true});await entry.click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();await expect(dialog.getByRole('heading',{name:game.title,exact:true})).toBeVisible();
+ await expect(dialog.locator('.guide-goal')).toHaveText(gameGuides[game.id].goal);await expect(dialog.locator('.guide-steps li')).toHaveCount(3);await expect(dialog.locator('svg[role=img]')).toHaveCount(3);
+ await expect(page.locator('#game-frame')).toHaveCount(0);expect(await page.evaluate(()=>window.cameraRequests)).toBe(0);
+ await page.screenshot({path:info.outputPath('guide-desktop.png')});
+ await page.keyboard.press('Escape');await expect(dialog).not.toBeVisible();await expect(entry).toBeFocused();
+ await card.getByRole('link',{name:'Play now'}).click();await expect(dialog).toBeVisible();
+ await page.setViewportSize({width:320,height:740});
+ await dialog.locator('.guide-pause').scrollIntoViewIfNeeded();await expect(dialog.locator('.guide-pause')).toBeVisible();
+ await dialog.locator('.guide-scroll').evaluate(el=>el.scrollTop=0);
+ const play=dialog.getByRole('link',{name:'Let’s play'});await expect(play).toBeInViewport();await expect(dialog.getByRole('button',{name:'Close instructions'})).toBeInViewport();
+ expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+ const bounds=await dialog.boundingBox();const closeBox=await dialog.locator('.guide-close').boundingBox();expect(closeBox.y).toBeGreaterThanOrEqual(bounds.y);expect(bounds.y).toBeGreaterThanOrEqual(0);expect(bounds.y+bounds.height).toBeLessThanOrEqual(740);
+ await page.screenshot({path:info.outputPath('guide-mobile.png')});
+ await play.click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('#game-frame')).toHaveAttribute('title',game.title+' game');
+ expect(errors).toEqual([]);
+});
+test('title links open matching instructions and close restores page scrolling',async({page})=>{
+ await page.goto('/#arcade');await page.getByRole('heading',{name:'Bubble Pop AR',exact:true}).getByRole('link').click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toContainText('below shoulder height');await expect(dialog).toContainText('Raise your left wrist');
+ await dialog.getByRole('button',{name:'Close instructions'}).click();await expect(dialog).not.toBeVisible();expect(await page.evaluate(()=>document.body.style.overflow)).toBe('');
+});

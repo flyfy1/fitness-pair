@@ -7,7 +7,7 @@ test('landing has a direct arcade path and a factual build story',async({page})=
  await expect(page.getByRole('link',{name:'Hopmodo home',exact:true}).first()).toBeVisible();
  await expect(page.getByRole('heading',{name:/Games that get you moving\./i})).toBeVisible();
  await page.getByRole('link',{name:'Take me to the arcade',exact:true}).first().click();await expect(page).toHaveURL(/#arcade$/);
- await expect(page.getByRole('link',{name:'Play Ready to Move',exact:true})).toBeInViewport();
+ await expect(page.locator('.game-art').first()).toBeInViewport();
  await page.getByRole('link',{name:'How we built it',exact:true}).click();await expect(page.getByRole('heading',{name:'BUILDING THE ARCADE WITH ASTRA.'})).toBeInViewport();
  expect(errors).toEqual([]);
 });
