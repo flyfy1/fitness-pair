@@ -1,5 +1,17 @@
 # Kinetic playground
 
+## Landing-page refinement — 2026-09-13
+
+The user's latest landing-page direction supersedes the acid-yellow fields below
+for the home route only: restrained warm ivory `#f7f6f2`, charcoal `#252824`,
+cobalt actions, and small pale-yellow accents. A spacious, sentence-case hero and
+lighter sans-serif headings frame a contained, softly desaturated playground.
+The charcoal movement section and neutral closing invitation provide visual rest.
+Keep the interactive illustration and existing game entry points intact.
+`src/landing.css` is scoped to `.landing-page`, which only `home()` adds; shared
+styles, game routes, game interfaces, camera controls, and recordings are unchanged.
+The earlier identity below remains the reference for those other surfaces.
+
 The landing page is a large interactive playground poster. It persuades through visible game action and a direct arcade entry. The arcade and gallery use the same visual language with calmer task-oriented layouts.
 
 - Acid yellow `#eeff41` owns the opening playfield; cobalt `#2347ee` owns display lettering and navigation. Ink `#182346`, white `#ffffff`, and coral `#ff795e` provide supporting regions.
