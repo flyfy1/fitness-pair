@@ -60,6 +60,13 @@ $('demo').addEventListener('click',async()=>{
   }catch(error){status(error.message);}
   finally{cancelAnimationFrame(frame);clearTimeout(watchdog);if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());generating=false;cancelDemo=null;$('fields').disabled=false;}
 });
+$('code-file').addEventListener('change',async()=>{
+  const file=$('code-file').files[0];
+  if(!file || file.size>256){status('Choose the small upload-code.txt file supplied for this experiment.');return;}
+  const code=(await file.text()).trim();
+  if(!/^[A-Za-z0-9_-]{12,128}$/.test(code)){status('That file does not contain a valid upload code.');return;}
+  $('code').value=code; $('code-file').value=''; status('Upload code loaded locally. Preview and confirm your clip before publishing.');
+});
 $('publish-form').addEventListener('submit',event=>{
   event.preventDefault();if(!chosen||xhr)return;
   $('fields').disabled=true;$('cancel').hidden=false;status('Uploading your approved clip…');
