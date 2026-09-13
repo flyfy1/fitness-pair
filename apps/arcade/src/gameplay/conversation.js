@@ -1,5 +1,5 @@
 // Microphone capture is opt-in, local, and independent of the game video/audio.
-const FORMATS=['audio/webm;codecs=opus','audio/webm','audio/mp4;codecs=mp4a.40.2','audio/mp4'];
+import {startRollingRecorder} from './rolling-media.js';
 const LIMIT=10*1024*1024;
 export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
  let stream=null,context=null,source=null,round=null,generation=0,pending=false,timer=0;
@@ -14,29 +14,24 @@ export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
    const target=round,output=context.createMediaStreamDestination();
    target.output=output;target.context=context;target.chunks=[];target.bytes=0;
    target.result=new Promise(resolve=>{target.resolve=resolve;});
-   let recorder;
-   for(const mimeType of FORMATS){
-    if(!MediaRecorder.isTypeSupported(mimeType))continue;
-    try{recorder=new MediaRecorder(output.stream,{mimeType,audioBitsPerSecond:96000});
-     recorder.ondataavailable=e=>{if(!e.data.size)return;target.bytes+=e.data.size;if(target.bytes>LIMIT){target.failed=true;if(round===target)disable();stop(target);onError('Conversation track reached its limit. The game video is still recording.');}else target.chunks.push(e.data);};
-     recorder.onerror=()=>{target.failed=true;if(round===target)disable();stop(target);onError('Conversation recording stopped. The game video is still recording.');};
-     recorder.onstop=()=>settle(target);
-     recorder.start(500);target.offsetSeconds=Math.max(0,(performance.now()-target.startedAt)/1000);target.recorder=recorder;break;
-    }catch{if(recorder){recorder.ondataavailable=recorder.onstop=recorder.onerror=null;if(recorder.state!=='inactive')recorder.stop();}recorder=null;}
-   }
-   if(!target.recorder){output.stream.getTracks().forEach(t=>t.stop());target.resolve(null);throw new Error('This browser cannot record a conversation track. You can still play and record video.');}
+   target.offsetSeconds=Math.max(0,(performance.now()-target.startedAt)/1000);
+   try{
+    target.recorder=startRollingRecorder(output.stream,{audioOnly:true,maxBytes:LIMIT,onError:()=>{
+     target.failed=true;if(round===target)disable();stop(target);onError('Conversation recording stopped. The game video is still recording.');
+    }});
+   }catch(error){output.stream.getTracks().forEach(t=>t.stop());target.resolve(null);throw error;}
+
   }
   source?.disconnect();source=context.createMediaStreamSource(stream);source.connect(round.output);
  }
- function settle(target){
-  clearTimeout(target.timeout);target.output?.stream.getTracks().forEach(t=>t.stop());
+ function settle(target,recorded){
+  target.output?.stream.getTracks().forEach(t=>t.stop());
   target.context?.close().catch(()=>{});if(context===target.context)context=null;
-  const blob=new Blob(target.chunks||[],{type:target.recorder?.mimeType.split(';')[0]||'audio/webm'});
-  target.chunks=[];target.resolve?.(!target.failed&&blob.size?{blob,offsetSeconds:target.offsetSeconds}:null);
+  target.resolve?.(!target.failed&&recorded?.blob.size?{blob:recorded.blob,offsetSeconds:target.offsetSeconds+recorded.startSeconds}:null);
  }
  function stop(target){
   if(target.stopping)return;target.stopping=true;
-  if(target.recorder?.state!=='inactive'&&target.recorder){target.recorder.stop();target.timeout=setTimeout(()=>{target.failed=true;settle(target);},3000);}
+  if(target.recorder)target.recorder.stop().then(recorded=>settle(target,recorded)).catch(()=>{target.failed=true;settle(target);onError('Conversation recording could not be saved. The game video is still available.');});
   else settle(target);
  }
  async function enable(){

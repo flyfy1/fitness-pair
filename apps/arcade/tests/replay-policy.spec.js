@@ -61,7 +61,7 @@ test('native replay keeps the game in view; only Share scrolls; three rounds ret
  expect(errors).toEqual([]);
 });
 
-test('a real portrait recording over 30 seconds is saved at 2x with audio and no promotional ending',async({page},info)=>{
+test('a real portrait recording over 30 seconds stays at normal speed with audio and no promotional ending',async({page},info)=>{
  test.setTimeout(90000);
  await page.setViewportSize({width:390,height:844});
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#demo').click();
@@ -70,20 +70,20 @@ test('a real portrait recording over 30 seconds is saved at 2x with audio and no
  await page.waitForTimeout(28500);
  for(let i=0;i<5;i++)await game.locator('#demo-action').press('Space',{delay:750});
  await expect(game.locator('#victory')).toBeVisible({timeout:7000});
- await expect(page.locator('#record-status')).toContainText('2× speed');
+ await expect(page.locator('#record-status')).toContainText('Saved on this device');
  expect(await page.evaluate(()=>scrollY)).toBe(0);
  await game.locator('[data-replay-share]').click();
  await expect(page.locator('#local-result .clip-card')).toHaveCount(1,{timeout:30000});
  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
- const [clip]=await stored(page);expect(clip.playbackRate).toBe(2);expect(clip.sourceDuration).toBeGreaterThan(30);
- expect(clip.duration).toBeGreaterThan(clip.sourceDuration/2-1);expect(clip.duration).toBeLessThan(clip.sourceDuration/2+1);
+ const [clip]=await stored(page);expect(clip.playbackRate).toBe(1);expect(clip.duration).toBeGreaterThan(30);expect(clip.sourceDuration).toBeUndefined();
+ expect(clip.duration).toBeLessThan(40);
  const video=page.locator('#local-result video'),result=await pixels(video);
  expect(result.height).toBeGreaterThan(result.width);expect([result.width,result.height]).toEqual([clip.width,clip.height]);
- expect(result.duration).toBeGreaterThan(clip.sourceDuration/2-1);expect(result.duration).toBeLessThan(clip.sourceDuration/2+1);
+ expect(result.duration).toBeGreaterThan(clip.duration-1);expect(result.duration).toBeLessThan(clip.duration+1);
  expect(yellow(result.first)).toBe(false);expect(yellow(result.last)).toBe(false);
  const audio=await video.evaluate(async v=>{const context=new AudioContext();try{const buffer=await context.decodeAudioData(await(await fetch(v.src)).arrayBuffer());const values=buffer.getChannelData(0);return Math.sqrt(values.reduce((n,x)=>n+x*x,0)/values.length);}finally{await context.close();}});
  expect(audio).toBeGreaterThan(.0001);
- await info.attach('encoded-duration',{body:JSON.stringify({source:clip.sourceDuration,metadata:clip.duration,decoded:result.duration,audioRMS:audio}),contentType:'application/json'});
+ await info.attach('encoded-duration',{body:JSON.stringify({source:clip.duration,metadata:clip.duration,decoded:result.duration,audioRMS:audio}),contentType:'application/json'});
 });
 
 test('existing libraries and simultaneous saves keep two newest clips; stale updates cannot restore evicted videos',async({page})=>{

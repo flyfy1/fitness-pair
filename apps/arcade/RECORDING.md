@@ -8,14 +8,44 @@
   evicted clip, change the gallery source, or lose synchronized game audio.
 - Loop: play → native Replay or Share → unbranded preview/upload; Download alone
   makes a temporary branded copy with a footer and three-second invitation.
-- Rounds over 30 seconds are saved at 2× speed once. A 90-second round becomes
-  about 45 seconds, not a 30-second crop. If conversion fails or is interrupted,
-  retain the original-speed video and report the limitation.
+- Recordings keep up to the latest 90 seconds at original speed. New footage
+  replaces old footage while play continues. This also bounds optional voice
+  capture, whose offset is adjusted to the retained video window.
 - Proof: `tests/replay-policy.spec.js` uses actual browser recordings, decoded
   pixels/audio/duration, repeated rounds, reloads and concurrent IndexedDB saves.
 - Boundary: no camera/recognition changes, no remote conversion, and no automatic
   upload. Historical checks below describe earlier releases; their branding and
   unlimited-retention expectations are superseded by this policy.
+
+## Rolling capture
+
+The shared recorder rotates native MediaRecorders every five seconds and evicts
+segments ending before the rolling window. At most one extra segment overlaps
+the cutoff, plus the current segment. Each segment has a container header and
+an initial keyframe; dropping arbitrary MediaRecorder timeslice chunks would
+produce broken MP4/WebM files. Video requests a one-second keyframe interval.
+
+Mediabunny is the sole new runtime dependency required to demux these bounded
+segments and remux compressed video/audio packets without another encode or a
+playback-time delay. Export starts at the first keyframe inside the last 90
+seconds, so the clip may be slightly shorter than 90 seconds (normally less than
+one second shorter; browsers may ignore the requested keyframe interval).
+Both audio and video use the same rebased timestamp. Optional conversation has
+its own rolling audio buffer and adjusted offset. No discarded footage is saved
+to the library, and no media leaves the device during assembly.
+
+The buffer retains native MP4 where available and WebM fallback. A 1.5 Mbps video
+target limits the usual 90-second file size; byte safety limits remain enforced.
+Encoder-stop timeouts release buffered data and report failure. Stopping a helper
+does not stop borrowed tracks; the gameplay/conversation owners release their own
+tracks, microphone and audio context. Assembly works without foreground playback.
+
+Synthetic browser coverage in `tests/rolling-replay.spec.js` decodes both MP4 and
+forced WebM, checks first/last pixels after repeated overwrite, audible game and
+voice tracks, bounded segment retention, and a real 96-second encode using the
+production 90-second window. `tests/replay-policy.spec.js` verifies original-speed
+portrait gameplay with audio, persisted replays and explicit Share navigation.
+These fixtures use generated canvas/audio and do not measure human recognition.
 
 ## Format policy
 

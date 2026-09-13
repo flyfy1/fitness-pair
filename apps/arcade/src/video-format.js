@@ -21,12 +21,12 @@ export const formatLabel = blob => videoExtension(blob) === 'mp4' ? 'MP4' : 'Web
 
 // Wire handlers before start; retry synchronous encoder failures without losing
 // the stream. An asynchronous recording failure is reported by the owner.
-export function startVideoRecorder(stream, wire, {Recorder = globalThis.MediaRecorder, videoBitsPerSecond = 2200000} = {}) {
+export function startVideoRecorder(stream, wire, {Recorder = globalThis.MediaRecorder, videoBitsPerSecond = 2200000, videoKeyFrameIntervalDuration} = {}) {
   for (const mimeType of (stream.getAudioTracks?.().length ? AUDIO_RECORDING_FORMATS : RECORDING_FORMATS)) {
     if (!Recorder?.isTypeSupported(mimeType)) continue;
     let recorder;
     try {
-      recorder = new Recorder(stream, {mimeType, videoBitsPerSecond});
+      recorder = new Recorder(stream, {mimeType, videoBitsPerSecond, ...(videoKeyFrameIntervalDuration ? {videoKeyFrameIntervalDuration} : {})});
       wire(recorder);
       recorder.start(500);
       return recorder;
