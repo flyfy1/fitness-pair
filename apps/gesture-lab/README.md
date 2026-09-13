@@ -32,8 +32,8 @@ npm ci
 npm run dev --workspace gesture-lab
 ```
 
-Open <http://127.0.0.1:5182>. Allow camera access, keep one complete hand in view,
-and face the palm toward the camera in good light. Hold thumbs up for roughly
+Open <http://127.0.0.1:5182>. Allow camera access, keep one or both complete hands
+in view and separated, with palms toward the camera in good light. Hold thumbs up for roughly
 half a second. For No, spread your fingers and move your palm left → right →
 left (or the reverse). Lower your hand briefly between completed actions.
 The feed is mirrored for display; recognition coordinates are not mirrored.
@@ -67,12 +67,34 @@ Source: [Google's Gesture Recognizer Web guide](https://developers.google.com/ed
 
 ## Rating POC: 1–5
 
-Choose **Rate 1–5**, enable the camera, and face one palm toward it. Hold the
-number still for 700 ms to preview a rating. Lower the hand for at least 350 ms
+Choose **Rate 1–5**, enable the camera, and face one or both palms toward it. Hold
+each number still for 700 ms to preview a rating. Lower that hand for at least 350 ms
 before the next rating. Holding a number or changing directly to another number
 does not submit repeatedly. Switching modes stops the camera, clears the preview
 and starts a new session on the next enable. Confirm / No stays inactive in
 rating mode, so V means 2 and a still open palm means 5.
+
+Left and right hands have separate readouts, hold timers, last ratings and
+release requirements. Left 2 and right 5 remain two ratings; they are not added
+or averaged. The recent history identifies the hand, and the overall last-rating
+tile shows the most recently processed event. Both hands may complete on the
+same input frame; unique IDs include the hand label so neither event is dropped.
+One hand leaving the frame does not reset the other hand's completed action.
+
+The coordinator keys by the model's Left/Right labels rather than result-array
+order. Overlapping wrists, duplicate side labels or unknown side labels pause
+both action lanes and discard incomplete holds without rearming completed ones.
+Separate the hands to resume. This is not persistent person/hand identity:
+occlusion, crossing and mislabeled sides can still affect association. It is a
+one-person, two-hand POC, not a multi-participant voting system.
+
+Two-hand extension verified on 2026-09-13: 18 app unit tests and 9 production
+Chrome tests pass. Synthetic fixtures cover simultaneous left-2/right-5 ratings,
+array reordering, independent release, two simultaneous confirms and ambiguous
+tracking. A public-image composite (the V-sign image plus its horizontal mirror)
+runs through the real two-hand model and produces one 2/5 rating per side without
+external browser requests. This is public-fixture inference, not a two-hand human
+trial. Desktop and narrow-layout readouts were visually checked.
 
 | Rating | Documented pattern |
 | --- | --- |
@@ -138,6 +160,8 @@ have synthetic evidence only; all five values still need live human trials.
   errors, camera disconnect, tab hiding and page exit release tracks/Worker.
 - Counters and the last eight recognized actions live only in this session.
   Starting again resets them and creates new session/completion IDs.
+  The host routes each side to a separate recognizer/consumer and merges only
+  the display history and totals. Both hands retain the same camera provenance.
 
 The optional hand observations and experimental action IDs stay inside this
 app until their semantics have been agreed for shared use. Human performance,

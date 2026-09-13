@@ -11,3 +11,9 @@
 .rating-number { display: inline-grid; place-items: center; border-radius: 50%; background: #e7eedb; width: 44px; height: 44px; font-size: 24px; }
 #rating-catalog article p { min-height: 98px; }
 @media (max-width: 850px) { #rating-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+#hand-readouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 4px 0 18px; }
+.hand-readout { padding: 12px; border: 1px solid #d8ded3; border-top: 4px solid #8eae55; border-radius: 9px; min-width: 0; }
+.hand-readout.left { border-top-color: #26949a; }
+.hand-readout strong { font-size: 12px; }
+.hand-readout p { font-size: 12px; margin: 8px 0; }
+.hand-readout small { font-size: 10px; line-height: 1.5; display: block; color: #647461; }

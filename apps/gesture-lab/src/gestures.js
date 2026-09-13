@@ -14,13 +14,19 @@ export const findGesture = id => [...GESTURES, ...RATINGS].find(g => g.id === id
 /** App-local experiment over PoseFrame + optional named hand observations.
  * Emits compatible ActionFrames; no raw MediaPipe indices cross this boundary. */
 export class GestureActions {
-  constructor(session, { mode = 'controls' } = {}) {
+  constructor(session, { mode = 'controls', handId = null } = {}) {
     this.session = session;
     this.mode = mode;
+    this.handId = handId;
     this.ratingAnchor = null;
     this.seq = -1; this.time = -Infinity; this.count = 0;
     this.candidate = ''; this.since = 0; this.latched = false; this.releaseSince = null;
     this.wave = null; this.handKey = null;
+  }
+
+  interrupt() {
+    // Ambiguous tracking cannot count toward a hold or rearm a held action.
+    this.candidate = ''; this.wave = null; this.ratingAnchor = null; this.releaseSince = null;
   }
 
   update(frame) {
@@ -74,7 +80,7 @@ export class GestureActions {
     let completion = null;
     if (complete) {
       this.latched = true; this.releaseSince = null;
-      completion = { id: `${frame.sessionId}:gesture:${++this.count}`, repIndex: this.count };
+      completion = { id: `${frame.sessionId}:${this.handId ?? 'gesture'}:${++this.count}`, repIndex: this.count };
     }
     return { version: 1, sessionId: frame.sessionId, source: { ...frame.source }, inputSeq: frame.seq,
       tMs: frame.tMs, recognizerId: 'gesture-lab-v1', action: gesture ?? 'None',
