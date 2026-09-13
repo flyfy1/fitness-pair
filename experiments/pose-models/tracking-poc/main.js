@@ -29,7 +29,7 @@ function fail(error) {
     NotFoundError: ['No camera found', 'Connect a camera, then retry.'],
     NotReadableError: ['Camera unavailable', 'The camera may be in use by another app. Close it there and retry.'],
   };
-  stop(...(messages[error.name] ?? ['Tracking could not start or continue', error.message || 'Retry in a recent Chrome or Edge browser.']));
+  stop(...(messages[error.name] ?? ['Tracking could not start or continue', 'Check your camera connection and retry in a recent Chrome or Edge browser.']));
 }
 async function start() {
   stop(); const token = generation; const selected = mode;
