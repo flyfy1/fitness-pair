@@ -200,7 +200,7 @@ function tick(now){
 }
 requestAnimationFrame(tick);
 // Retain the existing read-only debug handle; never expose camera pixels or raw landmarks.
-window.plankFlight={getState:()=>{
+window.plankFlight={getAudioStream:()=>sound.getAudioStream(),getState:()=>{
   const {headControl,...snapshot}=structuredClone(state);
   return {...snapshot,mode,cameraActive:camera.active,starting,audio:sound.snapshot(),headVisible:!!pilot,phase:lastAction?.phase??null};
 }};

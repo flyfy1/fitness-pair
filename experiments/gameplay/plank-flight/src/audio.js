@@ -8,7 +8,6 @@ export class FlightAudio {
     this.generation=0;this.voiceSerial=0;this.lastCue=null;this.unavailable=false;
   }
   unlock() {
-    if(this.muted)return;
     try {
       if(!this.context||this.context.state==='closed') {
         const Context=globalThis.AudioContext||globalThis.webkitAudioContext;
@@ -17,6 +16,8 @@ export class FlightAudio {
         this.master=c.createGain();this.master.gain.value=.7;
         this.music=c.createGain();this.music.gain.value=.22;this.music.connect(this.master);
         const limiter=c.createDynamicsCompressor();this.master.connect(limiter);limiter.connect(c.destination);
+        // A stable post-mix output lets the host record exactly the game sound.
+        this.recording=c.createMediaStreamDestination();limiter.connect(this.recording);
         this.noise=c.createBuffer(1,c.sampleRate*.3,c.sampleRate);
         const data=this.noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
         this.ready=Promise.all(VOICES.map(async name=>{
@@ -27,10 +28,12 @@ export class FlightAudio {
           } catch { /* Keep musical cues available if a voice asset cannot load. */ }
         }));
       }
+      if(this.muted)return;
       void this.context.resume().catch(()=>{this.unavailable=true;});
     } catch {this.unavailable=true;}
   }
-  snapshot(){return {muted:this.muted,state:this.context?.state??'idle',lastCue:this.lastCue,voicesReady:this.buffers.size,unavailable:this.unavailable};}
+  getAudioStream(){return this.recording?.stream??null;}
+  snapshot(){return {playing:!this.muted&&this.context?.state==='running'&&this.nodes.size>0,muted:this.muted,state:this.context?.state??'idle',lastCue:this.lastCue,voicesReady:this.buffers.size,unavailable:this.unavailable};}
   setMuted(value){this.muted=value;this.stop();if(!value)this.unlock();}
   track(node,gain){
     this.nodes.add(node);node.onended=()=>{this.nodes.delete(node);node.disconnect();gain.disconnect();};
@@ -106,5 +109,5 @@ export class FlightAudio {
     if(this.context&&this.music){const t=this.context.currentTime;this.music.gain.cancelScheduledValues(t);this.music.gain.setValueAtTime(.22,t);}
   }
   stop(){this.clearNodes();if(this.context?.state==='running')void this.context.suspend().catch(()=>{});}
-  dispose(){this.stop();if(this.context?.state!=='closed')void this.context?.close().catch(()=>{});}
+  dispose(){this.stop();this.recording?.stream.getTracks().forEach(track=>track.stop());if(this.context?.state!=='closed')void this.context?.close().catch(()=>{});}
 }
