@@ -13,3 +13,6 @@
 @media(max-width:600px){.brand{font-size:25px}.brand img{width:31px;height:31px}.record-bar .button{width:100%}.clip-actions a,.clip-actions button{min-height:44px}.local-result .clip-card video{width:100%}}
 
 .game-poster{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#dedaff;color:#2347ee;font:900 clamp(2rem,4vw,4rem)/.95 Arial,sans-serif;text-align:center;letter-spacing:-.06em}
+
+/* Motion Quest retains its native viewport and interface; replay tools follow the game. */
+.quest-mode{background:#101511}.quest-play{padding:0}.quest-play #game-frame{width:100%;max-width:none;height:100dvh;min-height:320px;border:0;border-radius:0;margin:0;background:#101511}.quest-replay-tools{padding:24px max(20px,4vw);background:#f3f4ed}.quest-replay-tools>.back{display:inline-block;margin-bottom:16px}.quest-replay-tools .record-bar{padding:0;margin:0;max-width:none}.quest-play .local-result{padding:32px max(20px,4vw);margin:0;max-width:none;background:white}.quest-play .local-result>.clip-grid{max-width:1000px}

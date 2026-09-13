@@ -35,3 +35,5 @@ The public-facing platform is Hopmodo. Repository/package names, the Sites app t
 ## Latest game mounts
 
 Dino AR and Push-up Flight retain their camera and keyboard/pointer preview modes. Ready to Move uses its guided standing/range/countdown flow. Their cards label experimental controls. All five game adapters use existing read-only game state to detect start, round identity, and completion. Dino AR's already-projected skeleton is not mirrored twice. Ready to Move composites its smaller game canvas into the full camera viewport using DOM rectangles. Push-up Flight preserves its crash sequence using a frozen camera frame when the game has already stopped its camera. No recognition contract changes were needed.
+
+Motion Quest is the primary recording reference. Its `/play/motion-quest` route presents the unchanged native game interface in a full-window iframe, without landing-page navigation or a fixed-height arcade card around it. Replay tools follow the game and receive focus at completion. The native MQ home mark returns to the arcade. Full-window desktop/mobile layout and the complete synthetic five-repetition replay flow are tested.
