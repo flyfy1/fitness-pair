@@ -15,7 +15,7 @@ export class ShoulderMotionRecognizer {
   recalibrate() {
     this.stage = 'standing'; this.baseline = null; this.samples = [];
     this.flight = null; this.landingSince = null; this.lastValid = null;
-    this.filtered = 0; this.filterTime = null; this.recovering = false;
+    this.filtered = 0; this.filterTime = null; this.recovering = false; this.bestHeightRatio = 0;
   }
   output(frame, phase, cue, { quality = 'tracked', ratio = 0, progress = null, completion = null } = {}) {
     const calibrated = this.stage === 'ready';
@@ -25,7 +25,7 @@ export class ShoulderMotionRecognizer {
       phase, cue, progress: heightRatio, calibrationProgress: progress, completion,
       stage: this.stage, calibrated, heightRatio, quality, trackingMode: 'shoulders',
       visibleShoulders: [frame.joints.leftShoulder, frame.joints.rightShoulder].filter(visible).length,
-      peakRise: this.baseline?.range ?? null };
+      bestHeightRatio: this.bestHeightRatio, peakRise: this.baseline?.range ?? null };
     assertActionFrame(output); return output;
   }
   update(frame) {
@@ -62,8 +62,8 @@ export class ShoulderMotionRecognizer {
       if (elapsed >= 200 && this.samples.length >= 3) {
         this.baseline = Object.fromEntries(['leftY', 'rightY', 'x', 'width'].map(k => [k, mean(this.samples.map(p => p[k]))]));
         this.baseline.range = Math.max(.04, this.baseline.width * .7);
-        this.stage = 'maximum'; this.samples = [];
-        return this.output(frame, 'calibrating', 'jump-to-start', { progress: .5 });
+        this.stage = 'ready'; this.samples = [];
+        return this.output(frame, 'ready', 'ready');
       }
       return this.output(frame, 'calibrating', 'hold-shoulders-steady', { progress: clamp(elapsed / 200) * .5 });
     }
@@ -85,17 +85,19 @@ export class ShoulderMotionRecognizer {
       this.recovering = false; this.landingSince = null;
     }
     if (rise > lift) {
-      this.flight ??= { started: frame.tMs, samples: 0, confirmed: false };
+      this.flight ??= { started: frame.tMs, samples: 0, confirmed: false, peak: 0 };
       this.flight.samples++;
       if (this.flight.samples >= 2 && frame.tMs - this.flight.started >= 60) {
-        this.flight.confirmed = true; this.stage = 'ready';
+        this.flight.confirmed = true;
       }
     }
     let completion = null;
     if (this.flight) {
+      if (this.flight.confirmed) this.flight.peak = Math.max(this.flight.peak, this.filtered / b.range);
       if (grounded) this.landingSince ??= frame.tMs; else this.landingSince = null;
       if (this.landingSince !== null && frame.tMs - this.landingSince >= 150) {
         if (this.flight.confirmed) {
+          this.bestHeightRatio = Math.max(this.bestHeightRatio, this.flight.peak);
           this.rep++; completion = { id: `${frame.sessionId}:ar-shoulder-rise:${this.rep}`, repIndex: this.rep };
         }
         this.flight = null; this.landingSince = null; this.filtered = 0;
@@ -104,7 +106,6 @@ export class ShoulderMotionRecognizer {
         return this.output(frame, 'calibrating', 'hold-shoulders-steady', { quality: 'position-changed', progress: 0 });
       }
     }
-    if (this.stage !== 'ready') return this.output(frame, 'calibrating', this.flight ? 'detecting-rise' : 'jump-to-start', { progress: .5 });
     return this.output(frame, completion ? 'completed' : this.flight?.confirmed ? 'active' : 'ready',
       this.flight?.confirmed ? 'moving-up' : 'ready', {
         ratio: this.flight?.confirmed && !grounded ? this.filtered / b.range : 0, completion });

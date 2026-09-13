@@ -6,8 +6,26 @@
 footer{left:36px;right:36px;bottom:20px;display:grid;grid-template-columns:1fr auto;gap:15px 24px;align-items:center}.status{max-width:670px}h2{font-size:clamp(19px,2vw,26px);font-weight:550;letter-spacing:-.5px;margin:8px 0}.status p{font-size:13px;color:#d4dfd1;margin:0;line-height:1.5}.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.secondary{background:#10241ecf;color:#e8f4df;font-size:12px}.meter{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:1px}.meter>div{width:140px;height:4px;background:#ffffff30;border-radius:5px;overflow:hidden}.meter i{display:block;background:#d8ff81;height:100%;width:0}.privacy{font-size:10px;color:#c2d3c1;text-align:right}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @media(max-width:700px){#arena{min-height:660px}header{top:18px;left:18px;right:18px;gap:12px}.brand{font-size:17px}.brand small{font-size:7px}.brand-icon{display:none}.scores{gap:16px}.scores strong{font-size:23px}.scores small{font-size:8px}#settings{top:90px;right:18px;padding:12px 14px;gap:7px}.eyebrow{font-size:9px}#welcome{left:24px;right:24px;top:30%}h1{letter-spacing:-1.5px}.steps{gap:10px;font-size:9px;margin-top:14px}#welcome p{font-size:13px}footer{left:18px;right:18px;bottom:16px;grid-template-columns:1fr;gap:12px}.actions{justify-content:flex-start}button{padding:11px 16px}.privacy{text-align:left;font-size:9px}.status p{font-size:11px}.meter{font-size:9px}}
 @media(max-height:640px) and (min-width:701px){#arena{min-height:420px}header{top:14px}#settings{top:85px}#welcome{top:23%}h1{font-size:36px;margin:10px 0}#welcome p{font-size:12px}.steps{margin-top:10px}footer{bottom:12px;gap:8px}h2{font-size:18px}}
-/* Keep controls above the foot runway, where they cannot conceal incoming cacti. */
-.floor-lane footer{top:250px;bottom:auto}.floor-lane .status{max-width:440px}
+
+/* The main instruction stays high and centered in every camera framing. */
+#instruction{position:absolute;z-index:3;top:clamp(95px,10vh,125px);left:50%;transform:translateX(-50%);width:min(1100px,90%);max-width:none;text-align:center;pointer-events:none;text-shadow:0 3px 24px #071810,0 2px 4px #071810}
+#instruction h1{font-size:clamp(48px,6vw,88px);font-weight:850;line-height:1.02;letter-spacing:-3px;margin:14px 0 18px;text-wrap:balance}
+#instruction .eyebrow{font-size:13px;letter-spacing:3px}
+#instruction p{font-size:clamp(16px,1.6vw,23px);line-height:1.4;max-width:720px;margin:0 auto;color:#f6ffef;text-wrap:balance}
+#settings{top:auto;left:36px;right:auto;bottom:26px;max-width:310px;gap:8px;padding:14px 16px}
+footer{left:auto;width:calc(100% - 400px);grid-template-columns:1fr;justify-items:end;gap:14px}
+.meter{flex-wrap:wrap;justify-content:flex-end;font-size:12px}.meter strong{font-variant-numeric:tabular-nums}#best-height{color:#d8ff81;margin-left:12px}
+.floor-lane footer,.floor-lane #settings{bottom:24%}
 #tracking-detail{font-size:10px;color:#d4dfd1;line-height:1.5;max-width:260px}
-@media(max-width:700px){.floor-lane footer{top:195px}.floor-lane .status{max-width:100%}}
-@media(max-width:700px){.floor-lane.show-debug footer{top:260px}}
+@media(max-width:700px){
+  #instruction{top:16%;width:92%}#instruction h1{font-size:48px;letter-spacing:-1.5px;margin:12px 0}
+  #instruction .eyebrow{font-size:10px}#instruction p{font-size:16px}
+  #settings{left:18px;right:18px;bottom:175px;max-width:none;padding:8px 12px;gap:4px}
+  #settings>.eyebrow{display:none}#tracking{font-size:10px}#tracking-detail{max-width:none}
+  footer{left:18px;right:18px;width:auto;justify-items:start;gap:12px}.meter{font-size:10px;gap:8px;justify-content:flex-start}.meter>div{width:90px}#best-height{margin-left:0}
+  .floor-lane footer{bottom:24%}.floor-lane #settings{bottom:calc(24% + 148px)}
+  .actions{gap:6px}.actions button{padding:11px 12px}.privacy{font-size:8px}
+}
+@media(max-height:640px) and (min-width:701px){#instruction{top:19%}#instruction h1{font-size:52px}#instruction p{font-size:16px}.floor-lane footer,.floor-lane #settings{bottom:15%}}
+
+#instruction p:empty{display:none}
