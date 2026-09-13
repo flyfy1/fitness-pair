@@ -27,6 +27,7 @@ const energy=async locator=>locator.evaluate(async media=>{
 
 test('conversation is a separate local track; selected export includes it and original does not',async({page})=>{
  test.setTimeout(75000);
+ await page.setViewportSize({width:390,height:844});
  await syntheticMicrophone(page);const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
  await game.getByRole('button',{name:'Game sound',exact:true}).click();await game.locator('#demo').click();
@@ -54,10 +55,13 @@ test('conversation is a separate local track; selected export includes it and or
  await expect.poll(()=>page.evaluate(()=>{const a=window.voicePreviewAnalyser;if(!a)return 0;const d=new Float32Array(a.fftSize);a.getFloatTimeDomainData(d);return Math.sqrt(d.reduce((sum,x)=>sum+x*x,0)/d.length);})).toBeGreaterThan(.01);
  await video.evaluate(video=>video.pause());
  await expect(card).toHaveAttribute('data-voice-playing','false');
+ await expect.poll(()=>video.evaluate(v=>v.videoHeight>v.videoWidth)).toBe(true);
+ const originalSize=await video.evaluate(v=>[v.videoWidth,v.videoHeight]);
  const originalURL=await video.getAttribute('src');
  await card.getByLabel('Include conversation in video').check();
  await expect(card.getByText('With conversation. Preview this version before sharing.')).toBeVisible({timeout:25000});
  expect(await energy(video)).toBeGreaterThan(.01);
+ await expect.poll(()=>video.evaluate(v=>[v.videoWidth,v.videoHeight])).toEqual(originalSize);
  const leading=await video.evaluate(async video=>{const context=new AudioContext();try{const buffer=await context.decodeAudioData(await(await fetch(video.src)).arrayBuffer());const samples=buffer.getChannelData(0).subarray(0,Math.floor(buffer.sampleRate*.3));return Math.sqrt(samples.reduce((sum,x)=>sum+x*x,0)/samples.length);}finally{await context.close();}});
  expect(leading).toBeLessThan(.001); // Mic was enabled after the game started.
  await page.evaluate(()=>{Object.defineProperty(navigator,'canShare',{value:()=>true,configurable:true});Object.defineProperty(navigator,'share',{value:async data=>{window.sharedConversationFile=data.files[0];},configurable:true});});

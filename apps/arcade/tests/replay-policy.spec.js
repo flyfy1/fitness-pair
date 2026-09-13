@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
+import {movingCamera} from './moving-camera.js';
 
 async function stored(page){return page.evaluate(()=>new Promise((resolve,reject)=>{
  const r=indexedDB.open('fitness-pair-clips',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,q=db.transaction('clips').objectStore('clips').getAll();q.onsuccess=()=>{db.close();resolve(q.result.map(({blob,conversation,...clip})=>({...clip,size:blob.size})));};};
@@ -132,4 +133,24 @@ test('recording orientation is fixed per round and changes for the next round af
  const recent=await pixels(page.locator('.clip-card video').first()),previous=await pixels(page.locator('.clip-card video').last());
  expect([recent.width,recent.height]).toEqual([landscape.width,landscape.height]);
  expect([previous.width,previous.height]).toEqual([portrait.width,portrait.height]);
+});
+
+
+test('portrait camera gameplay fills a portrait replay with the moving camera image intact',async({page},info)=>{
+ await page.setViewportSize({width:390,height:844});await movingCamera(page);
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
+ await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:25000});
+ const video=page.locator('#local-result video');const result=await pixels(video);
+ expect(result.height).toBeGreaterThan(result.width);expect(result.width/result.height).toBeCloseTo(390/844,2);
+ const coverage=await video.evaluate(async video=>{
+  await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=.5;});
+  const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;const ctx=canvas.getContext('2d');ctx.drawImage(video,0,0);
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;let person=0,camera=0;
+  for(let i=0;i<data.length;i+=4){if(data[i]>210&&data[i+1]<80&&data[i+2]<100)person++;if(data[i]<70&&data[i+1]>130&&data[i+2]>160)camera++;}
+  return {person:person/(data.length/4),camera:camera/(data.length/4)};
+ });
+ expect(coverage.person).toBeGreaterThan(.02);expect(coverage.camera).toBeGreaterThan(.25);
+ await game.locator('[data-replay-share]').click();await expect(video).toBeInViewport();
+ await video.screenshot({path:info.outputPath('portrait-camera-preview.png')});
 });
