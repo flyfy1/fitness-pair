@@ -2,12 +2,12 @@ import './style.css';
 import { Runner } from '../../../../apps/dino-run/src/engine.js';
 import { PoseCamera } from '../../../../apps/dino-run/src/camera.js';
 import { setupFullscreen } from '../../../../apps/dino-run/src/fullscreen.js';
-import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
+import { ShoulderMotionRecognizer } from './shoulder-motion.js';
 import { anchorFromPose, drawSkeleton, drawWorld } from './scene.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner(); runner.setControlMode('motion');
-const recognizer = new JumpHeightRecognizer({ quickStart: true, preferUpperBody: true });
+const recognizer = new ShoulderMotionRecognizer();
 let action = null, pose = null, groundPose = null, anchor = null, cameraState = 'off';
 let awaiting = false, lastPoseAt = 0, lastFrame = 0, lastPaint = 0;
 let message = '', error = '', previousStatus = 'ready';
@@ -83,20 +83,20 @@ function paint() {
     } else if (running) $('announcement').textContent = 'Run started. Jump to lift your marker over the cacti.';
   }
   $('welcome').hidden = camera.active || runner.status !== 'ready';
-  $('arena').classList.toggle('floor-lane', !!anchor && anchor.mode === 'full-body');
+  $('arena').classList.toggle('floor-lane', !!anchor && anchor.y > .65);
   $('arena').classList.toggle('show-debug', $('debug').checked);
   $('score').textContent = String(runner.score).padStart(5, '0');
   $('cleared').textContent = runner.passed;
   $('stop').hidden = !camera.active; $('recalibrate').hidden = !camera.running;
   $('tracking').textContent = cameraState === 'ready'
-    ? 'Local · shoulder + hip movement'
+    ? 'Local · shoulder movement mode'
     : `Camera ${cameraState} · local processing`;
   $('tracking-detail').hidden = !$('debug').checked;
   $('tracking-detail').textContent = camera.running
-    ? `Stage: ${action?.stage ?? 'standing'} · ${action?.quality ?? 'waiting-for-pose'} · Input age: ${lastPoseAt ? Math.round(performance.now() - lastPoseAt) + ' ms' : 'waiting'}`
+    ? `Stage: ${action?.stage ?? 'standing'} · ${action?.visibleShoulders ?? 0}/2 shoulders · ${action?.quality ?? 'waiting-for-pose'} · Input age: ${lastPoseAt ? Math.round(performance.now() - lastPoseAt) + ' ms' : 'waiting'}`
     : 'Camera off';
   let phase = 'READY WHEN YOU ARE', cue = 'Step back. Leave room to jump.';
-  let detail = message || 'Keep shoulders and hips visible. Full body is best.';
+  let detail = message || 'Keep both shoulders visible. Your waist and feet can stay outside the frame.';
   let button = 'Enable camera', disabled = false;
   if (error) { phase = 'CAMERA NEEDS ATTENTION'; cue = 'Let’s get you connected.'; detail = error; button = 'Retry camera'; }
   else if (runner.status === 'over') {
@@ -104,7 +104,7 @@ function paint() {
     detail = `${runner.score} points · ${runner.passed} cacti cleared. Camera is off.`; button = 'Jump & run again';
   } else if (running) {
     phase = 'YOU ARE IN THE GAME'; cue = 'Lift your marker over the cacti.';
-    detail = anchor?.mode === 'upper-body' ? 'Torso movement controls the marker at your waist.' : 'Jump in place. The glowing marker follows your height.';
+    detail = 'Move your upper body up and down. The glowing marker follows your shoulders.';
     button = 'Pause';
   } else if (camera.active) {
     phase = 'JUMP TO START'; disabled = true; button = 'Waiting for your jump…';
@@ -114,15 +114,18 @@ function paint() {
       phase = 'WAITING FOR TRACKING'; cue = 'Tracking is catching up.';
       detail = 'Waiting for a fresh camera result before detecting your jump.';
     }
-    else if (action?.phase === 'missing') { cue = action.cue === 'land-and-hold' ? 'Land and stand steady.' : 'Keep shoulders and hips in view.'; detail = 'Tracking is paused. Return to your starting position.'; }
+    else if (action?.phase === 'missing') {
+      cue = action.cue === 'return-to-starting-height' ? 'Return to your starting height.' : 'Keep both shoulders in view.';
+      detail = action.cue === 'face-the-camera' ? 'Face the camera so both shoulders can be seen.' : 'Your waist and feet do not need to be visible.';
+    }
     else if (!action || action.stage === 'standing') {
       phase = 'FINDING YOUR POSITION'; cue = 'Stand comfortably for a moment.';
-      detail = 'Keep both shoulders and hips visible. Wait for “Jump now”.';
+      detail = 'Keep both shoulders visible. Wait for “Jump now”.';
       button = 'Finding your position…';
     }
     else if (!action?.calibrated) {
       cue = 'Jump now to start.';
-      detail = 'Lift your shoulders and hips together. Your feet do not need to be visible.';
+      detail = 'Hop or lift your upper body. This mode responds to shoulder movement.';
     } else if (awaiting) {
       cue = 'Return to your starting position.'; detail = 'The run resumes when tracking is steady.';
     } else {
@@ -156,6 +159,7 @@ window.dinoAR = Object.freeze({ getState: () => ({ ...runner.snapshot(),
     trackingMode: action?.trackingMode ?? null, heightRatio: action?.heightRatio ?? 0, cue: action?.cue ?? null,
     quality: action?.quality ?? null, frameAgeMs: lastPoseAt ? Math.round(performance.now() - lastPoseAt) : null },
   debug: $('debug').checked, anchored: !!anchor,
+  anchorMode: anchor?.mode ?? null,
   nextObstacleDistance: runner.obstacles[0] ? runner.obstacles[0].x - 116 : null,
 }) });
 

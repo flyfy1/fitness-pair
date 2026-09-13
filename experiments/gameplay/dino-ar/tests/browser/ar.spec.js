@@ -5,6 +5,7 @@ async function syntheticCamera(page) {
   await page.addInitScript(() => {
     window.testRise = 0; window.testMissing = false; window.testDelay = 0; window.testUpper = false;
     window.testUnstable = false; window.testWidthNoise = false; window.testFeetStill = false;
+    window.testShouldersOnly = false; window.testWeakHips = false;
     navigator.mediaDevices.getUserMedia = async () => {
       const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
       const c = canvas.getContext('2d');
@@ -26,9 +27,12 @@ async function syntheticCamera(page) {
         if (data.type === 'init') { setTimeout(()=>this.onmessage?.({data:{type:'ready'}}),0); return; }
         data.bitmap.close(); const points = []; this.seq++;
         if (!window.testMissing) for (const [ids,x] of [[[11,13,15,23,25,27],.44],[[12,14,16,24,26,28],.56]]) {
-          ids.forEach((id,i)=>{if(window.testUpper && i>=4)return; points[id]={x,y:[.25,.34,.43,.48,.68,.88][i]-window.testRise,visibility:.99};});
+          ids.forEach((id,i)=>{if(window.testUpper && i>=4 || window.testShouldersOnly && i>=3)return; points[id]={x,y:[.25,.34,.43,.48,.68,.88][i]-window.testRise,visibility:.99};});
         }
         if (!window.testMissing) {
+          if (window.testWeakHips) for (const id of [23,24,25,26,27,28]) if (points[id]) {
+            points[id].visibility=.1; points[id].y=1.1;
+          }
           if (window.testFeetStill) for (const id of [25,26,27,28]) if (points[id]) {
             points[id].y += window.testRise;
             if (id < 27) points[id].x += id === 25 ? .08 : -.08;
@@ -89,7 +93,7 @@ test('AR camera loop: anchored player, optional skeleton, proportional height, c
 test('mobile upper-body view, fullscreen, debug toggling and manual pause clean up',async({page})=>{
   await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/');
   await page.evaluate(()=>{window.testUpper=true;}); await calibrate(page);
-  expect((await state(page)).camera.trackingMode).toBe('upper-body');
+  expect((await state(page)).camera.trackingMode).toBe('shoulders');
   await page.getByLabel('Debug · show body skeleton').check();
   await page.getByRole('button',{name:'Enter fullscreen',exact:true}).click();
   expect((await state(page)).status).toBe('running');
@@ -146,11 +150,27 @@ test('entry shows the real gate and accepts torso lift despite bent knees, stuck
   await expect(page.locator('#tracking-detail')).toContainText('Stage: standing');
   await page.evaluate(()=>{window.testUnstable=false;});
   await expect(page.getByRole('heading',{name:'Jump now to start.',exact:true})).toBeVisible();
-  expect((await state(page)).camera.trackingMode).toBe('upper-body');
+  expect((await state(page)).camera.trackingMode).toBe('shoulders');
   await page.evaluate(()=>{window.testRise=.025;});
   await expect.poll(async()=>(await state(page)).status,{timeout:2000,intervals:[30]}).toBe('running');
   expect((await state(page)).anchored).toBe(true);
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
+});
+
+test('shoulders alone start the real game with missing or unreliable waist landmarks and a visible chest marker',async({page})=>{
+  await syntheticCamera(page); await page.goto('/');
+  for (const missing of [true,false]) {
+    await page.evaluate(missing=>{window.testShouldersOnly=missing;window.testWeakHips=!missing;window.testRise=0;},missing);
+    await calibrate(page);
+    expect((await state(page)).camera.trackingMode).toBe('shoulders');
+    expect((await state(page)).anchorMode).toBe('shoulders');
+    await page.getByLabel('Debug · show body skeleton').check();
+    await expect(page.locator('#tracking-detail')).toContainText('2/2 shoulders');
+    await page.evaluate(()=>{window.testRise=.06;});
+    await expect.poll(async()=>(await state(page)).height).toBeGreaterThan(60);
+    await page.screenshot({path:`test-results/ar-shoulders-${missing?'missing':'weak'}-waist.png`});
+    await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
+  }
 });
 
 test('permission denial and cancellation of a late camera grant recover safely',async({page})=>{
