@@ -95,7 +95,7 @@ The physical cadence, latency and difficulty still need human playtesting.
 
 The camera emits at most 30 input samples/sec with one inference in flight.
 The host pauses gameplay after 250ms without a fresh result; the camera helper
-terminates a stalled model after 1 second. Initialization is bounded at 30 seconds,
+terminates a stalled model after 1 second. Initialization is bounded at 330 seconds,
 including permission/video readiness. These are implementation thresholds, not
 measured end-to-end human motion latency.
 

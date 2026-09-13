@@ -97,3 +97,5 @@ kbd { font: inherit; opacity: .65; }
   .viewfinder { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { #hp-bar, #charge-bar { transition: none; } }
+
+#model-download{width:100%;height:8px;margin:0 0 16px;accent-color:#e6ff9b}

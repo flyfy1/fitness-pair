@@ -24,7 +24,7 @@
       <a id="mode-link" href="?mode=detect">Jump detection only</a>
       <div id="game-stats" hidden><span>Score <strong id="game-score">0</strong></span><span>Cleared <strong id="game-cleared">0</strong></span></div>
       <label class="body-toggle"><input type="checkbox" id="show-body" checked> Skeleton debug view</label>
-      <label for="jump-range">Movement for a full jump <output id="range-value" for="jump-range">25%</output></label>
+      <label for="jump-range"><span id="range-title">Movement for a full jump</span> <output id="range-value" for="jump-range">25%</output></label>
       <input id="jump-range" type="range" min="10" max="80" step="5" value="25" aria-describedby="range-help">
       <p id="range-help">Smaller movement ← → Bigger movement · % of torso length</p>
       <div class="movement-readout"><span id="movement-label">Live movement · enable camera</span><meter id="movement-meter" min="0" max="100" value="0" aria-label="Live jump response"></meter></div>

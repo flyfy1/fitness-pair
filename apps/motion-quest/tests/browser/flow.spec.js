@@ -74,7 +74,7 @@ test('real local model infers a public pose image, with no camera upload; stop r
     };
   }, { dataURL });
   const external = [], errors = [];
-  page.on('request', req => { if (!req.url().startsWith(`http://127.0.0.1:${process.env.MOTION_PORT || 5179}/`) && !req.url().startsWith('data:')) external.push(req.url()); });
+  page.on('request', req => { if (new URL(req.url()).origin !== `http://127.0.0.1:${process.env.MOTION_PORT || 5179}` && !req.url().startsWith('data:')) external.push(req.url()); });
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', msg => { if (msg.type() === 'error') console.error(msg.text()); });
   await page.goto('/'); await page.locator('#start').click();

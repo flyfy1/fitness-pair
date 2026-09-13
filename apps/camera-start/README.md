@@ -10,12 +10,13 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
 
 - **Player:** someone standing far enough from a camera for body tracking.
 - **Job:** complete setup, then control a dinosaur using comfortable body movement.
-- **Risk:** setup must hand off live controls without losing the baseline; missing
-  tracking and paused movement must not advance the round or create jump counts.
+- **Risk:** a short body jump must trigger a complete, smooth Dino arc; longer
+  observed rise-to-return time should produce a higher arc without noise or pause
+  time increasing height.
 - **Loop:** enable camera → stand still → choose a range with the slider → raise
   one hand to confirm → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
-- **Proof:** production-browser synthetic setup, proportional movement, obstacle
+- **Proof:** production-browser synthetic setup, duration-based animation, obstacle
   clearance, collision, replay, pause/resume, tracking recovery and camera cleanup.
 - **No-gos:** no new game engine, model, backend, recording, physical-height claims
   or deployment.
@@ -79,6 +80,7 @@ For example, `stale-tracking` means frames are at least 250 ms old or missing;
 ## Evidence
 
 ```sh
+npm run test --workspace camera-start
 npm run build --workspace camera-start
 npm run test:browser --workspace camera-start
 ```
@@ -93,10 +95,12 @@ input validation and the unchanged default maximum-calibration mode.
 Synthetic input proves software transitions, not human recognition accuracy or
 readability from a measured physical distance. The user still needs to try this
 screen at their actual camera distance. Detection-only mode isolates recognition
-evaluation from gameplay. The game checks additionally cover proportional Dino
-height, clearing a cactus, collision, replay, button/gesture pause and resume,
+evaluation from gameplay. The game checks additionally cover animated Dino
+jumps, clearing a cactus, collision, replay, button/gesture pause and resume,
 tracking-loss freezing, camera restart without resetting the round, and visible
-controls at the three viewport sizes above.
+controls at the three viewport sizes above. Animation unit tests compare short
+and long cycles with identical movement amplitude, reject single-frame spikes,
+verify no stacked jumps, freeze on pause, and check 30/120 FPS consistency.
 
 The preview uses its own origin on port 5274. Port 5190 was previously controlled
 by an unrelated cached games app in the desktop browser; its cache/storage were
@@ -133,9 +137,12 @@ missing/stale joints are cleared rather than displayed as a frozen body. Turning
 the switch off, stopping the camera or completing a round clears the overlay.
 Nothing is recorded.
 
-**Movement for a full jump** chooses upward torso movement as 10–80% of the
+**Movement for a jump trigger** (game) / **Movement for a full jump** (detection
+mode) chooses the response scale as 10–80% of the
 standing torso length, initially 25%. Lower means less real movement for the same
-response. This is a relative screen-space setting, not centimeters or a measured
+response. In game mode a coherent rise reaching 12% of this response scale
+can trigger the animation; its final height depends on observed movement duration.
+This is a relative screen-space setting, not centimeters or a measured
 personal maximum. The **Live jump response** meter previews that mapping after
 the standing baseline is captured. Trying a movement is optional: standing still
 is sufficient to unlock confirmation. The chosen range becomes fixed when
@@ -149,9 +156,16 @@ and overlay toggles. These settings are configuration, never evidence of a jump.
 ## Play Dino
 
 The default `/` route finishes the countdown into a running game. The player's
-filtered relative torso height controls Dino's height continuously, including
-its descent. The slider sets the movement needed to reach full game height;
-there is no mandatory maximum jump. Half-body tracking still requires both
+rise triggers a dinosaur jump after a 100 ms animation buffer. Two or more
+coherent rising samples over at least 60 ms are required before triggering.
+The dinosaur follows its own continuous trajectory, so the player's return does
+not snap it to the ground. Longer observed rise-to-return time sustains lift
+for longer, creating a higher arc; lift is capped at 360 ms. A short movement
+still produces a complete arc (about 0.8 seconds, versus about 1.2 seconds at
+full lift). New movements during an arc do not queue or stack extra jumps.
+The slider sets the movement threshold for triggering; the response meter
+continues to show the raw movement mapping, not the dinosaur's animated height.
+There is no mandatory maximum jump. Half-body tracking still requires both
 shoulders and hips. The scene comes from `experiments/gameplay/dino-ar/src/scene.js`
 and the motion-mode rules from `apps/dino-run/src/engine.js`.
 
@@ -171,6 +185,12 @@ camera** starts a new tracking session, repeats setup and continues that round.
 
 A collision or **Finish run** shows the results and stops owned camera tracks and
 the model worker. **Play again** resets the score and counts and returns to setup.
+Local diagnostics also include `dino-jump-triggered`, `dino-body-returned`,
+`dino-jump-landed` and `dino-jump-ignored`. The observed duration excludes the
+recognizer's landing confirmation hold. It measures a tracked torso cycle, not
+verified physical airtime. Pauses or lost tracking discard the in-progress
+duration measurement and freeze animation along with the world.
+
 Local diagnostics include `game-started`, `game-paused`, `game-resume-blocked`,
 `game-resumed`, `obstacle-cleared` and `round-finished`, alongside the existing
 jump detection events. No camera images or skeleton coordinates are recorded.

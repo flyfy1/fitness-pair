@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { HeadFlightController, TAKEOFF_MS } from '../src/recognizer.js';
 import { fromMediaPipe } from '../src/pose-provider.js';
 import { createFlight,consumeAction,stepFlight,crash } from '../src/engine.js';
-import { projectHead } from '../src/projection.js';
+import { projectHead, helicopterHeight } from '../src/projection.js';
 import { assertActionFrame } from '../../../../contracts/index.js';
 import { pose } from './fixtures.js';
 import { TrackingGate } from '../src/tracking-gate.js';
@@ -94,16 +94,63 @@ test('a single contact frame is harmless; sustained contact crashes',()=>{
 });
 test('three live difficulty controls change existing gates, speed and future acceleration without restarting',()=>{
   const s=createFlight(pose());consumeAction(s,active(0));s.obstacles=[{x:1,gap:.3,counted:false}];
-  const gate=s.obstacles[0],session=s.sessionId;setDifficulty(s,{opening:.7,speed:.4,acceleration:1.5});
-  assert.ok(Math.abs(gateOpening(gate,s.difficulty).bottom-gateOpening(gate,s.difficulty).top-.7)<1e-10);
+  const gate=s.obstacles[0],session=s.sessionId;setDifficulty(s,{opening:6,speed:.4,acceleration:1.5});
+  assert.ok(Math.abs(gateOpening(gate,s.difficulty).bottom-gateOpening(gate,s.difficulty).top-6*helicopterHeight(1280)/720)<1e-10);
   const before=gate.x;stepFlight(s,.05,0,{width:640,height:480});assert.ok(gate.x<before);assert.ok(flightSpeed(s)>.4);
   const speed=flightSpeed(s);setDifficulty(s,{...s.difficulty,acceleration:0});assert.equal(flightSpeed(s),speed);
   for(let t=100;t<2000;t+=50)stepFlight(s,.05,t,{width:640,height:480});assert.equal(flightSpeed(s),speed);
-  setDifficulty(s,{...s.difficulty,speed:1.8});assert.equal(flightSpeed(s),1.8);assert.equal(s.sessionId,session);assert.equal(s.obstacles[0],gate);
-  setDifficulty(s,{opening:100,speed:-1,acceleration:NaN});assert.deepEqual(s.difficulty,{opening:.7,speed:.4,acceleration:.4});
+  setDifficulty(s,{...s.difficulty,speed:6});assert.equal(flightSpeed(s),6);assert.equal(s.sessionId,session);assert.equal(s.obstacles[0],gate);
+  setDifficulty(s,{opening:100,speed:-1,acceleration:NaN});assert.deepEqual(s.difficulty,{opening:6,speed:.4,acceleration:.4});
 });
-test('acceleration grows over active game time, including held tracking, and caps at 3x',()=>{
-  const s=createFlight(pose(),{speed:1,opening:.5,acceleration:1.5});consumeAction(s,active(0));s.trackingHeld=true;
-  for(let t=0;t<120_000;t+=50){s.obstacles=[];stepFlight(s,.05,t,{width:640,height:480});}
-  assert.equal(s.status,'flying');assert.equal(flightSpeed(s),3);
+test('acceleration grows over active game time, including held tracking, and caps at 10x',()=>{
+  const s=createFlight(pose(),{speed:1,opening:4,acceleration:1.5});consumeAction(s,active(0));s.trackingHeld=true;
+  for(let t=0;t<400_000;t+=50){s.obstacles=[];stepFlight(s,.05,t,{width:640,height:480});}
+  assert.equal(s.status,'flying');assert.equal(flightSpeed(s),10);
+});
+
+test('missing actions preserve the last control and position until valid control returns',()=>{
+  const s=createFlight(pose()),view={width:640,height:480};
+  consumeAction(s,active(0,.4,.3));stepFlight(s,.01,0,view);const head={...s.headControl};
+  for(let t=50;t<=4000;t+=50){
+    consumeAction(s,{...active(t),phase:'missing',progress:0,headControl:null});
+    stepFlight(s,.05,t,view);assert.equal(s.x,.6);assert.equal(s.y,.3);assert.deepEqual(s.headControl,head);
+  }
+  assert.equal(s.status,'flying');assert.equal(s.trackingHeld,true);
+  consumeAction(s,active(4100,.5,.6));stepFlight(s,.01,4100,view);
+  assert.equal(s.trackingHeld,false);assert.equal(s.x,.5);assert.equal(s.y,.6);
+});
+test('hardest opening is twice the helicopter height across viewport sizes',()=>{
+  for(const view of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]){
+    const s=createFlight(pose(),{opening:2});
+    for(const center of [.2,.5,.8]){
+      const gap=gateOpening({gap:center},s.difficulty,view);
+      assert.ok(Math.abs((gap.bottom-gap.top)*view.height-2*helicopterHeight(view.width))<1e-8);
+      assert.ok(gap.top>=0&&gap.bottom<=1);
+    }
+  }
+});
+test('fast gates still collide at 10x, while centered flight passes the 2x opening',()=>{
+  for(const view of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]){
+    for(const blocked of [true,false]){
+      const s=createFlight(pose(),{opening:2,speed:6,acceleration:0});
+      consumeAction(s,active(0));s.trackingHeld=true;s.x=.5;s.y=blocked?.1:.5;s.speedGain=4;
+      s.obstacles=[{x:.8,gap:.5,counted:false}];
+      for(let t=0;t<1000&&s.status==='flying';t+=50)stepFlight(s,.05,t,view);
+      assert.equal(s.status,blocked?'crashing':'flying');
+      if(!blocked)assert.equal(s.passed,1);
+    }
+  }
+});
+
+test('the first gate enters at three seconds and the next gate follows three seconds later',()=>{
+  const s=createFlight(pose(),{speed:1,acceleration:0}),view={width:1280,height:720};
+  consumeAction(s,active(0));s.trackingHeld=true;s.x=.1;s.y=.3;
+  for(let i=0;i<59;i++)stepFlight(s,.05,i*50,view);
+  assert.equal(s.spawned,0);assert.equal(s.obstacles.length,0);
+  for(let i=0;i<2;i++)stepFlight(s,.05,2950+i*50,view);
+  assert.equal(s.spawned,1);assert.ok(s.obstacles[0].x*view.width-17<view.width);
+  for(let i=0;i<60;i++)stepFlight(s,.05,3050+i*50,view);
+  assert.equal(s.spawned,2);assert.equal(s.obstacles.length,2);
+  const distance=s.obstacles[1].x-s.obstacles[0].x;
+  assert.ok(Math.abs(distance-.105*3)<.002);
 });

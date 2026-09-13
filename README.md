@@ -17,7 +17,7 @@ npm run dev
 Open <http://127.0.0.1:5178>. Enable the camera, keep shoulders through ankles visible,
 turn slightly sideways, and stand upright for about two seconds to calibrate.
 Squat to charge, then stand to attack. The button/Space preview is labeled synthetic.
-The first start downloads the official Lite model; later starts use local assets.
+The arcade homepage preloads tracking files without camera access. Games reuse verified device-cached files when browser storage is available; first-time and uncached starts show download progress in Motion Quest.
 
 Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
 with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,
@@ -51,8 +51,10 @@ regression cases. See [capture, privacy and test workflow](apps/recognition-lab/
 Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
 `npm run build:motion-quest` retains the standalone baseline build.
 The arcade lives in `apps/arcade/`; game sources remain independently owned.
-Opt-in recordings save to IndexedDB on the player’s device. GCP gallery publishing
-is prepared but disabled until the owner provides bucket and runtime identity settings.
+Gameplay records automatically to IndexedDB on the player’s device. Branded MP4
+exports use a supported native encoder, with an explicitly labeled WebM fallback.
+Full replays can produce a short local copy for website sharing. GCP publication
+remains disabled until a usable runtime identity and upload code are configured.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
 ## Team map

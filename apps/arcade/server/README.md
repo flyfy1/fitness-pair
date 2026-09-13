@@ -1,6 +1,6 @@
 # Optional GCP sharing gateway
 
-The deployed Sites Worker serves the arcade and private-bucket media. Sharing stays disabled until the owner provides configuration. No GCP project, bucket, identity or credentials have been invented or provisioned.
+The deployed Sites Worker serves the arcade and private-bucket media. Sharing stays disabled until the owner provides configuration. The configured private bucket is `project-e8ef2daf-0520-4018-b9f-fitness-sharing`. A usable runtime identity has not been supplied; bucket configuration alone does not enable sharing.
 
 ## Runtime configuration
 
@@ -15,12 +15,12 @@ Grant the service account object create/get/list/delete permissions only on this
 ## Flow
 
 1. Gameplay automatically creates a branded local replay in IndexedDB. Local recordings are bounded at 100 MiB; this pilot upload endpoint currently accepts up to 60 seconds / 20 MiB.
-2. Player previews it and explicitly consents to gallery publication. A management key is saved locally **before** upload so retry and deletion remain possible.
+2. For an oversized replay, the player first makes a local share copy of up to 55 seconds of final gameplay plus a three-second invitation. The original remains local. The player previews the chosen copy and explicitly consents to gallery publication. A management key is saved locally **before** upload so retry and deletion remain possible.
 3. Worker verifies upload authorization, origin, consent, metadata, bounded body and MP4/WebM magic bytes; it uploads private bytes and then a publication record. The metadata contains a hash of the management key.
 4. Gallery and `/clips/:id` read publication records. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.
 5. Deletion removes the publication record first; downloads no longer resolve. Local deletion and public revocation are independent.
 
-This is an access-code-gated integration prepared for a future bucket, not a fully moderated public video platform. Header checks do not establish video codec safety or actual duration: duration is client-declared. GCP live upload, lifecycle, range playback, authentication and quotas need verification after configuration. The existing Node/FFmpeg sharing experiment contains deeper media validation and remains unchanged.
+This is an access-code-gated integration with live verification pending a usable runtime credential, not a fully moderated public video platform. Header checks do not establish video codec safety or actual duration: duration is client-declared. GCP live upload, lifecycle, range playback, authentication and quotas need verification after configuration. The existing Node/FFmpeg sharing experiment contains deeper media validation and remains unchanged.
 
 The site hosts clip links but cannot prevent viewers from saving videos or recording their screen. An iframe does not provide copy protection. Sites access controls still determine who can open shared pages; a private deployment is not a public growth loop.
 

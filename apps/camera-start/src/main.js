@@ -1,5 +1,5 @@
 import './style.css';
-import { Runner } from '../../dino-run/src/engine.js';
+import { AnimatedRunner } from './animated-runner.js';
 import { drawWorld, sceneGeometry } from '../../../experiments/gameplay/dino-ar/src/scene.js';
 import { drawBody } from './body-overlay.js';
 import { PoseCamera } from '../../dino-run/src/camera.js';
@@ -10,10 +10,11 @@ import { createDiagnostics } from './diagnostics.js';
 
 const $ = id => document.getElementById(id);
 const gameMode = new URLSearchParams(location.search).get('mode') !== 'detect';
-const runner = new Runner(); runner.setControlMode('motion');
+const runner = new AnimatedRunner({ onEvent: (event, detail) => log(event, detail) }); runner.setControlMode('motion');
 let pauseReason = null, lastGameFrame = 0, lastPassed = 0, clearedAt = -Infinity;
 $('mode-link').textContent = gameMode ? 'Jump detection only' : 'Play Dino';
 $('mode-link').href = gameMode ? '?mode=detect' : './';
+$('range-title').textContent = gameMode ? 'Movement for a jump trigger' : 'Movement for a full jump';
 const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true, robustTracking: true });
 recognizer.setJumpRange(Number($('jump-range').value) / 100);
 let bodyFrame = null;
@@ -138,7 +139,7 @@ function gamePresentation(now) {
   const confirmed = detectedAt !== null && now - detectedAt < 1800;
   return { ...base, status: `${runner.score} POINTS · ${runner.passed} CLEARED`,
     title: approaching ? 'Jump!' : now - clearedAt < 1200 ? 'Cleared!' : confirmed ? 'Jump detected!' : 'Keep going!',
-    detail: approaching ? 'Lift your dinosaur over the cactus.' : confirmed ? `Jump ${jumpCount} confirmed.` : 'Your movement controls the dinosaur.',
+    detail: approaching ? 'Lift your dinosaur over the cactus.' : confirmed ? `Jump ${jumpCount} confirmed.` : 'Your jump triggers a smooth dinosaur jump.',
     reason: approaching ? 'obstacle-approaching' : confirmed ? 'jump-detected' : 'running' };
 }
 function observeJump(input) {
@@ -269,7 +270,7 @@ function paint() {
   const response = fresh ? Math.round((action?.previewHeightRatio ?? 0) * 100) : 0;
   $('movement-meter').value = response;
   $('movement-label').textContent = !camera.running ? 'Live movement · enable camera'
-    : !fresh ? 'Live movement · tracking paused' : `Live jump response · ${response}%`;
+    : !fresh ? 'Live movement · tracking paused' : `${gameMode ? 'Body movement' : 'Live jump response'} · ${response}%`;
   $('setup').dataset.stage = next.stage;
   $('status').textContent = next.status; $('instruction').textContent = next.title;
   $('detail').textContent = next.detail; $('feedback').textContent = next.feedback;
