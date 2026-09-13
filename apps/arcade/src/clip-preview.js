@@ -1,7 +1,12 @@
 // Keep the source out of the media element until an explicit playback action.
 export function mountClipPreview(container,{src,poster,title,width=640,height=400}){
  const frame=document.createElement('div');frame.className='clip-preview';
+ // Reserve the recorded shape before the poster loads, so replay navigation
+ // measures the final card height instead of a temporarily collapsed player.
+ frame.style.width=`min(100%, ${width}px, ${65*width/height}vh)`;
+ frame.style.aspectRatio=`${width} / ${height}`;
  const video=document.createElement('video');video.playsInline=true;video.preload='none';
+ video.style.width='100%';video.style.height='100%';
  video.width=width;video.height=height;video.setAttribute('aria-label',title);
  const button=document.createElement('button');button.type='button';button.className='clip-preview-play';
  button.setAttribute('aria-label','Play replay: '+title);

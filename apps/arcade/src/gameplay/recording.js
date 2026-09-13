@@ -5,7 +5,7 @@ import {BRAND_NAME,SITE_URL} from '../brand.js';
 import {recordingSize,drawClipFrame} from '../clip-compositor.js';
 import {saveClip,listClips} from '../local-clips.js';
 import {mountClipCard} from '../clips.js';
-export function mountRecording(game,runtime,{panel,result}){
+export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. Only your two latest videos stay on this device. Replays keep the latest 90 seconds at normal speed.</p><p class="record-note">Game + enabled camera · game sound when available · optional conversation track · nothing shared automatically</p></div><a href="/library">My clips →</a>';
  const status=panel.querySelector('#record-status');
  let conversationControls=null;
@@ -18,33 +18,49 @@ export function mountRecording(game,runtime,{panel,result}){
   button.setAttribute('aria-pressed',String(state.enabled));
   if(state.pending||state.enabled)delete conversationControls.dataset.error;
   if(conversationControls.dataset.error)return;
-  conversationControls.querySelector('[role=status]').hidden=true;
-  conversationControls.querySelector('[role=status]').textContent=state.pending?'Waiting for microphone permission…':state.enabled?(state.recording?'Microphone on · separate local track':'Microphone ready · starts with the game'):'Microphone off';
- },onError:message=>{if(conversationControls){conversationControls.dataset.error='true';const status=conversationControls.querySelector('[role=status]');status.hidden=false;status.textContent=message;}}});
+  conversationControls.querySelector('[role=status]:not([data-replay-status])').hidden=true;
+  conversationControls.querySelector('[role=status]:not([data-replay-status])').textContent=state.pending?'Waiting for microphone permission…':state.enabled?(state.recording?'Microphone on · separate local track':'Microphone ready · starts with the game'):'Microphone off';
+ },onError:message=>{if(conversationControls){conversationControls.dataset.error='true';const status=conversationControls.querySelector('[role=status]:not([data-replay-status])');status.hidden=false;status.textContent=message;}}});
 
  const cameraActive=video=>!!video?.srcObject?.getVideoTracks().some(track=>track.readyState==='live');
  const cameraLive=video=>cameraActive(video)&&video.readyState>=2&&video.videoWidth>0&&video.videoHeight>0;
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';
  let active=null,handledRound=null,watcher=0,unloading=false;
- const sessions=new Set(),readyRounds=new Map();let shareRound=null,shareButton=null;
+ const sessions=new Set(),readyRounds=new Map(),failedRounds=new Map();let shareRound=null,shareButton=null,completedRound=null,revealing=false;
  async function revealResult(){
-  if(unloading||shareRound===null||!readyRounds.has(shareRound)||document.hidden)return;
+  if(unloading||revealing||shareRound===null||!readyRounds.has(shareRound)||document.hidden)return;
   const round=shareRound;
-  if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});
-  const current=readGame();
-  if(shareRound!==round||current?.round!==round||current.phase!=='complete')return;
-  shareRound=null;
-  const card=result.querySelector(`[data-clip-id="${readyRounds.get(round)}"]`);
-  const heading=card?.querySelector("h3");
-  if(!heading)return;heading.tabIndex=-1;heading.focus({preventScroll:true});
-  (card||result).scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"});
+  revealing=true;
+  try{
+   if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});
+   const current=readGame();
+   if(unloading||document.hidden||shareRound!==round||current?.round!==round||current.phase!=='complete')return;
+   const card=result.querySelector(`[data-clip-id="${readyRounds.get(round)}"]`);
+   const heading=card?.querySelector('h3');
+   if(!heading)return;
+   shareRound=null;
+   heading.tabIndex=-1;heading.focus({preventScroll:true});
+   card.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+  }finally{revealing=false;}
+ }
+ function recordingFailed(session,error){
+  sessions.delete(session);
+  failedRounds.set(session.round,error.message||'The browser could not finish this recording.');
+  while(failedRounds.size>2)failedRounds.delete(failedRounds.keys().next().value);
+  if(!active)setState('idle',failedRounds.get(session.round));
+  watchForStart();
  }
  function setState(next,message){panel.dataset.state=next;if(next==='unavailable'&&conversationControls)conversationControls.querySelector('button').disabled=true;if(message&&status.textContent!==message)status.textContent=message;}
  const readGame=()=>{const value=runtime.readFrame();return value?{...value}:null;};
  function showResult(clip){
   if(unloading)return;
   if(result.hidden){result.hidden=false;result.innerHTML='<h2 tabindex="-1">Your replay is ready.</h2><p>Watch it, then send it to a friend or keep it for yourself. Nothing has been uploaded.</p><div class="clip-grid"></div>';}
-  if(!result.querySelector(`[data-clip-id="${clip.id}"]`))mountClipCard(result.querySelector('.clip-grid'),clip);
+  if(!result.querySelector(`[data-clip-id="${clip.id}"]`)){
+   const card=mountClipCard(result.querySelector('.clip-grid'),clip);
+   const back=document.createElement('button');back.type='button';back.className='replay-return';back.textContent='Back to game';
+   back.onclick=()=>{result.querySelectorAll('video').forEach(video=>video.pause());onReturnToGame();};
+   card.prepend(back);
+  }
   revealResult();
  }
  function start(snapshot){
@@ -57,17 +73,17 @@ export function mountRecording(game,runtime,{panel,result}){
    cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';session.stoppedAt=performance.now();
    if(active===session)active=null;
    if(!active)setState('saving','Saving your clip on this device…');
-   if(session.recorder?.state!=='inactive')session.recorder?.stop().then(saveRecording).catch(error=>{sessions.delete(session);if(!active)setState('idle',error.message);});
+   if(session.recorder?.state!=='inactive')session.recorder?.stop().then(saveRecording).catch(error=>recordingFailed(session,error));
    stopTracks();
   }
   async function saveRecording(recorded){
-   sessions.delete(session);
    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,blob:recorded.blob};
    clip.conversation=await session.conversationResult;
    clip.thumbnail=recorded.trimmed?recorded.thumbnail:await session.thumbnail;
    if(clip.conversation)clip.conversation.offsetSeconds-=recorded.startSeconds;
    let message=session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the latest camera replay below.':'Saved on this device. Your replay is ready below.';
    try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
+   sessions.delete(session);
    readyRounds.set(session.round,clip.id);
    while(readyRounds.size>2)readyRounds.delete(readyRounds.keys().next().value);
    if(!active)setState(sessions.size?'finishing':'idle',message);
@@ -119,21 +135,35 @@ export function mountRecording(game,runtime,{panel,result}){
     }catch{finish('Game closed');}
    }
    session.raf=requestAnimationFrame(paint);
-  }catch(error){stopTracks();sessions.delete(session);if(active===session)active=null;setState('idle',error.message);}
+  }catch(error){stopTracks();if(active===session)active=null;recordingFailed(session,error);}
  }
  function watchForStart(){
-  if(unloading||document.hidden||!supported)return;
+  if(unloading||document.hidden)return;
   try{
    const snapshot=readGame();
-   if(shareButton){shareButton.hidden=snapshot?.phase!=='complete';shareButton.textContent=shareRound===snapshot?.round&&!readyRounds.has(snapshot.round)?'Preparing video…':'Share';}
-   if(snapshot?.phase!=='complete')shareRound=null;
+   const complete=snapshot?.phase==='complete';
+   if(complete&&completedRound!==snapshot.round){completedRound=snapshot.round;shareRound=snapshot.round;}
+   if(!complete)shareRound=null;
+   if(shareButton){
+    const ready=readyRounds.has(snapshot?.round);
+    const pending=[...sessions].some(session=>session.round===snapshot?.round);
+    const error=failedRounds.get(snapshot?.round)||(!supported?'Recording is unavailable in this browser.':!ready&&!pending?'No replay was recorded for this round.':'');
+    shareButton.hidden=!complete;shareButton.disabled=!ready;
+    const label=ready?'View replay':error?'Video unavailable':'Preparing video…';
+    if(shareButton.textContent!==label)shareButton.textContent=label;
+    const notice=conversationControls.querySelector('[data-replay-status]');
+    notice.hidden=!complete;
+    const message=ready?'Your replay is ready.':error||'Preparing your replay on this device…';
+    if(notice.textContent!==message)notice.textContent=message;
+   }
+   if(complete)revealResult();
    if(active&&snapshot&&snapshot.round!==active.round)active.finish('Round restarted');
-   if(!active&&snapshot?.phase==='playing'&&snapshot.round!==handledRound)start(snapshot);
+   if(supported&&!active&&snapshot?.phase==='playing'&&snapshot.round!==handledRound)start(snapshot);
   }catch{/* Wait for the same-origin game to finish loading. */}
  }
  listClips().then(clips=>{for(const clip of clips)showResult(clip);}).catch(()=>{});
  if(!supported)setState('unavailable','Recording is unavailable in this browser. You can still play.');
- else{watcher=setInterval(watchForStart,100);watchForStart();}
+ watcher=setInterval(watchForStart,100);watchForStart();
  function visibility(){
   if(document.hidden){conversation.disable();handledRound=null;for(const session of sessions)session.saveNow();}
   else watchForStart();
@@ -143,10 +173,10 @@ export function mountRecording(game,runtime,{panel,result}){
  return {
   connectControls(element){
    conversationControls=element;shareButton=element.querySelector('[data-replay-share]');
-   shareButton.onclick=()=>{const snapshot=readGame();if(snapshot?.phase!=='complete')return;shareRound=snapshot.round;shareButton.textContent='Preparing video…';revealResult();};
+   shareButton.onclick=()=>{const snapshot=readGame();if(snapshot?.phase!=='complete'||!readyRounds.has(snapshot.round))return;shareRound=snapshot.round;revealResult();};
    element.querySelector('button').disabled=!supported||panel.dataset.state==='unavailable';element.querySelector('button').onclick=()=>conversation.toggle();watchForStart();
   },
-  onGameReload(){if(active)active.finish('Game reloaded');conversation.disable();handledRound=null;},
+  onGameReload(){if(active)active.finish('Game reloaded');conversation.disable();handledRound=null;completedRound=null;shareRound=null;},
   dispose(){if(unloading)return;unloading=true;document.removeEventListener('visibilitychange',visibility);conversation.disable();clearInterval(watcher);unsubscribe();for(const session of sessions)session.saveNow();},
  };
 }

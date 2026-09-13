@@ -19,6 +19,10 @@
 
 `shell.js` owns the viewport, home/exit link, optional microphone control and
 replay area. `recording` owns automatic recording lifecycle and local persistence.
+When the current round completes, its replay is revealed automatically after
+saving. The shared HUD shows preparation or recording failure; a newer round
+cancels the reveal. Back to game pauses replay playback and restores the game
+viewport. Opening a replay never publishes or automatically plays its video.
 `rolling-media.js` bounds native video and optional conversation capture to the
 latest 90 seconds, then remuxes the retained packets at normal speed. It rotates
 independently decodable segments and preserves a shared video/audio timeline.

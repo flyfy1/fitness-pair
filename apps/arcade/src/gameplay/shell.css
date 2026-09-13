@@ -25,3 +25,5 @@
   background: white;
 }
 .game-play .local-result > .clip-grid { max-width: 1000px; }
+
+.game-play .replay-return { margin-bottom: 12px; min-height: 44px; }
