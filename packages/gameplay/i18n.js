@@ -1,4 +1,6 @@
-import catalog from './translations/zh-CN.json' with {type: 'json'};
+import baseCatalog from './translations/zh-CN.json' with {type: 'json'};
+import sharingCatalog from './translations/sharing.zh-CN.json' with {type: 'json'};
+const catalog = [...baseCatalog, ...sharingCatalog];
 import flight from '../../experiments/gameplay/plank-flight/resources/ui.zh.json' with {type: 'json'};
 import {readLanguage} from './locale.js';
 

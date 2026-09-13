@@ -8,6 +8,7 @@ import { PoseCamera } from './camera.js';
 import { HeadFlightController } from './recognizer.js';
 import { createFlight, consumeAction, stepFlight, crash } from './engine.js';
 import { render } from './render.js';
+import { setupLandscape } from './landscape.js';
 import { setupFullscreen } from './fullscreen.js';
 import { TrackingGate, FRAME_FRESH_MS } from './tracking-gate.js';
 import { DEFAULT_DIFFICULTY, setDifficulty, flightSpeed } from './difficulty.js';
@@ -24,6 +25,7 @@ document.querySelector('#app').innerHTML = `
 <label for="speed"><span>Speed <output id="speed-value">1.0×</output></span><input id="speed" type="range" min="0.4" max="6" step="0.1" value="1"></label>
 <label for="acceleration"><span>Acceleration <output id="acceleration-value">+0.4×/min</output></span><input id="acceleration" type="range" min="0" max="1.5" step="0.1" value="0.4"></label>
 </div><div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><label class="language-control" data-no-i18n><select id="language" aria-label="Language / 语言"><option value="en">English</option><option value="zh">中文</option></select></label><button id="sound" aria-pressed="true" aria-label="Mute sound">Sound on</button><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
+<div id="landscape-prompt" class="landscape-prompt" role="dialog" aria-modal="true" aria-labelledby="landscape-title" hidden><div><span class="rotate-phone" aria-hidden="true">↻</span><h2 id="landscape-title">Turn your phone sideways</h2><p>Play in landscape for more room between gates. Rotate your phone, or tap below to use automatic rotation when supported.</p><button id="landscape-start" class="primary">Use landscape</button></div></div>
 <span class="privacy">Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
 
 const $ = id => document.getElementById(id);
@@ -107,6 +109,8 @@ const camera=new PoseCamera({video,
   }
 });
 async function startCamera(){
+  if(landscape.blocked())return;
+  void landscape.request();
   sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='camera';lastAction=null;halted=false;starting=true;
   $('mode').textContent=t('HEAD & SHOULDERS');$('demo-note').textContent=t('Camera · AI-generated voices');
@@ -114,6 +118,8 @@ async function startCamera(){
   await camera.start();
 }
 function startDemo(){
+  if(landscape.blocked())return;
+  void landscape.request();
   sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='synthetic';halted=false;starting=false;lastAction=null;demoSeq=0;
   state=createFlight({sessionId:crypto.randomUUID(),source:{kind:'synthetic',id:'pointer-demo'}},difficulty);
@@ -144,9 +150,13 @@ if(import.meta.hot)import.meta.hot.dispose(()=>sound.dispose());
 updateDifficulty();
 for(const id of ['opening','speed','acceleration'])$(id).addEventListener('input',updateDifficulty);
 setupFullscreen(stage,$('fullscreen'),message=>{$('view-status').textContent=message;});
+const landscape=setupLandscape(stage,$('landscape-prompt'),$('landscape-start'),()=>{
+  if(camera.active||starting||['countdown','flying','crashing'].includes(state.status))
+    interrupt('Your phone is upright. Turn it sideways, then start a fresh flight.');
+});
 $('start').onclick=startCamera;$('demo').onclick=startDemo;$('stop').onclick=finishOrStop;
 function pointerControl(event){
-  if(mode!=='synthetic'||halted||event.target.closest('button, .difficulty, .language-control'))return;
+  if(landscape.blocked()||mode!=='synthetic'||halted||event.target.closest('button, .difficulty, .language-control'))return;
   const rect=stage.getBoundingClientRect();
   demoHead={x:1-Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),
     y:Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height)),

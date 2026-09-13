@@ -146,3 +146,14 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
   .language-control select { width: 72px; font-size: 11px; padding: 4px; }
   #fullscreen { width: 40px; }
 }
+
+
+.landscape-prompt {
+  position: absolute; inset: 0; z-index: 20; display: grid; place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px; overflow: auto;
+  background: #102c38; text-align: center; touch-action: auto;
+}
+.landscape-prompt > div { max-width: 340px; }
+.landscape-prompt h2 { font: normal 32px/1.15 Georgia, serif; }
+.landscape-prompt p { color: #c2d5d1; line-height: 1.6; }
+.rotate-phone { display: block; font-size: 72px; color: #f3cd8e; }

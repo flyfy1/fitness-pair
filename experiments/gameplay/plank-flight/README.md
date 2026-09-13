@@ -44,8 +44,11 @@ fills the screen with a centered, aspect-preserving crop; viewport rotation/resi
 and fullscreen use the same projection for the overlay and collisions.
 
 The first gate enters from the right at 3 seconds of flight, with another gate
-every 3 seconds. At the same speed, gates are half as far apart as the earlier
-6-second schedule.
+no sooner than 3 seconds after the previous one. Spawning waits longer when needed
+so the horizontal edge-to-edge clearance is at least twice the visible helicopter
+width (tail through the widest rotor position). Acceleration and the vertical gate
+opening never reduce this minimum. Delayed gates are not queued for catch-up bursts.
+Resizing also preserves this clearance for gates already in flight.
 
 The timer shows **flight time**, not detected exercise time. Gates are game obstacles,
 not repetition events. Head tracking can also respond to seated or standing motion;
@@ -161,6 +164,13 @@ Starting again creates a fresh session. Late-arriving permission streams are
 stopped after cancellation. Tracking loss is not interpreted as workout failure.
 
 ## Full-window play
+
+Phones default to landscape play. Portrait touch screens show a rotation prompt
+before camera or demo entry. The landscape button and game entry request native
+fullscreen/orientation locking where supported; browsers that reject locking keep
+the prompt until the player physically turns the phone. Returning to portrait
+cancels the current flight and stops its camera/worker; turn sideways and start a
+fresh flight. Desktop portrait windows remain supported.
 
 The game fills the current window. Video, body overlay, helicopter and gates share
 one stage; the timer, instructions and controls are overlays. Portrait and landscape

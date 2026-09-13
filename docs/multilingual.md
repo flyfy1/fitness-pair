@@ -28,7 +28,7 @@ without recreating game sessions, camera tracks or recording output streams.
 
 ## Translation ownership
 
-`packages/gameplay/translations/zh-CN.json` contains records with stable semantic
+`packages/gameplay/translations/zh-CN.json` and `sharing.zh-CN.json` contain records with stable semantic
 `id`, exact English `en`, and Simplified Chinese `zh`. New copy should use a semantic
 ID through `message(id, values)` or `data-i18n`. Existing independently owned hosts
 use the shared DOM adapter to translate their English text and accessible labels
@@ -74,12 +74,14 @@ part of the arcade's translation catalog.
 
 ## Reviewed evidence (2026-09-14)
 
-- 84 shared/unit tests and 18 auth/server/resource tests pass.
-- The bilingual browser suite and Flight voice suite pass (11 checks), including
+- 87 shared/unit tests and 25 auth/server/resource tests pass.
+- The bilingual, Flight voice, sharing and current start/audio browser suites pass
+  (19 checks), including
   storage denial, explicit-choice persistence, 320/390 px menus, live language
   changes, Chinese countdown speech, a complete five-squat synthetic camera round,
   camera/worker cleanup, decoded replay audio and user-created title preservation.
-- Three additional current English start/audio regressions pass.
+- Sharing checks cover private token preservation, native share/copy messages,
+  user titles, the upload size limit and the permanent-expiry option in Chinese.
 - An older `recording-boundaries.spec.js` still requires a removed Motion Quest
   raised-hands start gate and therefore fails against the current product flow.
   That unrelated historical fixture was not rewritten. The current five-squat

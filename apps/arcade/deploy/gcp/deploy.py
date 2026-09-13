@@ -39,9 +39,15 @@ with tarfile.open(archive, 'w:gz') as bundle:
     bundle.add(package, arcname='package.json')
 if git('rev-parse', 'HEAD') != commit or git('status', '--porcelain'):
     raise SystemExit('Source changed during build; no remote deployment performed.')
+# Migrate storage expiry before exposing choices beyond seven days.
+run(['node', 'apps/arcade/deploy/gcp/retention-policy.mjs', '--apply',
+     '--backup='+str(local/('retention-before-'+release))])
 flags = ['--project', 'project-e8ef2daf-0520-4018-b9f', '--zone', 'asia-southeast1-b', '--tunnel-through-iap', '--quiet']
 run(['gcloud', 'compute', 'scp', str(archive), f'integ-prod:/tmp/{archive.name}', *flags])
 run(['gcloud', 'compute', 'scp', str(root/'apps/arcade/deploy/gcp/install.sh'), 'integ-prod:/tmp/fitness-arcade-install.sh', *flags])
 run(['gcloud', 'compute', 'ssh', 'integ-prod', *flags, '--command', f'sudo -n sh /tmp/fitness-arcade-install.sh {release}'])
+# Catch uploads that completed on the previous gateway during the release.
+run(['node', 'apps/arcade/deploy/gcp/retention-policy.mjs', '--apply',
+     '--backup='+str(local/('retention-after-'+release))])
 print('GCP deployed:', release)
 print('URL: https://fitness.integ.life')

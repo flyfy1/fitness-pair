@@ -20,7 +20,7 @@ async function firstFrame(bytes,stateDir){
 }
 
 // Add only missing derived JPEGs. No video, publication marker, ownership, or
-// account ledger is rewritten. The existing videos/ expiry policy covers JPEGs.
+// account ledger is rewritten. JPEGs inherit the publication expiry; permanent videos have no custom deletion time.
 export async function backfillThumbnails({apply=false,env=process.env,fetcher=fetch,encode=firstFrame,tokenProvider,log=console.log}={}){
  const token=tokenProvider||(apply?createMetadataTokenProvider({serviceAccount:env.GCP_IMPERSONATE_SERVICE_ACCOUNT}):null);
  if(apply&&(!env.GCP_BUCKET||!env.FITNESS_STATE_DIR))throw Error('Storage and state directory must be configured.');
@@ -40,8 +40,8 @@ export async function backfillThumbnails({apply=false,env=process.env,fetcher=fe
     if(poster.status!==404)throw Error('Could not check the thumbnail.');
     stats.missing++;if(!apply)continue;
     const media=await request(origin+'/api/media/'+clip.id);
-    if(!media.ok||Number(media.headers.get('Content-Length'))>20*1024*1024)throw Error('Could not read the bounded video.');
-    const bytes=Buffer.from(await media.arrayBuffer());if(!bytes.length||bytes.length>20*1024*1024)throw Error('Video exceeds the size limit.');
+    if(!media.ok||Number(media.headers.get('Content-Length'))>200_000_000)throw Error('Could not read the bounded video.');
+    const bytes=Buffer.from(await media.arrayBuffer());if(!bytes.length||bytes.length>200_000_000)throw Error('Video exceeds the size limit.');
     const image=await encode(bytes,env.FITNESS_STATE_DIR);
     if(image.length>256*1024||image[0]!==255||image[1]!==216||image.at(-2)!==255||image.at(-1)!==217)throw Error('Invalid thumbnail output.');
     // Recheck visibility after decoding in case its owner removed the clip.
@@ -50,8 +50,12 @@ export async function backfillThumbnails({apply=false,env=process.env,fetcher=fe
     const upload=await request('https://storage.googleapis.com/upload/storage/v1/b/'+encodeURIComponent(env.GCP_BUCKET)+'/o?uploadType=media&ifGenerationMatch=0&name='+encodeURIComponent(name),{
      method:'POST',headers:{Authorization:'Bearer '+await token(),'Content-Type':'image/jpeg'},body:image,
     });
+    if(!upload.ok&&upload.status!==412)throw Error('Thumbnail upload failed.');
+    if(Number.isSafeInteger(clip.expiresAt)){
+     const expiry=await request('https://storage.googleapis.com/storage/v1/b/'+encodeURIComponent(env.GCP_BUCKET)+'/o/'+encodeURIComponent(name),{method:'PATCH',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body:JSON.stringify({customTime:new Date(clip.expiresAt).toISOString()})});
+     if(!expiry.ok)throw Error('Thumbnail expiry update failed.');
+    }
     if(upload.status===412){stats.existing++;continue;}
-    if(!upload.ok)throw Error('Thumbnail upload failed.');
     const served=await request(origin+'/api/posters/'+clip.id);
     if(!served.ok||hash(Buffer.from(await served.arrayBuffer()))!==hash(image))throw Error('Thumbnail readback failed.');
     stats.created++;log(JSON.stringify({id:clip.id,thumbnailBytes:image.length,videoSHA256:hash(bytes),thumbnailSHA256:hash(image)}));

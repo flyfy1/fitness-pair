@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readLanguage,saveLanguage,subscribeLanguage,preferredLanguage,normalizeLanguage} from '../packages/gameplay/locale.js';
-import catalog from '../packages/gameplay/translations/zh-CN.json' with {type:'json'};
+import baseCatalog from '../packages/gameplay/translations/zh-CN.json' with {type:'json'};
 
+import sharingCatalog from '../packages/gameplay/translations/sharing.zh-CN.json' with {type:'json'};
+const catalog=[...baseCatalog,...sharingCatalog];
 const stateKey=Symbol.for('hopmodo.language.preference');
 test('browser preference, explicit choice, unsupported languages and storage denial',()=>{
  const originalNavigator=Object.getOwnPropertyDescriptor(globalThis,'navigator');

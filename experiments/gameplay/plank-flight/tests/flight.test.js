@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { HeadFlightController, TAKEOFF_MS } from '../src/recognizer.js';
 import { fromMediaPipe } from '../src/pose-provider.js';
 import { createFlight,consumeAction,stepFlight,crash } from '../src/engine.js';
-import { projectHead, helicopterHeight } from '../src/projection.js';
+import { projectHead, helicopterHeight, helicopterWidth } from '../src/projection.js';
 import { assertActionFrame } from '../../../../contracts/index.js';
 import { pose } from './fixtures.js';
 import { TrackingGate } from '../src/tracking-gate.js';
@@ -144,8 +144,8 @@ test('fast gates still collide at 10x, while centered flight passes the 2x openi
   }
 });
 
-test('the first gate enters at three seconds and the next gate follows three seconds later',()=>{
-  const s=flyingFlight(pose(),{speed:1,acceleration:0}),view={width:1280,height:720};
+test('the first gate enters at three seconds and roomy screens retain the three-second cadence',()=>{
+  const s=flyingFlight(pose(),{speed:1,acceleration:0}),view={width:1440,height:720};
   consumeAction(s,active(0));s.trackingHeld=true;s.x=.1;s.y=.3;
   for(let i=0;i<59;i++)stepFlight(s,.05,i*50,view);
   assert.equal(s.spawned,0);assert.equal(s.obstacles.length,0);
@@ -166,4 +166,30 @@ test('three-second countdown tracks the head but delays flight time, speed gain 
   for(let i=0;i<10;i++)stepFlight(s,.05,2600+i*50,{width:640,height:480});
   assert.equal(s.status,'flying');assert.equal(s.flightSeconds,0);assert.equal(s.x,.6);assert.equal(s.y,.3);
   stepFlight(s,.05,3100);assert.ok(s.flightSeconds>0);
+});
+
+
+test('horizontal clearance stays at least two visible helicopter widths through difficulty changes and resize',()=>{
+  for(const width of [390,844,1280]) {
+    const s=flyingFlight(pose(),{speed:.4,acceleration:0});
+    s.trackingHeld=true;s.x=-2;
+    let spawnTime=0,spawnCount=0,pairs=0;
+    for(let i=0;i<3600;i++) {
+      const view={width:i<1800?width:390,height:720};
+      if(i===1200)setDifficulty(s,{speed:6,acceleration:1.5,opening:2});
+      if(i===2400)setDifficulty(s,{speed:.4,acceleration:0,opening:6});
+      stepFlight(s,.05,i*50,view);
+      if(s.spawned>spawnCount) {
+        assert.equal(s.spawned,spawnCount+1);
+        assert.ok(s.flightSeconds-spawnTime>=3-1e-8);
+        spawnCount=s.spawned;spawnTime=s.flightSeconds;
+      }
+      for(let j=1;j<s.obstacles.length;j++) {
+        pairs++;
+        const clearance=(s.obstacles[j].x-s.obstacles[j-1].x)*view.width-34;
+        assert.ok(clearance>=2*helicopterWidth(view.width)-1e-8,`clearance ${clearance} at ${view.width}px`);
+      }
+    }
+    assert.ok(pairs>0);assert.ok(spawnCount>5);
+  }
 });
