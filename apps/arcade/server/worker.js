@@ -11,7 +11,7 @@ export function validateUpload(request,url){
  const title=(url.searchParams.get('title')||'').trim(),source=url.searchParams.get('source'),game=url.searchParams.get('game'),duration=Number(url.searchParams.get('duration'));
  const mime=(request.headers.get('Content-Type')||'').split(';')[0],key=request.headers.get('X-Management-Key')||'';
  if(!title||title.length>90||/[\x00-\x1f]/.test(title))throw fail(400,'Use a title of 1–90 characters.');
- if(!['replay','synthetic'].includes(source)||!['motion-quest','dino-run'].includes(game))throw fail(400,'Unknown game or recording source.');
+ if(!['replay','synthetic'].includes(source)||!['motion-quest','dino-run','dino-ar','plank-flight','camera-start'].includes(game))throw fail(400,'Unknown game or recording source.');
  if(!Number.isFinite(duration)||duration<=0||duration>60)throw fail(400,'Record a clip of 60 seconds or less.');
  if(!['video/mp4','video/webm'].includes(mime))throw fail(415,'Use an MP4 or WebM recording.');
  if(!/^[a-zA-Z0-9-]{32,100}$/.test(key))throw fail(400,'A local management key is required.');
@@ -87,6 +87,8 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
   if(path.startsWith('/api/'))throw fail(404,'Not found.');
   if(!['GET','HEAD'].includes(request.method))throw fail(405,'Method not allowed.');
   if(/^\/(play\/[^/]+|gallery|library|clips\/[^/]+)\/?$/.test(path))return env.ASSETS.fetch(new Request(new URL('/',url),request));
+  const runtime=/^\/games\/(?:motion-quest|dino-run|dino-ar|plank-flight|camera-start)\/runtime\/(.+)$/.exec(path);
+  if(runtime)return env.ASSETS.fetch(new Request(new URL('/runtime/'+runtime[1],url),request));
   return env.ASSETS.fetch(request);
  }
  return {async fetch(request,env){try{return await routes(request,env);}catch(error){return json({error:error.status?error.message:'The gallery is unavailable. Please try again later.'},error.status||503);}}};

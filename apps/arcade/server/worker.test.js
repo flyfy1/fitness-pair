@@ -32,3 +32,12 @@ test('mock GCP publication persists, retries idempotently, streams ranges, and r
  const removed=await worker.fetch(new Request(url,{method:'DELETE',headers:{Authorization:'Bearer '+headers['X-Management-Key']}}),env);assert.equal(removed.status,200);assert.equal(objects.size,0);
  assert.equal((await worker.fetch(new Request('https://arcade.test/api/media/'+clip.id),env)).status,404);
 });
+
+test('all mounted games use shared same-origin tracking assets and support clip metadata',async()=>{
+ const seen=[],worker=createWorker(),env={ASSETS:{fetch:r=>{seen.push(new URL(r.url).pathname);return new Response('asset');}}};
+ for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start']){
+  await worker.fetch(new Request(`https://arcade.test/games/${game}/runtime/pose-worker.js`),env);
+  const target=new URL(url);target.searchParams.set('game',game);assert.equal(validateUpload(new Request(target,{headers}),target).game,game);
+ }
+ assert.deepEqual(seen,Array(5).fill('/runtime/pose-worker.js'));
+});

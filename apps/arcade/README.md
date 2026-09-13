@@ -2,7 +2,7 @@
 
 Owns the landing page, game selection, local clip library, gallery UI and optional GCP gateway. Existing games and recognizers retain their ownership.
 
-Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes the current Motion Quest and Dino Run under `/games/`, without editing their sources. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
+Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Dino Run, Dino AR, Push-up Flight and Ready to Move (guided camera Dino) under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
 
 Recording starts automatically when a game is running (or Motion Quest’s camera/preview is ready). A visible notice explains that the game and enabled camera are recorded on this device with no audio. Each finished round produces a replay without another recording choice. Explicit round identifiers distinguish immediate restarts; an earlier end card finishes independently while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Dino uses a camera inset. Finished clips include a three-second Hopmodo invitation with the platform description and full website address.
 
@@ -30,3 +30,8 @@ The public-facing platform is Hopmodo. Repository/package names, the Sites app t
 
 - [Web Share file support and click activation](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share)
 - [Canvas capture streams](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream)
+
+
+## Latest game mounts
+
+Dino AR and Push-up Flight retain their camera and keyboard/pointer preview modes. Ready to Move uses its guided standing/range/countdown flow. Their cards label experimental controls. All five game adapters use existing read-only game state to detect start, round identity, and completion. Dino AR's already-projected skeleton is not mirrored twice. Ready to Move composites its smaller game canvas into the full camera viewport using DOM rectangles. Push-up Flight preserves its crash sequence using a frozen camera frame when the game has already stopped its camera. No recognition contract changes were needed.
