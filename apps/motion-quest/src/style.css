@@ -27,10 +27,12 @@ h1 { font-size: clamp(24px, 3.5vw, 42px); letter-spacing: -.04em; line-height: 1
 #charge-bar { width: 0; }
 .session-info { position: absolute; top: 98px; left: 28px; display: flex; flex-direction: column; gap: 5px; font-size: 10px; text-shadow: 0 1px 5px #000; color: #e0eadf; }
 #mode-label { font-size: 12px; font-weight: 600; }
-.arena-message { position: absolute; top: 110px; right: 28px; max-width: min(50%, 380px); text-align: right; text-shadow: 0 2px 8px #000, 0 1px 3px #000; }
-.arena-message span { color: #def5b0; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
-.arena-message h2 { font-size: clamp(17px, 2vw, 24px); margin: 7px 0; }
-.arena-message p { font-size: 12px; margin: 0; }
+.arena-message { position: absolute; top: 38%; left: 50%; width: min(92%, 1100px); transform: translate(-50%, -50%); text-align: center; pointer-events: none; text-shadow: 0 3px 8px #000, 0 0 30px #000, 0 1px 2px #000; }
+.arena-message span { color: #def5b0; font-size: clamp(14px, 1.5vw, 22px); text-transform: uppercase; letter-spacing: .12em; }
+.arena-message h2 { font-size: clamp(48px, 7.5vw, 112px); font-weight: 850; line-height: 1.02; letter-spacing: -.045em; text-wrap: balance; margin: 16px 0; }
+.arena-message p { font-size: clamp(20px, 2.4vw, 32px); font-weight: 650; margin: 0; font-variant-numeric: tabular-nums; }
+.arena-message.error h2 { color: #ffd0bc; }
+.sr-only { position: absolute; width: 1px !important; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .stats { position: absolute; right: 28px; bottom: max(28px, env(safe-area-inset-bottom)); display: flex; gap: 24px; padding: 16px 24px; border-radius: 16px; background: #102019c9; border: 1px solid #d9f5ca33; }
 .stats > div { display: flex; flex-direction: column; gap: 4px; }
 .stats strong { font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -57,9 +59,9 @@ kbd { font: inherit; opacity: .65; }
 .error { border-color: #f5a691; }
 .error #status-dot { background: #f5a691; }
 .victory { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: #0b1714ed; padding: 24px; text-align: center; }
-.victory > div { max-width: 420px; }
+.victory > div { max-width: 900px; }
 .victory span { color: #d2f399; font-size: 12px; letter-spacing: .12em; }
-.victory h2 { font-size: 38px; letter-spacing: -.04em; }
+.victory h2 { margin: 20px 0; font-size: clamp(48px, 7.5vw, 112px); line-height: 1.04; letter-spacing: -.04em; }
 .victory p { line-height: 1.6; color: #d7e4ce; }
 @media (max-width: 650px) {
   .topbar { padding: max(16px, env(safe-area-inset-top)) 14px 20px; gap: 12px; }
@@ -70,8 +72,9 @@ kbd { font: inherit; opacity: .65; }
   .boss-hud > div:first-child { font-size: 10px; gap: 5px; }
   .session-info { top: 84px; left: 14px; }
   #fps { display: none; }
-  .arena-message { top: 135px; right: 14px; max-width: 60%; }
-  .arena-message p { display: none; }
+  .arena-message { top: 33%; width: calc(100% - 24px); }
+  .arena-message h2 { font-size: clamp(44px, 10vw, 64px); margin: 12px 0; }
+  .arena-message p { font-size: 20px; }
   .camera-placeholder { top: 22%; }
   .camera-placeholder h1 { font-size: 25px; }
   .tracking-panel { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); width: calc(100% - 24px); max-height: 43%; padding: 14px; border-radius: 16px; }
@@ -85,8 +88,9 @@ kbd { font: inherit; opacity: .65; }
 @media (max-height: 500px) and (min-width: 651px) {
   .tracking-panel { width: 310px; max-height: calc(100% - 86px); bottom: 12px; left: 16px; padding: 12px; }
   .session-info { display: none; }
-  .arena-message { top: 82px; }
-  .arena-message p { display: none; }
+  .arena-message { top: 42%; left: 69%; width: 56%; }
+  .arena-message h2 { font-size: clamp(40px, 5.5vw, 56px); margin: 10px 0; }
+  .arena-message p { font-size: 20px; }
   .stats { bottom: 12px; padding: 10px 16px; }
   .camera-placeholder { left: 60%; top: 30%; width: 40%; }
   .camera-placeholder h1 { font-size: 22px; }

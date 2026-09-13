@@ -13,7 +13,7 @@
       <div class="camera-stage">
         <video id="camera" autoplay playsinline muted aria-label="Live mirrored camera background"></video>
         <canvas id="skeleton" aria-label="Camera body-landmark overlay"></canvas>
-        <div id="camera-placeholder" class="camera-placeholder">
+        <div id="camera-placeholder" class="camera-placeholder sr-only">
           <span class="viewfinder" aria-hidden="true">⌖</span>
           <h1>Move your body.<br />Your room is the arena.</h1>
           <p>Enable your camera to step into the quest.</p>
@@ -25,7 +25,7 @@
         <div class="boss-hud"><div><span>Forest guardian</span><span id="hp-label">100 / 100</span></div><div class="health-track"><div id="hp-bar"></div></div></div>
       </header>
       <div class="session-info"><span id="mode-label">Waiting for an adventurer</span><span id="camera-tag">CAM 01 · OFF</span><span id="fps"></span></div>
-      <div class="arena-message" aria-live="polite"><span id="arena-kicker">Your movement is magic</span><h2 id="arena-title">Ready to wake the forest?</h2><p id="arena-subtitle">Stand tall to calibrate before your first squat</p></div>
+      <div class="arena-message"><span id="arena-kicker">Your next move</span><h2 id="arena-title" role="status" aria-live="polite" aria-atomic="true">Ready to move?</h2><p id="arena-subtitle">Enable your camera to begin</p></div>
       <section class="stats" aria-label="Round statistics">
         <div><strong><span id="rep-count">0</span><small> / 5</small></strong><span>Squats</span></div>
         <div><strong id="damage-count">0</strong><span>Damage</span></div>
@@ -33,7 +33,7 @@
       </section>
       <aside class="tracking-panel" aria-label="Camera and movement controls">
         <div class="panel-heading"><span id="tracking-badge">Camera is off</span><span class="local-badge">ON DEVICE</span></div>
-        <div class="pose-status"><i id="status-dot"></i><div><strong id="status-title" role="status">Ready to move?</strong><p id="status-detail">Keep shoulders to ankles visible. Turn slightly sideways and stand tall for about 2 seconds to calibrate.</p></div></div>
+        <div class="pose-status"><i id="status-dot"></i><div><strong id="status-title">Ready to move?</strong><p id="status-detail">Keep shoulders to ankles visible. Turn slightly sideways and stand tall for about 2 seconds to calibrate.</p></div></div>
         <div class="charge-row"><span id="charge-label">Movement charge</span><span id="charge-value">0%</span></div><div class="charge-track"><div id="charge-bar"></div></div>
         <button id="start" class="primary">Enable camera & play <span>↗</span></button>
         <div class="secondary-actions"><button id="demo" class="secondary">Try a gameplay preview</button><button id="calibrate" class="secondary" hidden>Recalibrate</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>

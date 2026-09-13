@@ -6,6 +6,7 @@ import { ARGame } from './ar-game.js';
 import { cameraPoint } from './camera-projection.js';
 
 const $ = id => document.getElementById(id);
+const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
 const video = $('camera'), overlay = $('skeleton'), ctx = overlay.getContext('2d');
 const game = new ARGame($('game'));
 const detector = new SquatRecognizer();
@@ -16,15 +17,21 @@ let reps = 0, elapsedMs = 0, runningAt = null, demoHeldAt = null, demoCharge = 0
 let statusUntil = 0, currentProgress = 0, sound = null;
 let initTimer = null, gameState = null, inputSeq = 0;
 
-function status(title, detail, error = false) {
-  $('status-title').textContent = title; $('status-detail').textContent = detail;
+function status(title, detail, error = false, headline = title) {
+  setText('status-title', title); setText('status-detail', detail);
   document.querySelector('.tracking-panel').classList.toggle('error', error);
+  setText('arena-title', headline);
+  setText('arena-kicker', mode === 'demo' ? 'Preview · simulated movement' : 'Your next move');
+  document.querySelector('.arena-message').classList.toggle('error', error);
 }
 function progress(value, label = 'Movement charge') {
   currentProgress = Math.max(0, Math.min(1, value));
   $('charge-bar').style.width = `${currentProgress * 100}%`;
   $('charge-value').textContent = `${Math.round(currentProgress * 100)}%`;
   $('charge-label').textContent = label;
+  $('arena-subtitle').textContent = (mode === 'camera' || mode === 'demo') && reps < 5
+    ? `${label === 'Standing calibration' ? 'Calibrating' : 'Charge'} ${Math.round(currentProgress * 100)}% · ${reps} / 5 hits`
+    : `${reps} / 5 hits`;
 }
 function pauseClock() { if (runningAt !== null) elapsedMs += performance.now() - runningAt; runningAt = null; }
 function startClock() { if (runningAt === null && reps < 5) runningAt = performance.now(); }
@@ -36,9 +43,6 @@ function resetRound() {
   statusUntil = 0; detector.reset({ sessionId, source }); game.reset(); progress(0);
   $('rep-count').textContent = '0'; $('damage-count').textContent = '0'; $('elapsed').textContent = '00:00';
   $('hp-label').textContent = '100 / 100'; $('hp-bar').style.width = '100%'; $('victory').hidden = true;
-  $('arena-title').textContent = mode === 'demo' ? 'Hold to charge, release to attack' : 'Ready to wake the forest?';
-  $('arena-kicker').textContent = mode === 'demo' ? 'Preview · not a real workout' : 'Your movement is magic';
-  $('arena-subtitle').textContent = mode === 'demo' ? 'Use the button below or the Space key' : 'Stand tall to calibrate before your first squat';
 }
 function beep() {
   if (!sound || sound.state !== 'running') return;
@@ -59,10 +63,9 @@ function attack(actionFrame) {
   const hp = gameState.health; game.attack(hp); beep();
   $('rep-count').textContent = String(reps); $('damage-count').textContent = String(reps * 20);
   $('hp-label').textContent = `${hp} / 100`; $('hp-bar').style.width = `${hp}%`;
-  $('arena-title').textContent = ['Nice! Keep gathering energy', 'The forest is responding', 'Great work. Two more to go', 'Ready for the final hit?', 'A perfect finishing move!'][reps - 1];
-  $('arena-kicker').textContent = mode === 'demo' ? 'Preview · simulated attack' : `Movement complete · rep ${reps}`;
+  progress(0);
   statusUntil = performance.now() + 1000;
-  status(mode === 'demo' ? 'Simulated attack landed!' : 'Squat +1. Attack landed!', reps < 5 ? 'Stand steady, then continue at your own pace.' : 'Quest complete. Take a breather.');
+  status(mode === 'demo' ? 'Simulated attack landed!' : 'Squat +1. Attack landed!', reps < 5 ? 'Stand steady, then continue at your own pace.' : 'Quest complete. Take a breather.', false, reps < 5 ? `Hit! ${reps} / 5` : 'Quest complete!');
   if (reps === 5) {
     pauseClock(); game.charge = 0;
     const wasDemo = mode === 'demo';
@@ -87,30 +90,30 @@ function releaseCamera() {
   $('camera-placeholder').hidden = false; $('fps').textContent = '';
   game.charge = 0;
 }
-function stopCamera(message = 'Camera is off', detail = 'Enable your camera to start a new round.') {
+function stopCamera(message = 'Camera is off', detail = 'Enable your camera to start a new round.', headline = message) {
   releaseCamera(); mode = 'idle'; pauseClock(); demoHeldAt = null; demoCharge = 0; progress(0);
   $('start').hidden = false; $('start').disabled = false; $('start').innerHTML = 'Enable camera & play <span>↗</span>';
   $('stop').hidden = true; $('calibrate').hidden = true; $('demo-action').hidden = true;
   $('demo-action').classList.remove('pressed'); $('demo').hidden = false;
   $('tracking-badge').textContent = 'Camera is off'; $('camera-tag').textContent = 'CAM 01 · OFF'; $('mode-label').textContent = 'Waiting for an adventurer';
-  status(message, detail);
+  status(message, detail, false, headline);
 }
 function failCamera(error) {
   console.error('Motion Quest camera/model error:', error.name, error.message);
   const messages = {
-    NotAllowedError: ['Camera permission denied', 'Allow camera access in your browser and retry, or try the preview.'],
+    NotAllowedError: ['Camera permission denied', 'Allow camera access in your browser and retry, or try the preview.', 'Camera blocked'],
     NotFoundError: ['No camera found', 'Connect a camera and retry, or try the preview.'],
     NotReadableError: ['Camera is unavailable', 'Another app may be using it. Close that app and retry.'],
     TimeoutError: ['Model loading timed out', 'Retry after the local model files have been prepared.'],
   };
-  const [title, detail] = messages[error.name] ?? ['Could not start recognition', 'Try a recent Chrome or Edge browser, or use the gameplay preview.'];
-  stopCamera(title, detail); document.querySelector('.tracking-panel').classList.add('error');
+  const [title, detail, headline = 'Retry camera'] = messages[error.name] ?? ['Could not start recognition', 'Try a recent Chrome or Edge browser, or use the gameplay preview.'];
+  stopCamera(title, detail, headline); status(title, detail, true, headline);
 }
 async function startCamera() {
   stopCamera(); mode = 'loading'; resetRound(); enableSound();
   const session = generation;
   $('start').disabled = true; $('start').textContent = 'Requesting camera…'; $('stop').hidden = false;
-  status('Please allow camera access', 'The pose model will then load on this device.');
+  status('Please allow camera access', 'The pose model will then load on this device.', false, 'Allow camera');
   if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
     failCamera(new Error('Camera requires localhost or HTTPS')); status('A secure page is required', 'Open this page using localhost or HTTPS.', true); return;
   }
@@ -125,7 +128,7 @@ async function startCamera() {
     video.srcObject = stream; await video.play();
     if (session !== generation) return;
     $('camera-placeholder').hidden = true; $('start').textContent = 'Loading local model…';
-    $('camera-tag').textContent = 'CAM 01 · LOCAL'; status('Warming up movement tracking', 'The model runs on this device. Stand tall for about 2 seconds when ready.');
+    $('camera-tag').textContent = 'CAM 01 · LOCAL'; status('Warming up movement tracking', 'The model runs on this device. Stand tall for about 2 seconds when ready.', false, 'Getting ready');
     const workerURL = new URL(`${import.meta.env.BASE_URL}runtime/pose-worker.js`, location.href);
     worker = new Worker(workerURL);
     initTimer = setTimeout(() => {
@@ -137,7 +140,7 @@ async function startCamera() {
         clearTimeout(initTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
         $('start').hidden = true; $('start').disabled = false; $('calibrate').hidden = false;
         $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera AR · squat controls';
-        status('Stand tall to calibrate', 'Keep shoulders to ankles visible for about 2 seconds. Turn slightly sideways.');
+        status('Stand tall to calibrate', 'Keep shoulders to ankles visible for about 2 seconds. Turn slightly sideways.', false, 'Stand tall');
       } else if (data.type === 'pose') {
         inFlight = false; lastResultAt = performance.now();
         $('fps').textContent = `${Math.round(data.inferenceMs)} ms / frame`;
@@ -158,12 +161,12 @@ async function startCamera() {
 function handlePose(result) {
   if (mode !== 'camera' || reps >= 5) return;
   const copy = {
-    missing: ['Your full movement is not visible', 'Keep shoulders to ankles in frame and stand steady before continuing.'],
-    stand: ['Stand tall first', 'Stand comfortably with straight legs, turned slightly sideways.'],
-    calibrating: ['Calibrating your standing pose', 'Stay upright for about 2 seconds.'],
-    ready: ['Ready. Try a squat', 'Lower slowly and watch the magic gather around you.'],
-    lowering: ['Keep lowering to charge', 'Stay within a comfortable range. Turn slightly sideways if charge stays low.'],
-    down: ['Charged! Stand to attack', 'Return to standing to release your magic.'],
+    missing: ['Your full movement is not visible', 'Keep shoulders to ankles in frame and stand steady before continuing.', false, 'Step into view'],
+    stand: ['Stand tall first', 'Stand comfortably with straight legs, turned slightly sideways.', false, 'Stand tall'],
+    calibrating: ['Calibrating your standing pose', 'Stay upright for about 2 seconds.', false, 'Hold still'],
+    ready: ['Ready. Try a squat', 'Lower slowly and watch the magic gather around you.', false, 'Squat down'],
+    lowering: ['Keep lowering to charge', 'Stay within a comfortable range. Turn slightly sideways if charge stays low.', false, 'Keep lowering'],
+    down: ['Charged! Stand to attack', 'Return to standing to release your magic.', false, 'Stand to attack'],
   };
   const inactive = ['missing', 'calibrating'].includes(result.phase);
   if (inactive) { pauseClock(); statusUntil = 0; }
@@ -173,9 +176,6 @@ function handlePose(result) {
   if (result.completion) { attack(result); return; }
   gameState = consumeAction(gameState, result).state;
   if (performance.now() >= statusUntil && copy[result.cue]) status(...copy[result.cue]);
-  if (result.phase === 'ready' && reps === 0) {
-    $('arena-title').textContent = 'Squat to charge. Stand to strike'; $('arena-subtitle').textContent = 'Complete five movements to wake the forest';
-  }
   $('tracking-badge').textContent = result.phase === 'missing' ? 'Waiting for full body' : result.phase === 'calibrating' ? 'Calibrating' : 'Body landmarks detected';
 }
 function drawSkeleton(points) {
@@ -211,10 +211,11 @@ function beginDemo() {
   $('mode-label').textContent = 'Preview · simulated movement'; $('tracking-badge').textContent = 'Preview · no camera';
   $('demo-action').hidden = false; $('demo').hidden = true;
   $('camera-placeholder').hidden = true;
-  status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.');
+  status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.', false, 'Hold to charge');
 }
 function holdDemo() {
   if (mode !== 'demo' || reps >= 5 || demoHeldAt !== null) return;
+  statusUntil = 0; status('Charging a simulated attack', 'Release once fully charged. This is a simulation.', false, 'Keep holding');
   demoHeldAt = performance.now(); $('demo-action').classList.add('pressed'); startClock();
 }
 function releaseDemo(cancel = false) {
@@ -232,7 +233,12 @@ function render(time) {
   if (document.hidden) { raf = 0; return; }
   if (time - lastRenderAt >= 32) {
     lastRenderAt = time;
-    if (demoHeldAt !== null) { demoCharge = Math.min(1, (time - demoHeldAt) / 650); game.charge = demoCharge; progress(demoCharge); }
+    if (demoHeldAt !== null) {
+      demoCharge = Math.min(1, (time - demoHeldAt) / 650); game.charge = demoCharge; progress(demoCharge);
+      if (demoCharge >= 1) status('Preview charged', 'Release the button or Space to attack.', false, 'Release to attack');
+    } else if (mode === 'demo' && reps < 5 && time >= statusUntil) {
+      status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.', false, 'Hold to charge');
+    }
     game.draw(time);
     const seconds = Math.floor((elapsedMs + (runningAt === null ? 0 : time - runningAt)) / 1000);
     $('elapsed').textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
@@ -248,7 +254,7 @@ $('stop').addEventListener('click', () => stopCamera());
 $('demo').addEventListener('click', beginDemo);
 $('calibrate').addEventListener('click', () => {
   detector.recalibrate(); game.charge = 0; progress(0); pauseClock(); statusUntil = 0;
-  status('Recalibrate your stance', 'Stand tall for about 2 seconds, then continue this round.');
+  status('Recalibrate your stance', 'Stand tall for about 2 seconds, then continue this round.', false, 'Stand tall');
 });
 $('again').addEventListener('click', () => mode === 'demo' ? beginDemo() : startCamera());
 $('demo-action').addEventListener('pointerdown', event => { event.preventDefault(); $('demo-action').setPointerCapture(event.pointerId); holdDemo(); });

@@ -97,3 +97,22 @@ Run `npm run test --workspace @fitness-pair/motion-quest` and, after building,
 `CI=1 PREVIEW=1 npm run test:browser`. Browser checks now start an isolated server
 on port 5179 (override with `MOTION_PORT`) and never reuse another checkout's
 preview. The interactive game remains on port 5178.
+
+### Status cues for standing away from the screen
+
+The camera AR HUD now puts the immediate action in large centered text, following
+Dino AR's separation of phase, action cue and detailed help. Desktop headlines
+scale to 112px (108px at 1440px width); portrait headlines remain at least 44px.
+High-contrast shadows preserve legibility over the live camera, while the compact
+controls keep longer explanations. The headline is pointer-transparent and
+moves into the free right-hand area on short landscape screens.
+
+Live cues include `Stand tall`, `Hold still`, `Squat down`, `Keep lowering`,
+`Stand to attack`, `Hit! N / 5`, and `Step into view`. Calibration/charge percentages
+and hit counts appear beneath the headline. Permission errors and the final result
+also use the large presentation. Preview commands are explicitly marked simulated.
+A single polite live region announces headline changes; repeated inference frames
+do not rewrite the same announcement. Recognition thresholds and game rules stay
+unchanged. Browser checks exercise phase transitions, missing tracking, hits,
+victory and desktop/portrait text size. Actual distance readability needs a player
+trial with their screen and camera placement.
