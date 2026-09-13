@@ -1,5 +1,6 @@
 import {CLIP_WIDTH,CLIP_HEIGHT,loadRecordingLogo,drawClipEnding} from './clip-compositor.js';
 import {startVideoRecorder,recordedBlob} from './video-format.js';
+import {MAX_BYTES} from './local-clips.js';
 
 export const SHARE_MAX_BYTES=20*1024*1024,SHARE_MAX_SECONDS=60;
 export const fitsWebsiteShare=clip=>clip.blob.size>0&&clip.blob.size<=SHARE_MAX_BYTES&&Number.isFinite(clip.duration)&&clip.duration>0&&clip.duration<=SHARE_MAX_SECONDS;
@@ -28,26 +29,30 @@ function waitMedia(video,event,action,signal){
 
 // Local re-encoding only: no fetch/upload of video, no new camera permission.
 // The source already contains camera, game and footer; draw it without mirroring.
-export async function createShareCopy(clip,{signal,onProgress=()=>{}}={}){
+export async function createShareCopy(clip,{signal,onProgress=()=>{},includeConversation=false,fullLength=false}={}){
  const controller=new AbortController(),abort=()=>controller.abort(signal?.reason||new DOMException('Share copy cancelled.','AbortError'));
  const visibility=()=>{if(document.hidden)controller.abort(new Error('Keep this tab visible while making a share copy. Your original replay is safe.'));};
  signal?.addEventListener('abort',abort,{once:true});window.addEventListener('pagehide',abort);document.addEventListener('visibilitychange',visibility);
- const deadline=setTimeout(()=>controller.abort(new Error('Making the share copy took too long. Your original replay is safe.')),75000);
+ const deadline=setTimeout(()=>controller.abort(new Error('Making the share copy took too long. Your original replay is safe.')),fullLength?Math.max(75000,(clip.duration+20)*1000):75000);
  const localSignal=controller.signal,video=document.createElement('video'),url=URL.createObjectURL(clip.blob);
- let stream,recorder,audioContext,audioOutput,raf=0,endTimer=0;video.muted=true;video.playsInline=true;video.preload='auto';
+ let stream,recorder,audioContext,audioOutput,voiceSource,voiceBuffer,raf=0,endTimer=0;video.muted=true;video.playsInline=true;video.preload='auto';
  try{
   if(signal?.aborted)abort();visibility();localSignal.throwIfAborted();
-  if(clip.includesAudio){
+  if(clip.includesAudio||(includeConversation&&clip.conversation)){
    // Resume within the player's click; route decoded game sound only to the copy.
    audioContext=new AudioContext();
    audioOutput=audioContext.createMediaStreamDestination();
-   audioContext.createMediaElementSource(video).connect(audioOutput);
+   if(clip.includesAudio)audioContext.createMediaElementSource(video).connect(audioOutput);
    video.muted=false;
    await abortable(audioContext.resume(),localSignal);
   }
+  if(includeConversation&&clip.conversation){
+   voiceBuffer=await abortable(audioContext.decodeAudioData(await clip.conversation.blob.arrayBuffer()),localSignal);
+  }
   await waitMedia(video,'loadeddata',()=>{video.src=url;video.load();},localSignal);
   const duration=Number.isFinite(video.duration)?video.duration:clip.duration;
-  const range=shareWindow(duration,clip.hasEnding);
+  const range=fullLength?{start:0,end:duration}:shareWindow(duration,clip.hasEnding);
+  if(!Number.isFinite(range.end)||range.end<=0)throw new Error('The replay duration is unavailable.');
   if(range.start>0)await waitMedia(video,'seeked',()=>{video.currentTime=range.start;},localSignal);
   const logo=await abortable(loadRecordingLogo(),localSignal);localSignal.throwIfAborted();
   const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;const ctx=canvas.getContext('2d');
@@ -58,13 +63,14 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{}}={}){
    const interrupted=()=>reject(localSignal.reason);localSignal.addEventListener('abort',interrupted,{once:true});
    try{
     recorder=startVideoRecorder(stream,r=>{
-     r.ondataavailable=e=>{bytes+=e.data.size;if(bytes>SHARE_MAX_BYTES){controller.abort(new Error('This share copy exceeded 20 MiB. Download the full replay instead.'));return;}if(e.data.size)chunks.push(e.data);};
+     r.ondataavailable=e=>{bytes+=e.data.size;if(bytes>(fullLength?MAX_BYTES:SHARE_MAX_BYTES)){controller.abort(new Error('This copy exceeded its file limit. Your original replay is safe.'));return;}if(e.data.size)chunks.push(e.data);};
      r.onerror=()=>controller.abort(new Error('This browser could not encode the share copy. Your original replay is safe.'));
      r.onstop=async()=>{localSignal.removeEventListener('abort',interrupted);try{resolve({blob:await recordedBlob(chunks,r.mimeType),duration:(stoppedAt-startedAt)/1000});}catch(error){reject(error);}finally{chunks=[];}};
     },{videoBitsPerSecond:1800000});startedAt=performance.now();
    }catch(error){localSignal.removeEventListener('abort',interrupted);reject(error);return;}
    const finish=()=>{
-    if(finishing)return;finishing=true;video.pause();
+    if(finishing)return;finishing=true;video.pause();voiceSource?.stop();
+    if(fullLength){stoppedAt=performance.now();recorder.stop();return;}
     drawClipEnding(ctx,clip.gameTitle||clip.title.split(' · ')[0],clip.finalScore||'Replay highlights',logo,clip.includesCamera,'Replay highlights');
     onProgress('Adding the Hopmodo invitation…');
     endTimer=setTimeout(()=>{stoppedAt=performance.now();recorder.stop();},3000);
@@ -77,18 +83,26 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{}}={}){
      if(performance.now()-lastFrameAt>8000){controller.abort(new Error('Replay playback stalled. Keep this tab visible and retry.'));return;}
      ctx.drawImage(video,0,0,CLIP_WIDTH,CLIP_HEIGHT);
      onProgress(`Making your share copy · ${Math.floor(video.currentTime-range.start)} / ${Math.ceil(range.end-range.start)} seconds`);
-     if(video.currentTime>=range.end-.04||video.ended||performance.now()-startedAt>=55000)finish();
+     if(video.currentTime>=range.end-.04||video.ended||(!fullLength&&performance.now()-startedAt>=55000))finish();
     }
     raf=requestAnimationFrame(paint);
    }
-   video.play().then(()=>{raf=requestAnimationFrame(paint);},error=>controller.abort(new Error('Replay playback could not start. Please retry from the clip button.',{cause:error})));
+   video.play().then(()=>{
+    if(voiceBuffer){
+     const offset=clip.conversation.offsetSeconds||0,position=video.currentTime;
+     const skip=Math.max(0,position-offset),delay=Math.max(0,offset-position);
+     const length=Math.min(voiceBuffer.duration-skip,range.end-position-delay);
+     if(length>0){voiceSource=audioContext.createBufferSource();voiceSource.buffer=voiceBuffer;voiceSource.connect(audioOutput);voiceSource.start(audioContext.currentTime+delay,skip,length);}
+    }
+    raf=requestAnimationFrame(paint);},error=>controller.abort(new Error('Replay playback could not start. Please retry from the clip button.',{cause:error})));
   });
   const encoded=await output;localSignal.throwIfAborted();
-  if(!fitsWebsiteShare(encoded))throw new Error('The share copy exceeded the website limits. Your full replay is still saved.');
-  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · share copy`,game:clip.game,createdAt:Date.now(),source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio,brand:clip.brand,website:clip.website,shareCopy:true,hasEnding:true,finalScore:clip.finalScore,...encoded};
+  if(!fullLength&&!fitsWebsiteShare(encoded))throw new Error('The share copy exceeded the website limits. Your full replay is still saved.');
+  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · ${fullLength?'with conversation':'share copy'}`,game:clip.game,createdAt:Date.now(),source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio||!!voiceBuffer,conversationEmbedded:!!voiceBuffer||!!clip.conversationEmbedded,gameTitle:clip.gameTitle,brand:clip.brand,website:clip.website,shareCopy:!fullLength,hasEnding:fullLength?!!clip.hasEnding:true,finalScore:clip.finalScore,...encoded};
  }finally{
   clearTimeout(deadline);clearTimeout(endTimer);cancelAnimationFrame(raf);
   if(recorder){recorder.ondataavailable=recorder.onstop=recorder.onerror=null;if(recorder.state!=='inactive')recorder.stop();}
+  try{voiceSource?.stop();}catch{/* Already ended. */}
   stream?.getTracks().forEach(track=>track.stop());audioOutput?.stream.getTracks().forEach(track=>track.stop());audioContext?.close().catch(()=>{});video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url);
   signal?.removeEventListener('abort',abort);window.removeEventListener('pagehide',abort);document.removeEventListener('visibilitychange',visibility);
  }

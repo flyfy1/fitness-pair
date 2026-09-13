@@ -165,3 +165,21 @@ software/codec checks, not evidence of human movement-recognition accuracy.
 The forced WebM fallback was independently probed as 1280 × 800 VP8 video with
 Opus audio. The browser test verifies its EBML signature, `.webm` download and
 playback. Silent legacy clips keep working without an added audio track.
+
+
+## Independent conversation track — 2026-09-13
+
+The optional microphone track supersedes the earlier no-microphone policy above.
+It uses its own MediaRecorder and local audio Blob; it is never mixed into the
+original video. Its offset is measured against the video recording's monotonic
+start. Web Audio combines the selected track with existing game sound only when
+the player requests a new export version. Codec/container fallback remains native.
+See [Media Capture](https://www.w3.org/TR/mediacapture-streams/) and
+[MediaStream Recording](https://www.w3.org/TR/mediastream-recording/).
+
+Three Chrome checks with synthetic 660 Hz audio passed: mid-game opt-in, off/on,
+owned-track cleanup, IndexedDB reload, decoded track energy, mixed-video energy,
+silent original preservation, selected download filename, cancelled late permission
+and denial without blocking guest play. Tests never requested physical devices or
+uploaded recordings. Real microphone acoustics and mobile encoder support are not
+established by these fixtures.

@@ -4,7 +4,7 @@ Owns the landing page, game selection, local clip library, gallery UI and option
 
 Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Dino Run, Dino AR, Push-up Flight and Ready to Move (guided camera Dino) under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
 
-Recording starts automatically when a game is running. Motion Quest starts after standing calibration reaches gameplay readiness, or immediately on entering its synthetic preview. Permission, model loading and initial calibration are excluded. A visible notice explains that the game, enabled camera and available game sound are recorded on this device; microphone audio is never requested. Each finished round produces a replay without another recording choice. Explicit round identifiers distinguish immediate restarts; an earlier end card finishes independently while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest retains the full charge, projectile, impact and victory animation before its branded ending. Its camera stops at the final repetition; the recorder freezes the last camera frame while the game effects finish. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Dino uses a camera inset. Finished clips include a three-second Hopmodo invitation with the platform description and full website address.
+Recording starts automatically when a game is running. Motion Quest starts after standing calibration reaches gameplay readiness, or immediately on entering its synthetic preview. Permission, model loading and initial calibration are excluded. A visible notice explains that the game, enabled camera and available game sound are recorded on this device; microphone audio is requested only after the player clicks Record conversation and is stored as a separate local track. Each finished round produces a replay without another recording choice. Explicit round identifiers distinguish immediate restarts; an earlier end card finishes independently while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest retains the full charge, projectile, impact and victory animation before its branded ending. Its camera stops at the final repetition; the recorder freezes the last camera frame while the game effects finish. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Dino uses a camera inset. Finished clips include a three-second Hopmodo invitation with the platform description and full website address.
 
 The old 60-second recording cutoff is removed. Recording runs until completion, camera loss, exit, or backgrounding, with a 100 MiB file safety limit and a 150 MiB local library limit. Reaching the file limit saves the portion captured so far and reports that limit. IndexedDB stores local video blobs; localStorage is unsuitable for video sizes. Storage failures retain every downloadable in-memory copy on the play page until explicitly deleted or the page is closed. Page exit cannot guarantee asynchronous persistence; finish the round before closing the tab. Deleting a local clip does not revoke an already shared clip. The gallery gateway accepts clips up to 60 seconds / 20 MiB. “Make short share copy” keeps up to the final 55 seconds of gameplay and appends a three-second invitation, re-encoding entirely on this device. The full replay remains saved. Preparation takes up to a minute, can be cancelled, and stops if the tab is hidden. Preview the new copy before explicitly publishing it; creating a copy never uploads it. Full replays can also be downloaded or passed to native file sharing.
 
@@ -98,3 +98,22 @@ clip pages link directly to the recorded game's `/play/:id` route with its name.
 The clip page puts this action above the video. Camera permissions and setup
 remain in the game's own start flow. Publishing to Gallery requires Integ.Life
 login and explicit consent; returning from login never automatically publishes.
+
+
+## Optional conversation track
+
+The game HUD offers Record conversation / Stop conversation recording. The
+microphone defaults off, requires a player click, and records only during the
+round. It stops on completion, failure, backgrounding or exit; late permission
+results are released after cancellation. Turning it off mid-round keeps silence
+in the independent track and preserves timing when it is enabled again.
+
+IndexedDB stores `conversation: {blob, offsetSeconds}` beside the original video.
+Game audio stays in the original video. The library's 150 MiB budget counts both
+blobs; conversation capture has a 10 MiB safety cap. The track can be downloaded
+separately. Include conversation in video locally encodes a separate replay at
+playback speed, preserving the original. It is cancellable and stops when hidden.
+The selected version drives preview, download, native file sharing, short copies
+and Gallery publication. Switching off restores the original video immediately.
+Generated versions also appear in My clips after reload. Microphone permission
+is not upload consent; publication still requires login and explicit confirmation.

@@ -95,3 +95,5 @@
 @media(max-width: 760px) { .nav { flex-wrap: wrap; gap: 10px 16px; } .nav [data-account-nav] { margin-left: auto; } .nav [data-account-nav]:not(:empty) + .nav-play { display: none; } }
 
 .clip-game-invite{margin:0 0 24px}.clip-game-invite p{margin:8px 0 0;font-size:13px;color:#425277}.clip-card .play-clip-game{background:var(--blue);color:white;border-color:var(--blue)}.clip-card .play-clip-game:hover{background:#1638cf}
+
+.conversation-choice{margin:16px 0;padding:12px;border:1px solid #42527755;border-radius:10px}.conversation-choice label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px}.conversation-choice input{width:20px;height:20px;accent-color:var(--blue)}.conversation-choice a{font-size:12px;text-decoration:underline}.conversation-choice p{margin:8px 0}.clip-actions [aria-disabled=true]{opacity:.5;pointer-events:none}

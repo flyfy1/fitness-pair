@@ -1,3 +1,4 @@
+import {createConversationCapture} from './conversation.js';
 import {games} from './games.js';
 import {getSession,loginURL,accountAPI,storageLabel,removeSharedClip,confirmRemoval} from './account.js';
 import {createShareCopy,fitsWebsiteShare} from './share-copy.js';
@@ -15,8 +16,17 @@ function playClipGame(clip, className='button primary'){
 }
 export function mountRecording(game,frame){
  const panel=document.querySelector('#record-panel');
- panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. It stays on this device.</p><p class="record-note">Game + enabled camera · game sound when available · no microphone · nothing shared automatically</p></div><a href="/library">My clips →</a>';
+ panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. It stays on this device.</p><p class="record-note">Game + enabled camera · game sound when available · optional conversation track · nothing shared automatically</p></div><a href="/library">My clips →</a>';
  const status=panel.querySelector('#record-status');
+ let conversationControls=null;
+ const conversation=createConversationCapture({onChange:state=>{
+  if(!conversationControls)return;
+  const button=conversationControls.querySelector('button');
+  button.textContent=state.pending?'Cancel microphone request':state.enabled?'Stop conversation recording':'Record conversation';
+  button.setAttribute('aria-pressed',String(state.enabled));
+  conversationControls.querySelector('[role=status]').textContent=state.pending?'Waiting for microphone permission…':state.enabled?(state.recording?'Microphone on · separate local track':'Microphone ready · starts with the game'):'Microphone off';
+ },onError:message=>{if(conversationControls)conversationControls.querySelector('[role=status]').textContent=message;}});
+
  const cameraLive=video=>!!(video?.srcObject&&video.readyState>=2&&video.videoWidth>0&&video.srcObject.getVideoTracks().some(track=>track.readyState==='live'));
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';
  let logo=null,active=null,handledRound=null,watcher=0,unloading=false;
@@ -63,7 +73,8 @@ export function mountRecording(game,frame){
  function start(snapshot){
   const session={round:snapshot.round,phase:'recording',hadCamera:cameraLive(snapshot.video),cameraTime:snapshot.video?.currentTime,lastCameraAt:performance.now(),startAt:performance.now(),raf:0,endTimer:0,bytes:0,chunks:[],capture:null,recorder:null,failed:false};
   sessions.add(session);active=session;handledRound=snapshot.round;
-  function stopTracks(){cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
+  session.conversation=conversation.begin(session.startAt);
+  function stopTracks(){session.conversationResult??=session.conversation.finish();cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
   function saveNow(){
    if(session.phase==='saving')return;
    cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';session.stoppedAt=performance.now();
@@ -74,6 +85,7 @@ export function mountRecording(game,frame){
   }
   function finish(score,reason='Round complete'){
    if(session.phase!=='recording')return;
+   session.conversationResult??=session.conversation.finish();
    session.stopReason=reason;session.hasEnding=true;session.finalScore=score;
    session.phase='finishing';session.capture?.getAudioTracks().forEach(track=>{track.enabled=false;});if(active===session)active=null;cancelAnimationFrame(session.raf);
    if(!active)setState('finishing','Round complete. Saving your replay…');
@@ -109,6 +121,7 @@ export function mountRecording(game,frame){
     try{blob=await recordedBlob(session.chunks,session.recorder.mimeType);}
     catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
     const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:Date.now(),duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
+    clip.conversation=await session.conversationResult;
     let message=session.limited?'File limit reached. The replay up to that point is saved below.':session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the camera replay captured so far below.':'Saved on this device. Your replay is ready below.';
     try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
     if(!active)setState(sessions.size?'finishing':'idle',message);
@@ -151,27 +164,36 @@ export function mountRecording(game,frame){
  if(!supported)setState('unavailable','Recording is unavailable in this browser. You can still play.');
  else loadRecordingLogo().then(img=>{logo=img;watcher=setInterval(watchForStart,100);watchForStart();}).catch(()=>setState('unavailable','The replay logo could not load. Reload to try again; you can still play.'));
  document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){handledRound=null;for(const session of sessions)session.saveNow();}
+  if(document.hidden){conversation.disable();handledRound=null;for(const session of sessions)session.saveNow();}
   else watchForStart();
  });
- window.addEventListener('pagehide',()=>{unloading=true;clearInterval(watcher);for(const session of sessions)session.saveNow();});
+ window.addEventListener('pagehide',()=>{conversation.disable();unloading=true;clearInterval(watcher);for(const session of sessions)session.saveNow();});
  function connectGame(){
-  if(active)active.finish('Game reloaded');handledRound=null;
-  try{frame.contentWindow.addEventListener('motionquest:replay-state',watchForStart);const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note, .privacy');if(note)note.textContent=game.id==='motion-quest'?'Your game and camera view record automatically after standing calibration, with game sound and no microphone. Nothing is uploaded unless you choose to share.':'Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
+  if(active)active.finish('Game reloaded');conversation.disable();handledRound=null;
+  try{frame.contentWindow.addEventListener('motionquest:replay-state',watchForStart);const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note, .privacy');if(note)note.textContent=game.id==='motion-quest'?'Your game and camera view record automatically after standing calibration, with game sound. Conversation recording is optional. Nothing is uploaded unless you choose to share.':'Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
  }
+ function mountConversationControl(){
+  const doc=frame.contentDocument;if(!doc?.body)return;
+  conversationControls=doc.createElement('div');conversationControls.className='hopmodo-conversation';
+  conversationControls.innerHTML='<button type="button" aria-pressed="false">Record conversation</button><span role="status">Microphone off</span>';
+  conversationControls.querySelector('button').onclick=()=>conversation.toggle();
+  const style=doc.createElement('style');style.textContent='.hopmodo-conversation{position:fixed;right:12px;bottom:12px;z-index:100;max-width:min(280px,calc(100vw - 24px));padding:8px 12px;border:1px solid #18234655;border-radius:12px;background:#fff;color:#182346;font:12px Arial,sans-serif;box-shadow:0 2px 12px #0002}.hopmodo-conversation button{display:block;min-height:36px;border:0;border-radius:20px;background:#2347ee;color:#fff;padding:6px 12px;font:600 12px Arial,sans-serif}.hopmodo-conversation button[aria-pressed=true]{background:#a92020}.hopmodo-conversation span{display:block;margin-top:4px;max-width:240px}.hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}';
+  doc.head.append(style);doc.body.append(conversationControls);
+ }
+ frame.addEventListener('load',mountConversationControl);if(frame.contentDocument?.readyState==='complete')mountConversationControl();
  frame.addEventListener('load',connectGame);if(frame.contentDocument?.readyState==='complete')connectGame();
 }
 function mountClipCard(container,clip){
- let copyController=null;
- const card=document.createElement('article');card.className='clip-card';const url=objectURL(clip.blob);
- card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
- card.querySelector('[data-delete]').onclick=async()=>{copyController?.abort();try{if(!clip.unsaved)await deleteClip(clip.id);releaseURL(url);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
+ let copyController=null,selectedClip=clip,mixedClip=null;
+ const card=document.createElement('article');card.className='clip-card';const url=objectURL(clip.blob),ownedURLs=[url];
+ card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-conversation> Include conversation in video</label><p data-conversation-status>Without conversation. The separate track stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version. The original video is kept separately.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
+ card.querySelector('[data-delete]').onclick=async()=>{copyController?.abort();try{if(!selectedClip.unsaved)await deleteClip(selectedClip.id);if(selectedClip!==clip){mixedClip=null;card.querySelector('[data-conversation]').checked=false;selectClip(clip);return;}ownedURLs.forEach(releaseURL);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
  const copyButton=card.querySelector('[data-copy]'),cancelCopy=card.querySelector('[data-cancel-copy]');
  if(copyButton)copyButton.onclick=async()=>{
   if(copyController)return;copyController=new AbortController();copyButton.disabled=true;cancelCopy.hidden=false;
   const status=card.querySelector('[data-share-status]');status.textContent='Preparing the final 55 seconds of gameplay plus an invitation. Keep this tab open; nothing is uploaded.';
   try{
-   const copy=await createShareCopy(clip,{signal:copyController.signal,onProgress:text=>{status.textContent=text+' · stays on this device';}});
+   const copy=await createShareCopy(selectedClip,{signal:copyController.signal,onProgress:text=>{status.textContent=text+' · stays on this device';}});
    try{await saveClip(copy);}catch{copy.unsaved=true;}
    const copyCard=mountClipCard(container,copy),heading=copyCard.querySelector('h3');heading.tabIndex=-1;heading.focus({preventScroll:true});copyCard.scrollIntoView({block:'start',behavior:'instant'});status.textContent='Share copy ready below. Preview it, then choose whether to publish it.';
   }catch(error){status.textContent=error.name==='AbortError'?'Share copy cancelled. Your original replay is safe.':error.message;}
@@ -179,13 +201,41 @@ function mountClipCard(container,clip){
  };
  cancelCopy.onclick=()=>copyController?.abort();
  mountFriendSharing(card,clip);
- card.querySelector('[data-share]').onclick=()=>publishForm(card.querySelector('[data-publish]'),clip);
+ card.querySelector('[data-share]').onclick=()=>publishForm(card.querySelector('[data-publish]'),selectedClip);
+
+ function selectClip(value){
+  selectedClip=value;const mediaURL=value===clip?url:objectURL(value.blob);if(value!==clip)ownedURLs.push(mediaURL);
+  const video=card.querySelector('video');video.pause();video.src=mediaURL;
+  const download=card.querySelector('.clip-actions [download]');download.href=mediaURL;download.download=`hopmodo-${clip.game}${value.conversationEmbedded?'-with-conversation':''}.${videoExtension(value.blob)}`;
+  const note=card.querySelector('[data-conversation-status]');if(note)note.textContent=value===clip?'Without conversation. The separate track stays on this device.':'With conversation. Preview this version before sharing.';
+  card.querySelector('[data-publish]').innerHTML='';mountFriendSharing(card,value);
+ }
+ const choice=card.querySelector('[data-conversation]');
+ if(choice){
+  const track=card.querySelector('[data-conversation-download]'),audioURL=objectURL(clip.conversation.blob);ownedURLs.push(audioURL);
+  track.href=audioURL;track.download=`hopmodo-${clip.game}-conversation.${clip.conversation.blob.type.startsWith('audio/mp4')?'m4a':'webm'}`;
+  choice.onchange=async()=>{
+   if(!choice.checked){selectClip(clip);return;}
+   if(mixedClip){selectClip(mixedClip);return;}
+   if(copyController){choice.checked=false;return;}
+   copyController=new AbortController();choice.disabled=true;cancelCopy.hidden=false;
+   const actions=[...card.querySelectorAll('.clip-actions button')].filter(b=>b!==cancelCopy);actions.forEach(b=>b.disabled=true);
+   const download=card.querySelector('.clip-actions [download]');download.removeAttribute('href');download.setAttribute('aria-disabled','true');
+   const status=card.querySelector('[data-share-status]');status.textContent='Preparing a video with conversation on this device. This takes the replay length. Keep this tab open.';
+   try{
+    mixedClip=await createShareCopy(clip,{fullLength:true,includeConversation:true,signal:copyController.signal,onProgress:text=>{status.textContent=text;}});
+    try{await saveClip(mixedClip);}catch{mixedClip.unsaved=true;}
+    selectClip(mixedClip);status.textContent=mixedClip.unsaved?'Ready to download. This version could not be saved; download it before leaving.':'Conversation version ready. The original and separate track are kept in My clips.';
+   }catch(error){choice.checked=false;selectClip(clip);status.textContent=error.name==='AbortError'?'Preparation cancelled. Your original and conversation track are safe.':error.message;}
+   finally{copyController=null;choice.disabled=false;cancelCopy.hidden=true;actions.forEach(b=>b.disabled=false);download.removeAttribute('aria-disabled');}
+  };
+ }
  container.append(card);return card;
 }
 function mountFriendSharing(card,clip){
  const status=card.querySelector('[data-share-status]'),button=card.querySelector('[data-friend]');
  const gameURL=`${SITE_URL}/play/${encodeURIComponent(clip.game)}`;
- const file=new File([clip.blob],`hopmodo-${clip.game}.${videoExtension(clip.blob)}`,{type:clip.blob.type});
+ const file=new File([clip.blob],`hopmodo-${clip.game}${clip.conversationEmbedded?'-with-conversation':''}.${videoExtension(clip.blob)}`,{type:clip.blob.type});
  button.onclick=async()=>{
   try{
    if(!navigator.share||!navigator.canShare?.({files:[file]})){
