@@ -107,7 +107,7 @@ cleared on manual stop, restart or round completion. During tracking loss it sta
 with the helicopter until the round ends. No camera pixels or participant recordings
 are saved, uploaded, or committed.
 
-Model initialization is bounded at 30 seconds, stalled inference at 3 seconds.
+Model initialization is bounded at 330 seconds, stalled inference at 3 seconds.
 Camera frames older than 400 ms cannot start/control a round. During a flight,
 missing head/shoulder tracking or a head outside the visible crop holds the last
 helicopter position. Flight time, acceleration and obstacles keep moving; there is

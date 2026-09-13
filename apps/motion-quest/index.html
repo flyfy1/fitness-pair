@@ -34,6 +34,7 @@
       <aside class="tracking-panel" aria-label="Camera and movement controls">
         <div class="panel-heading"><span id="tracking-badge">Camera is off</span><span class="local-badge">ON DEVICE</span></div>
         <div class="pose-status"><i id="status-dot"></i><div><strong id="status-title">Ready to move?</strong><p id="status-detail">Keep shoulders to ankles visible. Turn slightly sideways and stand tall for about 2 seconds to calibrate.</p></div></div>
+        <progress id="model-download" aria-label="Movement tracking download" hidden></progress>
         <div class="charge-row"><span id="charge-label">Movement charge</span><span id="charge-value">0%</span></div><div class="charge-track"><div id="charge-bar"></div></div>
         <button id="start" class="primary">Enable camera & play <span>↗</span></button>
         <div class="secondary-actions"><button id="demo" class="secondary">Try a gameplay preview</button><button id="calibrate" class="secondary" hidden>Recalibrate</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>

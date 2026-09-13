@@ -1,6 +1,6 @@
 import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';
 
-const INITIALIZATION_TIMEOUT_MS = 30_000;
+const INITIALIZATION_TIMEOUT_MS = 330_000;
 const INFERENCE_TIMEOUT_MS = 1_000;
 const FRAME_INTERVAL_MS = 1000 / 30;
 

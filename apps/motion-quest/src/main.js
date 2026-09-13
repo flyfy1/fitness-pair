@@ -87,6 +87,7 @@ function releaseCamera() {
   clearTimeout(initTimer); initTimer = null;
   clearTimeout(loadingHintTimer); loadingHintTimer = null;
   worker?.terminate(); worker = null; inFlight = false;
+  $('model-download').hidden = true;
   stream?.getTracks().forEach(track => track.stop()); stream = null;
   video.srcObject = null; game.body = null; ctx.clearRect(0, 0, overlay.width, overlay.height);
   $('camera-placeholder').hidden = false; $('fps').textContent = '';
@@ -130,7 +131,7 @@ async function startCamera() {
     video.srcObject = stream; await video.play();
     if (session !== generation) return;
     $('camera-placeholder').hidden = true; $('start').textContent = 'Loading local model…';
-    $('camera-tag').textContent = 'CAM 01 · LOCAL'; status('Loading movement tracking', 'The first load can take up to two minutes. You can cancel at any time.', false, 'Getting ready');
+    $('camera-tag').textContent = 'CAM 01 · LOCAL'; status('Loading movement tracking', 'The first load can take a few minutes on a slow connection. You can cancel at any time.', false, 'Getting ready');
     const workerURL = new URL(`${import.meta.env.BASE_URL}runtime/pose-worker.js`, location.href);
     worker = new Worker(workerURL);
     loadingHintTimer = setTimeout(() => {
@@ -139,10 +140,26 @@ async function startCamera() {
     }, 20_000);
     initTimer = setTimeout(() => {
       if (session === generation) failCamera(Object.assign(new Error('Model timed out'), { name: 'TimeoutError' }));
-    }, 120_000);
+    }, 330_000);
     worker.onmessage = ({ data }) => {
       if (session !== generation) return;
-      if (data.type === 'ready') {
+      if (data.type === 'progress') {
+        const download = $('model-download');
+        download.hidden = false;
+        if (data.total > 0) { download.max = data.total; download.value = data.loaded; }
+        else download.removeAttribute('value');
+        if (data.state === 'downloading') {
+          const mb = value => (value / 1_000_000).toFixed(1);
+          const amount = data.total > 0 ? `${Math.floor(data.loaded / data.total * 100)}% · ${mb(data.loaded)} / ${mb(data.total)} MB` : `${mb(data.loaded || 0)} MB received`;
+          status('Downloading movement tracking', `${amount}. You can cancel at any time.`, false, 'Getting ready');
+          setText('arena-subtitle', amount);
+        } else if (data.state === 'initializing') {
+          clearTimeout(loadingHintTimer);
+          status('Starting movement tracking', 'The download is ready. Setting up controls on this device.', false, 'Nearly ready');
+          setText('arena-subtitle', 'Download ready · starting controls');
+        }
+      } else if (data.type === 'ready') {
+        $('model-download').hidden = true;
         clearTimeout(initTimer); clearTimeout(loadingHintTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
         $('start').hidden = true; $('start').disabled = false; $('calibrate').hidden = false;
         $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera AR · squat controls';
@@ -158,7 +175,7 @@ async function startCamera() {
           const action = detector.update(frame);
           if (action) handlePose(action);
         } catch (error) { failCamera(error); }
-      } else if (data.type === 'error') failCamera(new Error(data.message));
+      } else if (data.type === 'error') failCamera(Object.assign(new Error(data.message), { name: data.name || 'Error' }));
     };
     worker.onerror = () => { if (session === generation) failCamera(new Error('Worker failed')); };
     worker.postMessage({ type: 'init', base: new URL(import.meta.env.BASE_URL, location.href).href });

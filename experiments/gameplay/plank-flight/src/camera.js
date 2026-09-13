@@ -1,7 +1,7 @@
 // Adapted from apps/dino-run/src/camera.js; kept local to this experiment.
 import { fromMediaPipe } from './pose-provider.js';
 
-const INITIALIZATION_TIMEOUT_MS = 30_000;
+const INITIALIZATION_TIMEOUT_MS = 330_000;
 const INFERENCE_TIMEOUT_MS = 3_000;
 const FRAME_INTERVAL_MS = 1000 / 30;
 

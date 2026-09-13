@@ -17,7 +17,7 @@ npm run dev
 Open <http://127.0.0.1:5178>. Enable the camera, keep shoulders through ankles visible,
 turn slightly sideways, and stand upright for about two seconds to calibrate.
 Squat to charge, then stand to attack. The button/Space preview is labeled synthetic.
-The first start downloads the official Lite model; later starts use local assets.
+The arcade homepage preloads tracking files without camera access. Games reuse verified device-cached files when browser storage is available; first-time and uncached starts show download progress in Motion Quest.
 
 Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
 with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,

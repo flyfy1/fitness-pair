@@ -22,13 +22,13 @@ Both real and preview paths use the same game rules.
 Only video permission is requested. The standalone game does not record or upload
 camera data. Hopmodo’s arcade host creates local replays as described below. Model, WASM, and code load from this site. Inference
 runs with CPU/WASM (XNNPACK) in a classic Worker compatible with the unmodified
-MediaPipe loader. Initialization is bounded to 120 seconds to allow the first model download; a
-loading reminder appears after 20 seconds and cancellation remains available; stalled inference stops
+MediaPipe loader. Initialization is bounded to 330 seconds, including a five-minute download bound; a
+loading reminder appears after 20 seconds, measured download progress is shown, and cancellation remains available; stalled inference stops
 after 8 seconds. One frame at a time is processed, scheduled at most about 16 times
 per second; actual performance depends on the device.
 
 Stopping, hiding/leaving the page, errors, and victory stop media tracks and terminate
-the Worker. The waiting page has no loaded model. A remote camera page needs HTTPS;
+the Worker. The standalone waiting page has no loaded model. The arcade homepage can preload tracking files without a camera or detector. A remote camera page needs HTTPS;
 ordinary LAN HTTP is insufficient. No public deployment or long-lived service is
 configured here.
 
@@ -41,7 +41,7 @@ have not been validated. The next experiment is human playtesting.
 
 ## Assets
 
-`scripts/prepare-assets.mjs` resolves workspace dependencies, copies the provider
+`scripts/prepare-assets.mjs` delegates to the shared asset preparation, copies the provider
 Worker and WASM files, and downloads the official Lite model once. Downloads have
 60-second timeouts and a pinned SHA-256 check. Rebuild after editing the classic
 Worker. Dependencies and generated assets are ignored by Git.
