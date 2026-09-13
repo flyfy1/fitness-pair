@@ -25,6 +25,14 @@ independently decodable segments and preserves a shared video/audio timeline.
 The clip library and account sharing live outside this directory. Game rules,
 rendering, model loading and calibration remain independently owned.
 
+A live camera may briefly have no drawable video frame. Recording keeps the
+last camera image and continues the same clip through these interruptions;
+only fresh, drawable camera frames reset the eight-second stall deadline.
+An ended camera track still finishes the partial replay immediately. Synthetic
+portrait-browser regressions verify a 150 ms readiness/dimension interruption,
+the decoded replay beyond six seconds, and cleanup after a real camera stop.
+These checks do not establish behavior on a physical Android device.
+
 Each entry in `apps/arcade/game-catalog.js` selects a presentation adapter. Only the four legacy adapters inspect game-specific
 DOM/API shapes. Dino Run implements the native presentation API directly. The host and recorder consume `GameplayFrame`; they never switch
 on game IDs. New games expose the documented presentation API directly and use

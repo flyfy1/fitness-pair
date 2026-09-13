@@ -22,7 +22,8 @@ export function mountRecording(game,runtime,{panel,result}){
   conversationControls.querySelector('[role=status]').textContent=state.pending?'Waiting for microphone permission…':state.enabled?(state.recording?'Microphone on · separate local track':'Microphone ready · starts with the game'):'Microphone off';
  },onError:message=>{if(conversationControls){conversationControls.dataset.error='true';const status=conversationControls.querySelector('[role=status]');status.hidden=false;status.textContent=message;}}});
 
- const cameraLive=video=>!!(video?.srcObject&&video.readyState>=2&&video.videoWidth>0&&video.srcObject.getVideoTracks().some(track=>track.readyState==='live'));
+ const cameraActive=video=>!!video?.srcObject?.getVideoTracks().some(track=>track.readyState==='live');
+ const cameraLive=video=>cameraActive(video)&&video.readyState>=2&&video.videoWidth>0&&video.videoHeight>0;
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';
  let active=null,handledRound=null,watcher=0,unloading=false;
  const sessions=new Set(),readyRounds=new Map();let shareRound=null,shareButton=null;
@@ -80,7 +81,7 @@ export function mountRecording(game,runtime,{panel,result}){
   }
   session.saveNow=saveNow;session.finish=finish;
   try{
-   session.lastCamera=document.createElement('canvas');
+   session.lastCamera=document.createElement('canvas');session.lastCamera.width=0;session.lastCamera.height=0;
    const canvas=document.createElement('canvas');const size=recordingSize(runtime.getViewport?.()||snapshot.layout||snapshot.canvas);canvas.width=size.width;canvas.height=size.height;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
    // Own only cloned game-audio tracks; never stop the game's audio bus.
    for(const track of snapshot.audio?.getAudioTracks()||[])if(track.readyState==='live')session.capture.addTrack(track.clone());
@@ -98,13 +99,20 @@ export function mountRecording(game,runtime,{panel,result}){
      // Completion can turn off the game's camera in the same frame.
      if(now.phase==='complete'){finish(now.score);return;}
      if(now.phase==='idle'&&!session.hadCamera){finish(now.score,'Preview ended');return;}
+     const cameraReady=cameraLive(now.video);
      if(session.hadCamera&&now.phase!=='ending'){
-      if(now.video?.currentTime!==session.cameraTime){session.cameraTime=now.video?.currentTime;session.lastCameraAt=performance.now();}
-      if(!cameraLive(now.video)||performance.now()-session.lastCameraAt>8000){finish(now.score,'Camera interrupted');return;}
+      // A live phone camera can briefly lose drawable frames while the game
+      // keeps the round. Only fresh, drawable video resets the stall deadline.
+      if(cameraReady&&now.video.currentTime!==session.cameraTime){session.cameraTime=now.video.currentTime;session.lastCameraAt=performance.now();}
+      if(!cameraActive(now.video)||performance.now()-session.lastCameraAt>8000){finish(now.score,'Camera interrupted');return;}
      }
      if(!session.hadCamera&&now.video?.srcObject){handledRound=null;finish(now.score,'Preview ended');return;}
-     if(session.hadCamera&&now.video?.srcObject&&now.video.readyState>=2){const cache=session.lastCamera;cache.width=640;cache.height=Math.round(640*now.video.videoHeight/now.video.videoWidth);cache.getContext('2d').drawImage(now.video,0,0,cache.width,cache.height);}
-     if(now.phase==='ending'&&!now.video?.srcObject&&session.lastCamera.height)now.video=session.lastCamera;
+     if(session.hadCamera&&cameraReady){
+      const cache=session.lastCamera,height=Math.max(1,Math.round(640*now.video.videoHeight/now.video.videoWidth));
+      if(cache.width!==640||cache.height!==height){cache.width=640;cache.height=height;}
+      cache.getContext('2d').drawImage(now.video,0,0,cache.width,cache.height);
+     }
+     if(session.hadCamera&&!cameraReady&&session.lastCamera.height)now.video=session.lastCamera;
      drawClipFrame(session.context,{...now,includesCamera:session.hadCamera,title:game.title,branded:false});snapshot=now;
      setState('recording',`Recording ${Math.min(REPLAY_SECONDS,Math.floor((performance.now()-session.startAt)/1000))} / 90 seconds${performance.now()-session.startAt>=REPLAY_SECONDS*1000?' · keeping the latest 90 seconds':''} · ${session.hadCamera?'game + camera':'synthetic game preview'} · stays on this device`);
      session.raf=requestAnimationFrame(paint);
