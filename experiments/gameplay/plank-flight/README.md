@@ -165,6 +165,13 @@ stopped after cancellation. Tracking loss is not interpreted as workout failure.
 
 ## Full-window play
 
+Phones default to landscape play. Portrait touch screens show a rotation prompt
+before camera or demo entry. The landscape button and game entry request native
+fullscreen/orientation locking where supported; browsers that reject locking keep
+the prompt until the player physically turns the phone. Returning to portrait
+cancels the current flight and stops its camera/worker; turn sideways and start a
+fresh flight. Desktop portrait windows remain supported.
+
 The game fills the current window. Video, body overlay, helicopter and gates share
 one stage; the timer, instructions and controls are overlays. Portrait and landscape
 layouts have no page scroll. The bottom-right button enters browser fullscreen when

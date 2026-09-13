@@ -222,3 +222,50 @@ test('camera countdown preserves held controls and starts only once after tracki
   expect((await state(page)).status).toBe('flying');
   await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
 });
+
+test('phone landscape fallback gates entry and rotation stops the owned camera',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{
+    Element.prototype.requestFullscreen=async()=>{throw new Error('Fullscreen unavailable');};
+    screen.orientation.lock=async()=>{throw new Error('Lock unavailable');};
+  });
+  await syntheticCamera(page);await page.goto('http://127.0.0.1:5185/');
+  await expect(page.locator('#landscape-prompt')).toBeVisible();
+  await page.getByRole('button',{name:'Use landscape'}).click();
+  await expect(page.locator('#landscape-prompt')).toBeVisible();
+  expect((await state(page)).cameraActive).toBe(false);expect((await state(page)).status).toBe('waiting');
+  await page.setViewportSize({width:844,height:390});
+  await expect(page.locator('#landscape-prompt')).toBeHidden();
+  await page.getByRole('button',{name:'Try a demo'}).click();
+  await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await page.mouse.move(430,180);await expect.poll(async()=>(await state(page)).x).toBeCloseTo(430/844,3);
+  await page.screenshot({path:'test-results/phone-landscape.png'});
+  await page.getByRole('button',{name:'Finish & rest'}).click();
+  await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
+  await page.locator('#start').click();await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await page.setViewportSize({width:390,height:844});
+  await expect(page.locator('#landscape-prompt')).toBeVisible();await cleaned(page);
+  expect((await state(page)).status).toBe('paused');
+  await page.setViewportSize({width:844,height:390});await expect(page.locator('#landscape-prompt')).toBeHidden();
+  await page.locator('#start').click();await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
+  expect(errors).toEqual([]);await context.close();
+});
+
+test('phone entry requests native landscape locking when available',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const page=await context.newPage();
+  await page.addInitScript(()=>{
+    window.orientationCalls=[];
+    Element.prototype.requestFullscreen=async()=>{window.orientationCalls.push('fullscreen');};
+    screen.orientation.lock=async value=>{window.orientationCalls.push(value);};
+  });
+  await page.goto('http://127.0.0.1:5185/');await page.getByRole('button',{name:'Use landscape'}).click();
+  await expect.poll(()=>page.evaluate(()=>window.orientationCalls)).toEqual(['fullscreen','landscape']);
+  // The stub proves API wiring; viewport rotation models the native browser response.
+  await page.setViewportSize({width:844,height:390});await expect(page.locator('#landscape-prompt')).toBeHidden();
+  await page.getByRole('button',{name:'Try a demo'}).click();
+  await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await context.close();
+});
