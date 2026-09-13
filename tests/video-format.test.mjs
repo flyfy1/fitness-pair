@@ -26,3 +26,16 @@ test('WebM fallback keeps its actual type and extension; mislabeled or empty byt
   const mp4=await recordedBlob([new Blob([new Uint8Array([0,0,0,24,102,116,121,112,105,115,111,109])])], 'video/mp4;codecs=avc1.420020');
   assert.equal(mp4.type, 'video/mp4'); assert.equal(videoExtension(mp4), 'mp4');
 });
+
+test('streams with game sound try explicit AAC and Opus while preserving silent format choices', () => {
+  const attempts=[];
+  class Recorder {
+    static isTypeSupported(mime) { attempts.push(mime); return mime.includes('opus'); }
+    constructor(stream,{mimeType}) { this.mimeType=mimeType; this.state='inactive'; }
+    start() { this.state='recording'; }
+  }
+  const recorder=startVideoRecorder({getAudioTracks:()=>[{}]},()=>{},{Recorder});
+  assert.equal(recorder.mimeType,'video/webm;codecs=vp8,opus');
+  assert.ok(attempts[0].includes('mp4a.40.2'));
+  assert.ok(attempts.every(mime=>!mime.includes('codecs=')||/mp4a|opus/.test(mime)));
+});

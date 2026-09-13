@@ -110,6 +110,7 @@ test('synthetic camera fixture is mirrored behind AR layers and recorder release
   ctx.fillStyle='#ff0000';ctx.fillRect(0,0,320,480);ctx.fillStyle='#00ff00';ctx.fillRect(320,0,320,480);
   const video=doc.querySelector('#camera');video.srcObject=canvas.captureStream(24);await video.play();
   window.syntheticCamera=video.srcObject;doc.querySelector('#start').hidden=true;
+  frame.contentWindow.motionQuest.getReplayState=()=>({roundId:'compositor-fixture',phase:doc.querySelector('#rep-count').textContent==='5'?'complete':'playing'});
  });
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await page.waitForTimeout(1200);await page.evaluate(()=>{document.querySelector('#game-frame').contentDocument.querySelector('#rep-count').textContent='5';});
@@ -161,7 +162,7 @@ test('a backgrounded preview resumes automatic capture when visible again',async
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle');
  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
- await page.waitForTimeout(600);await page.evaluate(()=>{document.querySelector('#game-frame').contentDocument.querySelector('#rep-count').textContent='5';});
+ await page.waitForTimeout(600);await page.evaluate(()=>{document.querySelector('#game-frame').contentWindow.motionQuest.getReplayState=()=>({roundId:document.querySelector('#game-frame').contentDocument.documentElement.dataset.roundId,phase:'complete'});});
  await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:7000});
 });
 test('storage failure preserves download fallbacks from consecutive rounds',async({page})=>{
@@ -208,13 +209,13 @@ test('guided camera Dino calibrates and saves a replay on manual finish with syn
  await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise ONE hand.',{timeout:12000});
  await game.locator('#primary').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
- await page.waitForTimeout(900);await game.locator('#end-run').click();
+ await page.waitForTimeout(900);await game.locator('#show-settings').click();await game.locator('#end-run').click();
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
  await expect(page.getByRole('heading',{name:'Ready to Move · my replay'})).toBeVisible();
  expect(await page.evaluate(()=>document.querySelector('#game-frame').contentWindow.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
 
-test('a WebM-only encoder saves genuine WebM with an explicit fallback notice',async({page})=>{
+test('a WebM-only encoder saves genuine WebM with an explicit fallback notice',async({page},info)=>{
  await page.addInitScript(()=>{
   if(window!==window.top)return;
   const supports=MediaRecorder.isTypeSupported.bind(MediaRecorder);
@@ -223,11 +224,11 @@ test('a WebM-only encoder saves genuine WebM with an explicit fallback notice',a
  await page.goto('/play/motion-quest');
  await page.frameLocator('#game-frame').locator('#demo').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
- await page.evaluate(()=>{const doc=document.querySelector('#game-frame').contentDocument;doc.querySelector('#rep-count').textContent='5';});
+ await page.evaluate(()=>{const doc=document.querySelector('#game-frame').contentDocument;document.querySelector('#game-frame').contentWindow.motionQuest.getReplayState=()=>({roundId:doc.documentElement.dataset.roundId,phase:'complete'});});
  await expect(page.locator('#local-result video')).toBeVisible({timeout:12000});
  await expect(page.getByText(/This browser saved WebM/)).toBeVisible();
  const pending=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const file=await pending;
- expect(file.suggestedFilename()).toBe('hopmodo-motion-quest.webm');
+ expect(file.suggestedFilename()).toBe('hopmodo-motion-quest.webm');await file.saveAs(info.outputPath('synthetic-audio.webm'));
  const bytes=await readFile(await file.path());expect([...bytes.subarray(0,4)]).toEqual([26,69,223,163]);
  await page.locator('#local-result video').evaluate(v=>v.play());
  await expect.poll(()=>page.locator('#local-result video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);

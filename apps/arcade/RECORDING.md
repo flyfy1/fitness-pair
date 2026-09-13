@@ -45,8 +45,10 @@ saves a clearly labeled WebM; universal MP4 export is not claimed.
 
 ## Camera composition checkpoint
 
-Motion Quest recording waits for a ready live camera track and decoded camera
-frames after model readiness. It does not record a canvas-only fallback while
+Motion Quest recording waits for the recognizer’s first calibrated `ready`
+phase and decoded live camera frames. A synchronous presentation lifecycle event
+starts recording before the first squat; permission, model loading and standing
+calibration are excluded. It does not record a canvas-only fallback while
 camera initialization is pending. Preview and camera rounds retain separate IDs
 and source labels. Camera disappearance or an eight-second frame stall ends a
 partial camera replay labeled “Camera interrupted”; it cannot silently continue
@@ -117,3 +119,49 @@ supplied. The supplied setup ZIP contained no usable credential. No credential
 stores or organization policy were changed. Live upload, actual GCP playback,
 object lifecycle and revocation remain unverified. Passing mocks and browser
 codec checks do not establish a working live cloud share link.
+
+## Gameplay boundaries and game sound
+
+Motion Quest exposes `setup`, `playing`, `ending`, `complete` and `idle` presentation
+phases with its round ID. The recorder uses these explicit signals rather than
+button visibility or score text. Missing tracking after gameplay begins stays in
+the same recording without scoring. Cancellation ends a partial clip; new rounds
+receive new recordings. At the fifth repetition camera and worker stop immediately,
+but the last camera frame remains behind the live game canvas for the complete
+1.8-second spell, impact and victory sequence. Only then does the three-second
+Hopmodo ending begin.
+
+The recorder clones the synthesized game audio track, never a microphone track.
+The clone is muted during the branded ending so an immediate new round cannot
+leak sound into the previous replay. Stopping recording releases only its owned
+tracks. Audio streams request H.264/AAC MP4 before VP8/VP9/Opus WebM; silent
+streams retain their previous format candidates. Short share copies route the
+original video’s decoded game sound through a local Web Audio destination.
+Cancellation, backgrounding, exit and completion close that destination/context
+and retain the original. Upload still requires the separate explicit share gate.
+
+### Synthetic boundary/audio verification — 2026-09-13
+
+`recording-boundaries.spec.js` uses a moving generated camera canvas, controlled
+mock Worker landmarks, and the actual squat recognizer. It asserts zero recorder
+starts through permission, model initialization and standing calibration; initial
+ready has zero charge. Missing tracking after start does not score or start a new
+clip. Five real recognizer completion events produce exactly one replay.
+
+Decoded MP4 frames contain the first charge, final projectile (160 ms after the
+completion event), impact (720 ms), victory fade (1400 ms), and branded ending.
+The camera track and Worker are already stopped for all three final-effect
+samples. Pixel checks distinguish the bright spell and intentionally translucent
+victory text from the generated camera background. Visual inspection confirms
+these effects, the native game aspect, mirrored crop, HUD and permanent footer.
+
+Decoding the exported audio finds nonzero charge, release, impact and victory
+samples. Actual full-replay and short-copy files were independently probed as
+1280 × 800 H.264 video plus AAC audio. The short copy also passes decoded audio
+energy checks, and its completion leaves the original game sound track live.
+No participant data or microphone is used, and no video upload occurs. These are
+software/codec checks, not evidence of human movement-recognition accuracy.
+
+The forced WebM fallback was independently probed as 1280 × 800 VP8 video with
+Opus audio. The browser test verifies its EBML signature, `.webm` download and
+playback. Silent legacy clips keep working without an added audio track.
