@@ -23,8 +23,10 @@ test('public clip shares a full message and opens platform URLs only after a cli
  for(const platform of ['LinkedIn','X (Twitter)','Facebook']){
   const link=panel.getByRole('link',{name:'Share on '+platform+' (opens a new tab)',exact:true});
   await expect(link).toHaveAttribute('rel','noopener noreferrer');
-  const opened=context.waitForEvent('page');await link.click();const popup=await opened;await popup.waitForLoadState();
-  expect(new URL(popup.url()).searchParams.get(platform==='Facebook'?'u':'url')).toBe(new URL('/clips/'+id,page.url()).href);await popup.close();
+  const opened=context.waitForEvent('page');await link.click();const popup=await opened;await expect(popup).toHaveURL(/https:\/\/(www.linkedin.com|x.com|www.facebook.com)\//);
+  if(platform==='X (Twitter)')expect(new URL(popup.url()).searchParams.get('text')).toBe(copied);
+  else{expect(new URL(popup.url()).searchParams.get(platform==='Facebook'?'u':'url')).toBe(new URL('/clips/'+id,page.url()).href);await expect(panel.getByRole('status')).toHaveText(`Message copied. Paste it into your ${platform} post, then review and publish there.`);}
+  expect(await popup.evaluate(()=>window.opener)).toBeNull();await popup.close();
  }
  expect(destinations).toHaveLength(3);
 });
@@ -64,4 +66,16 @@ test('local clip offers attachment text and private upload immediately offers th
  await card.getByRole('button',{name:'Upload this clip',exact:false}).click();
  const uploaded=card.locator('[data-publish]');await expect(uploaded.getByRole('heading',{name:'Share privately with friends'})).toBeVisible();
  await uploaded.getByRole('button',{name:'Copy message',exact:true}).click();expect(await page.evaluate(()=>window.copied)).toContain('share=synthetic%2Bfriend%3D');expect(uploads).toBe(1);
+});
+
+test('blocked clipboard keeps the original page and provides manual copy guidance',async({page,context})=>{
+ await setup(page,'public',true);
+ await context.route('https://www.linkedin.com/**',r=>r.fulfill({body:'Synthetic LinkedIn composer boundary'}));
+ await page.goto('/clips/'+id);const original=page.url();
+ const opened=context.waitForEvent('page');
+ await page.getByRole('link',{name:'Share on LinkedIn (opens a new tab)',exact:true}).click();
+ const popup=await opened;await expect(popup).toHaveURL(/linkedin.com\/sharing\/share-offsite/);
+ await expect(page.locator('.share-message [role=status]')).toHaveText('Automatic copying was unavailable. Copy the message above and paste it into your LinkedIn post.');
+ await expect(page).toHaveURL(original);expect(await page.getByLabel('Message to share').inputValue()).toContain('/clips/'+id);
+ await popup.close();
 });

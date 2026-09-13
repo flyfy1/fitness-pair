@@ -19,11 +19,11 @@ export function shareMessage(clip,{origin=SITE_URL,local=false}={}){
  return {url:url.href,intro,text:`${intro}\nWatch my video: ${url.href}${expiry}${privacy}\nTry the game: ${gameURL}`};
 }
 
-export function socialLinks({url,intro}){
+export function socialLinks({url,text}){
  const link=(base,params)=>base+'?'+new URLSearchParams(params);
  return [
   ['LinkedIn',link('https://www.linkedin.com/sharing/share-offsite/',{url})],
-  ['X (Twitter)',link('https://x.com/intent/tweet',{text:intro,url})],
+  ['X (Twitter)',link('https://x.com/intent/tweet',{text})],
   ['Facebook',link('https://www.facebook.com/sharer/sharer.php',{u:url})],
  ];
 }
@@ -34,7 +34,7 @@ export function mountShareMessage(container,clip,{local=false,origin=location.or
  panel.append(heading);
  let message;
  try{message=shareMessage(clip,{local,origin});}catch(error){const note=document.createElement('p');note.textContent=error.message;panel.append(note);container.append(panel);return;}
- const note=document.createElement('p');note.textContent=local?'Copy this message, then attach your video using Share with a friend or Download. The game link does not include your video.':clip.visibility==='private'?'Hidden from the gallery. Anyone with this complete link can watch without logging in.':'Copy the message for your post. LinkedIn and Facebook open with the video link; paste your message there. X includes a short caption.';
+ const note=document.createElement('p');note.textContent=local?'Copy this message, then attach your video using Share with a friend or Download. The game link does not include your video.':clip.visibility==='private'?'Hidden from the gallery. Anyone with this complete link can watch without logging in.':'X prefills the complete message. LinkedIn and Facebook copy it for you to paste into their post box. Your video stays open while you finish sharing in another tab.';
  const label=document.createElement('label');label.textContent='Message to share';
  const field=document.createElement('textarea');field.readOnly=true;field.rows=local?4:7;field.value=message.text;label.append(field);
  const actions=document.createElement('div');actions.className='clip-actions';
@@ -61,8 +61,19 @@ export function mountShareMessage(container,clip,{local=false,origin=location.or
    actions.append(native);
   }
   if(clip.visibility!=='private')for(const [name,href] of socialLinks(message)){
-   const link=document.createElement('a');link.className='social-share-logo';link.title='Share on '+name;link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Share on '+name+' (opens a new tab)');
+   const link=document.createElement('a');link.className='social-share-logo';link.title=name==='X (Twitter)'?'Share on X with this message':'Copy message and share on '+name;link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Share on '+name+' (opens a new tab)');
    const logo=document.createElement('img');logo.src='/assets/social/'+({'LinkedIn':'linkedin','X (Twitter)':'twitter-x','Facebook':'facebook'}[name])+'.svg';logo.alt='';logo.width=22;logo.height=22;link.append(logo);actions.append(link);
+   link.onclick=event=>{
+    if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    // Start copying in the click event while this page still has focus.
+    const copying=name==='X (Twitter)'?null:copyMessage();
+    if(copying)copying.then(copied=>{
+     status.textContent=copied?`Message copied. Paste it into your ${name} post, then review and publish there.`:`Automatic copying was unavailable. Copy the message above and paste it into your ${name} post.`;
+    });
+    else status.textContent='X opens with your complete message prefilled. Review and publish it there.';
+   };
+   async function copyMessage(){try{await navigator.clipboard.writeText(message.text);return true;}catch{return false;}}
+
   }
  }
  panel.append(note,label,actions,status);container.append(panel);

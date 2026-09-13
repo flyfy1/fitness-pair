@@ -16,7 +16,7 @@ Round completion shows a visible preparation message, then automatically focuses
 
 “Share with a friend” passes the actual video File to the operating system share dialog, only from a player click and only when file sharing is supported. Otherwise, the player can download and attach it manually. “Copy game link” sends friends to the game, not to the private local clip. Cancelling sharing leaves the recording in place. Local clips also provide a complete Copy message caption to send with the video attachment; it includes the game invitation and does not claim to link to the local recording.
 
-After uploading, and on each shared video page, Copy message includes the full viewer link, game invitation and expiry date when set. Private messages retain the access token and explain that anyone holding the link can watch; private pages have no public social-network shortcuts. Public videos offer LinkedIn, X (Twitter), and Facebook links that open the platform composer for user review. X receives a short caption; LinkedIn and Facebook receive the viewer link, with the full message available to copy and paste. No social login, third-party SDK, automatic posting or visibility change is added. A selectable message remains available when clipboard access is blocked.
+After uploading, and on each shared video page, Copy message includes the full viewer link, game invitation and expiry date when set. Private messages retain the access token and explain that anyone holding the link can watch; private pages have no public social-network shortcuts. Public videos offer LinkedIn, X (Twitter), and Facebook logo links that open another tab for user review while retaining the video page. X receives the complete message as prefilled text. Clicking LinkedIn or Facebook also copies the message before opening their link-sharing composer, with an explicit paste instruction and a manual-copy fallback when the clipboard is blocked. This clipboard fallback is not text prefill. Ordinary links also work in embedded browsers that do not display scripted popups. No social login, third-party SDK, automatic posting or visibility change is added. A selectable message remains available when clipboard access is blocked.
 
 MP4 is preferred and confirmed from actual encoded bytes. Browsers without an available MP4 encoder save clearly labeled WebM files; files are never renamed to claim MP4. See [recording evidence and browser limits](RECORDING.md).
 
@@ -151,3 +151,11 @@ copy/native sharing, blocked clipboard selection at 320px, and immediate sharing
 after a consented upload. Uploads, clipboard, native sharing and platform responses
 use synthetic fixtures; no social post or participant video was sent. Real platform
 login/composer behavior and device share-sheet recipients still need manual checks.
+
+Prefill references: [X Post button](https://help.x.com/en/using-x/add-x-share-button), [LinkedIn Share Plugin](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/plugins/share-plugin), and [LinkedIn authenticated publishing](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin). A live browser check on 2026-09-14 found the legacy LinkedIn `feed/?shareActive&mini=true&text=...` route redirected to the feed without opening or prefilling a composer. No undocumented LinkedIn prefill parameter is used. Facebook's documentation endpoint could not be retrieved during this check; no Facebook body-prefill claim is made.
+
+Prefill follow-up verification (2026-09-14): 84 unit checks, the complete build,
+and five focused browser checks passed. A real X composer displayed the full
+synthetic message through the intent link; nothing was posted. Clicking the
+Facebook logo in the local browser copied the message before navigation. LinkedIn
+and Facebook use explicit copy/paste guidance; only X is claimed as body prefill.
