@@ -5,8 +5,8 @@ import { JumpHeightRecognizer } from '../index.js';
 
 // Artificial, named 2D geometry. These fixtures are not participant evidence.
 const session = { sessionId: 'synthetic-jump-session', source: { kind: 'synthetic', id: 'jump-height-geometry/1' } };
-function harness(defaultModify = () => {}) {
-  const recognizer = new JumpHeightRecognizer();
+function harness(defaultModify = () => {}, options = {}) {
+  const recognizer = new JumpHeightRecognizer(options);
   recognizer.reset(session);
   let seq = 0, tMs = 0;
   const pose = (rise = 0, modify = () => {}, dt = 40) => {
@@ -327,4 +327,36 @@ test('upper-body cannot calibrate from a bent or moving torso', () => {
     frame.joints.leftShoulder.x += .18; frame.joints.rightShoulder.x += .18;
   }).every(frame => frame.stage === 'standing' && frame.calibrationProgress === 0));
   for (let i = 0; i < 50; i++) assert.equal(h.update(i % 2 ? .02 : 0).stage, 'standing');
+});
+
+
+test('manual torso calibration keeps a captured range beyond timeouts and confirms only after returning', () => {
+  const h = harness(() => {}, { manualMaximum: true, preferUpperBody: true });
+  h.hold(); assert.equal(h.recognizer.trackingMode, 'upper-body');
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(8, .04); assert.equal(h.recognizer.confirmMaximum(), false);
+  const frames = h.hold(450);
+  assert.equal(frames.at(-1).stage, 'maximum');
+  assert.equal(frames.at(-1).canConfirmMaximum, true);
+  assert.ok(frames.at(-1).measuredRise > .038);
+  assert.ok(frames.every(f => !f.completion && f.heightRatio === 0));
+  assert.equal(h.recognizer.confirmMaximum(), true);
+  assert.equal(h.update().calibrated, true);
+  assert.ok(h.hold(8, .02).at(-1).heightRatio > .45);
+});
+
+test('manual maximum survives slow return; jitter and stale or missing evidence cannot confirm', () => {
+  const h = harness(() => {}, { manualMaximum: true, preferUpperBody: true });
+  h.hold(); h.hold(20, .004); h.hold();
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.jump(.012); assert.equal(h.update().cue, 'jump-higher-and-retry');
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(80, .08); assert.equal(h.update().stage, 'maximum');
+  h.hold(10); assert.equal(h.update().canConfirmMaximum, true);
+  const missing = h.pose(0, f => { f.joints = {}; }); h.recognizer.update(missing);
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  assert.equal(h.recognizer.update(missing), null);
+  h.hold(30, 0, f => { f.joints = {}; });
+  assert.equal(h.update().stage, 'standing');
+  assert.equal(h.recognizer.measuredRise, 0);
 });

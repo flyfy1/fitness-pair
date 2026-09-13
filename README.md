@@ -20,10 +20,27 @@ The first start downloads the official Lite model; later starts use local assets
 
 Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
 with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,
-stand still, then make one maximum comfortable jump and land. After a three-second
-countdown, Dino follows your relative rise and descent. Height is a percentage of
+stand still, then make one maximum comfortable jump and return. Raise one hand
+for one second to confirm the measured height, then lower both hands for a
+three-second countdown. Raise both hands for one second to pause or resume,
+lowering them between commands. Dino follows your relative torso rise and descent. Height is a percentage of
 your own calibration, not centimeters. Keyboard mode remains available separately.
 See [Dino setup and evidence](apps/dino-run/README.md).
+
+Gesture Lab is a separate hand-control POC. Start it with
+`npm run dev --workspace gesture-lab` at <http://127.0.0.1:5182>. Explore seven
+built-in hand poses and an experimental sideways wave: thumbs up confirms;
+waving side to side says No. See [the gesture catalog and trial instructions](apps/gesture-lab/README.md).
+
+## Arcade landing page and local clips
+
+`npm run build` now builds the complete arcade, including Motion Quest and Dino Run.
+Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
+`npm run build:motion-quest` retains the standalone baseline build.
+The arcade lives in `apps/arcade/`; game sources remain independently owned.
+Opt-in recordings save to IndexedDB on the player’s device. GCP gallery publishing
+is prepared but disabled until the owner provides bucket and runtime identity settings.
+See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
 ## Team map
 

@@ -95,3 +95,19 @@ recordings are included. Camera perspective, pose noise, clothing, low frame rat
 occlusion, walking in depth and camera movement can affect this estimate. It is
 relative image displacement, not centimeters, physical jump height or exercise
 assessment. The confidence threshold is a MediaPipe-oriented POC heuristic.
+
+## Explicit maximum confirmation (Dino host)
+
+`new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true })` keeps the
+existing default API available while opting into torso tracking and manual acceptance.
+`measuredRise` exposes the largest candidate rise; `canConfirmMaximum` is true only
+for a measurable candidate after a steady return to baseline. `confirmMaximum()`
+returns false until those requirements hold. The host must also check capture-time
+freshness before calling it. Neither measurement nor confirmation emits completion.
+
+Manual candidates require at least two elevated samples over 60 ms and a rise of
+at least max(0.015 image height, 0.06 torso length). They survive the 15-second idle
+and 2.5-second maximum-flight timeouts; long joint loss, position/scale drift and
+explicit recalibration still discard them. Live motion keeps the existing timeout
+and completion rules. `confirm-maximum` is an additive cue. Dino uses this option
+because missed feet/landing and automatic timeout resets made calibration hard to finish.

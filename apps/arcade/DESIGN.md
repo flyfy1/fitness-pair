@@ -1,0 +1,12 @@
+# Kinetic playground
+
+The landing page is a large interactive playground poster. It persuades through visible game action and a direct arcade entry. The arcade and gallery use the same visual language with calmer task-oriented layouts.
+
+- Acid yellow `#eeff41` owns the opening playfield; cobalt `#2347ee` owns display lettering and navigation. Ink `#182346`, white `#ffffff`, and coral `#ff795e` provide supporting regions.
+- Heavy condensed display typography with compact leading, offset lettering where it belongs to the poster, and plain system sans-serif body text. Semantic text and controls remain live HTML.
+- Oversized directional marks, curved movement paths, bold numbered play instructions, and custom canvas game scenes. No generic feature-card grid or fabricated social proof.
+- One main animated game tableau responds to pointer movement; pause when offscreen, respect reduced motion, and keep the experience useful with animation stopped.
+- Real games and concept simulations have explicit status labels. Gallery records are real or the gallery is empty. Sharing is never implied by recording.
+- Broad full-color fields alternate with quiet readable passages. On small screens, the playable stage follows the headline and primary action in document order.
+
+Direction confirmed by the user on 2026-09-13. The finished composition uses a centered two-line headline, a single primary arcade CTA, a panoramic illustration, and a three-game selector immediately below. Pointer movement adds slight parallax; the explicit jump control launches a canvas ball through an arc and announces its landing. The artwork’s top edge fades into the yellow field.
