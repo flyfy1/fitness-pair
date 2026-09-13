@@ -71,7 +71,7 @@ test.describe('Chinese voices and interface',()=>{
    await page.screenshot({path:info.outputPath(`chinese-${width}.png`)});
   }
  });
- test('Chinese browsers default to English; explicit language choices persist without resetting the round',async({page})=>{
+ test('initial language choices persist while setup controls stay hidden during the round',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
   await expect(game.locator('#language')).toHaveValue('en');
@@ -85,10 +85,8 @@ test.describe('Chinese voices and interface',()=>{
   await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
   await expect(game.getByRole('button',{name:'结束并休息',exact:true})).toBeVisible();
   const session=await game.locator('#scene').evaluate(()=>window.plankFlight.getState().sessionId);
-  await game.locator('#language').selectOption('en');
-  await expect(game.getByRole('button',{name:'Finish & rest',exact:true})).toBeVisible();
+  await expect(game.locator('#language')).toBeHidden();
   expect(await game.locator('#scene').evaluate(()=>window.plankFlight.getState().sessionId)).toBe(session);
-  await game.locator('#language').selectOption('zh');
   await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.encouragementReady)).toBe(18);
   await game.getByRole('button',{name:'结束并休息',exact:true}).click();
   await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastVoice?.id)).toMatch(/-end$/);
@@ -97,6 +95,8 @@ test.describe('Chinese voices and interface',()=>{
   await expect(page.locator('#local-result video')).toBeVisible({timeout:18000});
   await openReplay(page.locator('#local-result video'));
   expect(await page.locator('#local-result video').evaluate(async video=>{const a=new AudioContext();try{const b=await a.decodeAudioData(await(await fetch(video.src)).arrayBuffer());const d=b.getChannelData(0);return Math.sqrt(d.reduce((s,x)=>s+x*x,0)/d.length);}finally{await a.close();}})).toBeGreaterThan(.005);
+  await expect(game.locator('#language')).toBeHidden();
+  await page.reload();await expect(game.locator('#language')).toBeVisible();
   await game.locator('#language').selectOption('en');await page.reload();
   await expect(page.frameLocator('#game-frame').locator('#language')).toHaveValue('en');
   await expect(page.frameLocator('#game-frame').getByRole('button',{name:'Enable camera',exact:true})).toBeVisible();

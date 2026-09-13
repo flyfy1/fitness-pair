@@ -104,8 +104,14 @@ const camera=new PoseCamera({video,
       interrupt(t('The camera stopped. Start again with your head and a shoulder in view.'));
   }
 });
+function hideSetupControls(){
+  stage.classList.add('session-started');
+  for(const selector of ['.difficulty','.language-control','.current-speed'])
+    stage.querySelector(selector).hidden=true;
+}
 async function startCamera(){
   if(landscape.blocked())return;
+  hideSetupControls();
   void landscape.request();
   sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='camera';lastAction=null;halted=false;starting=true;
@@ -115,6 +121,7 @@ async function startCamera(){
 }
 function startDemo(){
   if(landscape.blocked())return;
+  hideSetupControls();
   void landscape.request();
   sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='synthetic';halted=false;starting=false;lastAction=null;demoSeq=0;

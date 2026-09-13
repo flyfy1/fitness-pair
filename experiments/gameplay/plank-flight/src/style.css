@@ -157,3 +157,12 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
 .landscape-prompt h2 { font: normal 32px/1.15 Georgia, serif; }
 .landscape-prompt p { color: #c2d5d1; line-height: 1.6; }
 .rotate-phone { display: block; font-size: 72px; color: #f3cd8e; }
+
+
+/* Setup controls disappear on entry; keep guidance near the remaining toolbar. */
+.stage.session-started .cue { bottom: max(94px, calc(env(safe-area-inset-bottom) + 80px)); }
+.stage.session-started .panel { max-height: calc(100% - 220px); }
+@media (max-height: 520px) {
+  .stage.session-started .cue { bottom: max(76px, calc(env(safe-area-inset-bottom) + 60px)); }
+  .stage.session-started .panel { bottom: 80px; max-height: none; }
+}

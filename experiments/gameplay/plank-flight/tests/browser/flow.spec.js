@@ -84,7 +84,7 @@ test('brief loss and delayed frames hold position and automatically recover in t
   await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
 });
 test('permission denial and late permission cancellation are recoverable',async({page})=>{
-  await page.addInitScript(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError');};});await page.goto('/');await page.getByRole('button',{name:'Enable camera'}).click();await expect(page.locator('#message')).toContainText('permission was denied');
+  await page.addInitScript(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError');};});await page.goto('/');await page.getByRole('button',{name:'Enable camera'}).click();await expect(page.locator('.difficulty')).toBeHidden();await expect(page.locator('#language')).toBeHidden();await expect(page.locator('#message')).toContainText('permission was denied');
   await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{window.grant=()=>{const c=document.createElement('canvas');c.width=640;c.height=480;window.testStream=c.captureStream(0);resolve(window.testStream);};});});
   await page.getByRole('button',{name:'Start a fresh flight'}).click();await page.getByRole('button',{name:'Stop camera'}).click();await page.evaluate(()=>window.grant());await expect.poll(()=>page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
@@ -150,24 +150,32 @@ test('embedded fullscreen fallback and Escape preserve flight',async({page})=>{
   await expect(page.locator('#view-status')).toBeEmpty();await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
 });
 
-test('three difficulty sliders work during flight and do not steer the demo',async({page})=>{
-  await page.goto('/');await page.getByRole('button',{name:'Try a demo'}).click();
-  await expect.poll(async()=>(await state(page)).status).toBe('flying');
-  await page.mouse.move(650,350);
-  await expect.poll(()=>page.evaluate(()=>window.plankFlight.getState().x*document.querySelector('#scene').getBoundingClientRect().width)).toBeCloseTo(650,0);
-  const before=await state(page);
-  await page.locator('#opening').press('Home');await expect(page.locator('#opening-value')).toHaveText('2.0× plane');
-  expect((await state(page)).difficulty.opening).toBe(2);
+test('initial settings apply and disappear from countdown through flight, results and retry',async({page})=>{
+  await page.setViewportSize({width:844,height:390});await page.goto('/');
+  for(const selector of ['.difficulty','.language-control','.current-speed'])
+    await expect(page.locator(selector)).toBeVisible();
   await page.locator('#opening').press('End');await expect(page.locator('#opening-value')).toHaveText('6.0× plane');
-  await page.locator('#speed').press('End');await expect(page.locator('#speed-value')).toHaveText('6.0×');
-  await page.locator('#acceleration').press('Home');await expect(page.locator('#acceleration-value')).toHaveText('+0.0×/min');
-  const changed=await state(page);expect(changed.difficulty).toEqual({opening:6,speed:6,acceleration:0});
-  expect(changed.status).toBe('flying');expect(changed.sessionId).toBe(before.sessionId);expect(changed.x).toBeCloseTo(before.x,3);expect(changed.y).toBeCloseTo(before.y,3);
-  const gain=changed.speedGain;await page.waitForTimeout(250);expect((await state(page)).speedGain).toBe(gain);
-  await page.locator('#acceleration').press('End');await page.waitForTimeout(250);expect((await state(page)).speedGain).toBeGreaterThan(gain);
-  await page.getByRole('button',{name:'Finish & rest'}).click();await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
-  await page.getByRole('button',{name:'Try a demo'}).click();expect((await state(page)).difficulty).toEqual({opening:6,speed:6,acceleration:1.5});
-  await page.screenshot({path:'test-results/difficulty-sliders.png'});
+  await page.locator('#speed').press('Home');await expect(page.locator('#speed-value')).toHaveText('0.4×');
+  await page.locator('#acceleration').press('End');
+  await page.getByRole('button',{name:'Try a demo'}).click();
+  const settings={opening:6,speed:.4,acceleration:1.5};
+  expect((await state(page)).difficulty).toEqual(settings);
+  for(const selector of ['.difficulty','.language-control','.current-speed'])
+    await expect(page.locator(selector)).toBeHidden();
+  await expect(page.locator('#countdown')).toBeVisible();
+  await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await expect.poll(async()=>(await state(page)).speedGain).toBeGreaterThan(0);
+  await page.mouse.move(430,180);await expect.poll(async()=>(await state(page)).x).toBeCloseTo(430/844,3);
+  for(const selector of ['#stop','#sound','#fullscreen'])await expect(page.locator(selector)).toBeVisible();
+  const cue=await page.locator('.cue').boundingBox();expect(cue.y).toBeGreaterThan(250);
+  await page.screenshot({path:'test-results/flight-clear-stage.png'});
+  await page.getByRole('button',{name:'Finish & rest'}).click();
+  await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
+  await expect(page.locator('.difficulty')).toBeHidden();
+  await page.getByRole('button',{name:'Try a demo'}).click();
+  expect((await state(page)).difficulty).toEqual(settings);
+  await expect(page.locator('.difficulty')).toBeHidden();
+  await page.reload();await expect(page.locator('.difficulty')).toBeVisible();
 });
 
 
