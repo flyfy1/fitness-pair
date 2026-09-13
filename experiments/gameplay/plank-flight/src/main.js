@@ -110,8 +110,9 @@ const camera=new PoseCamera({video,
 });
 function hideSetupControls(){
   stage.classList.add('session-started');
-  for(const selector of ['.difficulty','.language-control','.current-speed'])
-    stage.querySelector(selector).hidden=true;
+  // The arcade may move the language selector into its shared control panel.
+  for(const control of document.querySelectorAll('.difficulty,.language-control,.current-speed'))
+    control.hidden=true;
 }
 async function startCamera(){
   if(landscape.blocked())return;
