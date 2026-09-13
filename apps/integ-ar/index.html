@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#101f23"><title>Integ AR · Move to play</title></head>
+<body><main id="arena" aria-label="Camera movement arcade">
+  <video id="camera" muted playsinline aria-label="Your mirrored live camera"></video>
+  <div class="scrim" aria-hidden="true"></div>
+  <canvas id="world" aria-label="Game objects over your camera"></canvas>
+  <canvas id="skeleton" aria-label="Recognized shoulders, hips, torso and visible limbs"></canvas>
+  <header class="hud"><a class="brand" id="home" href="/" target="_top"><span>← Arcade</span><strong id="game-title">Integ AR</strong></a><div class="header-actions"><div class="score"><span>SCORE</span><strong id="score">0</strong></div><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div></header>
+  <div class="movement-hud" aria-live="polite"><span id="tracking">Camera off</span><span id="movement">Stand to calibrate</span><span id="hand">Left hand · waiting</span></div>
+  <section id="panel" aria-labelledby="instruction"><p class="eyebrow" id="category">CAMERA AR</p><h1 id="instruction">Your room. Your game.</h1><p id="detail"></p><p id="setup-copy">Keep your shoulders, hips and hands visible. Stand still to calibrate. Your torso and visible limbs will stay outlined.</p><progress id="calibration" max="1" value="0" aria-label="Standing calibration" hidden></progress><button id="start" class="primary">Enable camera & play</button><p id="camera-error" role="alert" hidden></p></section>
+  <p class="cue" id="cue" role="status">Choose your space and enable the camera.</p>
+  <footer class="controls"><div class="buttons"><button id="pause" disabled>Pause</button><button id="recalibrate" disabled>Recalibrate</button><button id="finish" hidden>Finish round</button><button id="stop" hidden>Turn camera off</button><details id="help"><summary>How to play</summary><div><p id="control-help"></p><p>Lower your left hand between actions. Hold both hands up for one second to pause or resume.</p><p>Body tracking is experimental. Move within a comfortable range.</p><a href="https://games.integ.life" target="_blank" rel="noreferrer">Original Integ Games ↗</a></div></details></div><p id="privacy-note">Camera and recognition stay on this device. Nothing is uploaded automatically.</p></footer>
+  <div id="source-game" aria-hidden="true" inert></div>
+</main><script type="module" src="/src/main.js"></script></body></html>
