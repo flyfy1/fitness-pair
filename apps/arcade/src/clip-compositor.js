@@ -11,11 +11,12 @@ function coverVideo(c,video,x,y,w,h){
  c.save();c.translate(x+w,y);c.scale(-1,1);
  c.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h);c.restore();
 }
-export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,isAR,layout,includesCamera,title,score,logo,hud}){
+export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,isAR,layout,includesCamera,title,score,logo,hud,branded=true}){
  c.fillStyle='#182346';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
  const sourceWidth=layout?.width||canvas.width,sourceHeight=layout?.height||canvas.height;
- const scale=Math.min(CLIP_WIDTH/sourceWidth,PLAY_HEIGHT/sourceHeight);
- const w=sourceWidth*scale,h=sourceHeight*scale,x=(CLIP_WIDTH-w)/2,y=(PLAY_HEIGHT-h)/2;
+ const playHeight=branded?PLAY_HEIGHT:CLIP_HEIGHT;
+ const scale=Math.min(CLIP_WIDTH/sourceWidth,playHeight/sourceHeight);
+ const w=sourceWidth*scale,h=sourceHeight*scale,x=(CLIP_WIDTH-w)/2,y=(playHeight-h)/2;
  const videoReady=video&&(video.readyState>=2||video instanceof HTMLCanvasElement&&video.width>0);
  if(isAR&&includesCamera&&videoReady)coverVideo(c,video,x,y,w,h);
  if(isAR&&skeleton?.width){
@@ -28,7 +29,7 @@ export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,is
  else c.drawImage(canvas,x,y,w,h);
  if(!isAR&&includesCamera&&videoReady){c.fillStyle='#fff';c.fillRect(990,486,266,200);coverVideo(c,video,994,490,258,192);}
  if(hud)drawGameHUD(c,hud,x,y,w,h);
- drawWatermark(c,{title,score,includesCamera,logo});
+ if(branded)drawWatermark(c,{title,score,includesCamera,logo});
 }
 // These values come from Motion Quest's live DOM; the native game UI is unchanged.
 function drawGameHUD(c,hud,x,y,w,h){
@@ -38,7 +39,7 @@ function drawGameHUD(c,hud,x,y,w,h){
  c.fillStyle='#fff';c.font='bold 22px Arial';c.fillText(hud.cue||'Move to play',x+26,y+h-51,w-52);
  c.font='16px Arial';c.fillText(`Charge ${hud.charge||'0%'} · Active time ${hud.elapsed||'00:00'}`,x+26,y+h-27,w-52);c.restore();
 }
-function drawWatermark(c,{title,score,includesCamera,logo}){
+export function drawWatermark(c,{title,score,includesCamera,logo}){
  c.fillStyle='#eeff41';c.fillRect(0,PLAY_HEIGHT,CLIP_WIDTH,80);
  c.drawImage(logo,20,736,48,48);
  c.fillStyle='#2347ee';c.font='900 30px Arial';c.fillText(BRAND_NAME.toLowerCase(),78,766);
@@ -62,4 +63,13 @@ export function drawClipEnding(c,title,score,logo,includesCamera,reason='Round c
  c.fillStyle='#182346';c.font='bold 26px Arial';c.fillText(`${title} · ${score}`,640,721,1136);
  c.font='18px Arial';c.fillText(`${includesCamera?'Player recording':'Synthetic gameplay preview'} · ${reason.toLowerCase()}`,640,759,1136);
  c.restore();
+}
+
+// Add branding only to an explicitly requested download, keeping all source pixels.
+export function drawDownloadFrame(c,video,clip,logo){
+ c.fillStyle='#182346';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
+ const scale=Math.min(CLIP_WIDTH/video.videoWidth,PLAY_HEIGHT/video.videoHeight);
+ const w=video.videoWidth*scale,h=video.videoHeight*scale;
+ c.drawImage(video,(CLIP_WIDTH-w)/2,(PLAY_HEIGHT-h)/2,w,h);
+ drawWatermark(c,{title:clip.gameTitle||clip.title,score:clip.finalScore||'Replay',includesCamera:clip.includesCamera,logo});
 }
