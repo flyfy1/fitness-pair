@@ -64,6 +64,7 @@ function showFrame() {
   $('scrub').value = index; $('position').textContent = `${index + 1} / ${session.samples.length} · ${elapsed.toFixed(2)} s`;
   if (!recording) {
     $('review-skeleton').style.aspectRatio = `${sample.pose.image.width} / ${sample.pose.image.height}`;
+    $('review-skeleton').style.maxWidth = `${400 * sample.pose.image.width / sample.pose.image.height}px`;
     drawBody($('review-skeleton'), sample.pose);
     $('mode').textContent = `REPLAY · ${session.evidence.toUpperCase()}`;
     $('cue').textContent = replay?.outputs[index]?.cue.replaceAll('-', ' ') ?? sample.observed.cue;

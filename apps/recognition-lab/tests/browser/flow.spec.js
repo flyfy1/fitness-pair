@@ -103,6 +103,8 @@ for (const viewport of [{ width: 1440, height: 960 }, { width: 390, height: 844 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const video = await page.locator('#camera').boundingBox(), canvas = await page.locator('#skeleton').boundingBox();
     expect(video).toEqual(canvas); expect(video.width).toBe(viewport.width);
+    const replayCanvas = await page.locator('#review-skeleton').boundingBox();
+    expect(replayCanvas.width / replayCanvas.height).toBeCloseTo(4 / 3, 1);
     await page.screenshot({ path: `test-results/layout-${viewport.width}.png`, fullPage: true });
     await page.locator('#scrub').fill('50'); await expect(page.locator('#position')).toContainText('51 / 78');
   });
