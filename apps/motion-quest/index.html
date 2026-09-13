@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101511" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="description" content="Turn on your camera and power an adventure with your body. Local squat recognition, instant game feedback." />
+    <title>Motion Quest · Move your body. Start your adventure.</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Motion Quest home"><span class="brand-mark">m<span>q</span></span> MOTION QUEST <small>MOVEMENT LAB / 01</small></a>
+        <span class="local-badge"><i></i> ON DEVICE · NO VIDEO UPLOAD</span>
+      </header>
+
+      <main>
+        <section class="intro">
+          <div><p class="eyebrow">YOUR BODY. YOUR CONTROLLER.</p><h1>Move your body. <span>Start your adventure.</span></h1><p class="intro-copy">Step away from your chair. One squat. One magical counterattack.</p></div>
+          <div class="chapter"><span>CHAPTER 01</span><strong>Wake the forest</strong><small>SOLO QUEST / 5 SQUATS</small></div>
+        </section>
+
+        <section class="play-layout" aria-label="Movement-controlled game">
+          <div class="arena-panel">
+            <div class="arena-top"><span class="pill"><i></i><span id="mode-label">Waiting for an adventurer</span></span><span class="arena-location">MOSSY WOODS <span>↗</span></span></div>
+            <div class="boss-hud"><div><span>Forest guardian</span><span id="hp-label">100 / 100</span></div><div class="health-track"><div id="hp-bar"></div></div></div>
+            <canvas id="game" aria-label="Forest scene: squat to charge, then stand to attack the guardian"></canvas>
+            <div class="arena-message"><span id="arena-kicker">Your movement is magic</span><h2 id="arena-title">Ready to wake the forest?</h2><p id="arena-subtitle">Enable your camera or try a quick preview</p></div>
+            <div class="arena-bottom"><span><kbd>↓</kbd> Squat to charge <b>→</b> <kbd>↑</kbd> Stand to attack</span><span id="combo-label">Each hit −20 HP</span></div>
+            <div id="victory" class="victory" hidden><span>QUEST COMPLETE</span><h2>The forest is awake.</h2><p id="victory-copy">Five squats. Five hits. Nicely done!</p><button id="again" class="primary">Play again <span>↗</span></button></div>
+          </div>
+
+          <aside class="tracking-panel">
+            <div class="panel-heading"><h2>Your movement space</h2><span id="tracking-badge">Camera is off</span></div>
+            <div class="camera-stage">
+              <video id="camera" autoplay playsinline muted></video>
+              <canvas id="skeleton" aria-label="Camera body-landmark overlay"></canvas>
+              <div id="camera-placeholder" class="camera-placeholder"><svg viewBox="0 0 160 190" fill="none" aria-hidden="true"><path d="M20 45V20h25M115 20h25v25M20 145v25h25M115 170h25v-25" stroke="currentColor" stroke-width="2"/><circle cx="80" cy="47" r="15"/><path d="M80 66v51m0-43L48 98m32-24 32 24m-32 19-24 43m24-43 24 43" stroke-width="6" stroke-linecap="round"/></svg><strong>Keep shoulders to ankles in frame</strong><span>Turn slightly sideways; leave room to squat</span></div>
+              <span id="camera-tag" class="camera-tag">CAM 01 · OFF</span>
+              <span id="fps" class="fps"></span>
+            </div>
+            <div class="pose-status"><i id="status-dot"></i><div><strong id="status-title" role="status">Ready to move?</strong><p id="status-detail">After enabling your camera, stand tall for about 2 seconds to calibrate.</p></div></div>
+            <div class="charge-row"><span id="charge-label">Movement charge</span><span id="charge-value">0%</span></div><div class="charge-track"><div id="charge-bar"></div></div>
+            <button id="start" class="primary">Enable camera & play <span>↗</span></button>
+            <div class="secondary-actions"><button id="demo" class="secondary">Try a gameplay preview</button><button id="calibrate" class="secondary" hidden>Recalibrate</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>
+            <button id="demo-action" class="demo-action" hidden>Hold to charge, release to attack <kbd>Space</kbd></button>
+            <p id="privacy-note" class="privacy-note">Processed on this device. No recording or uploads. Stopping releases the camera.</p>
+          </aside>
+        </section>
+
+        <section class="stats" aria-label="Round statistics"><div><span class="stat-icon">↟</span><div><span>Squats completed</span><strong><span id="rep-count">0</span><small> / 5 reps</small></strong></div></div><div><span class="stat-icon">ϟ</span><div><span>Damage dealt</span><strong><span id="damage-count">0</span><small> HP</small></strong></div></div><div><span class="stat-icon">◷</span><div><span>Active time</span><strong><span id="elapsed">00:00</span></strong></div></div><div class="stat-note"><span class="tiny-star">✳</span><p>Every small move<br/>takes you further.</p></div></section>
+
+        <section class="instructions"><div><span>01</span><p><strong>Stand tall, find your frame</strong>Keep the device steady and your shoulders to ankles visible.</p></div><div><span>02</span><p><strong>Squat to gather energy</strong>Squat comfortably and follow the charge bar.</p></div><div><span>03</span><p><strong>Stand up, strike back</strong>Complete the movement to release your magic.</p></div></section>
+      </main>
+      <footer><span>MOTION QUEST <b>·</b> A small game for your whole body</span><span>Small moves. Big adventures. ✳</span></footer>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

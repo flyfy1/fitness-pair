@@ -1,0 +1,5 @@
+{
+  "name": "@fitness-pair/pose-mediapipe", "version": "0.1.0", "private": true,
+  "type": "module", "exports": { ".": "./index.js", "./worker": "./worker.js" },
+  "dependencies": { "@fitness-pair/contracts": "*", "@mediapipe/tasks-vision": "0.10.32" }
+}

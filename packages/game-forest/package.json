@@ -1,0 +1,5 @@
+{
+  "name": "@fitness-pair/game-forest", "version": "0.1.0", "private": true,
+  "type": "module", "exports": { ".": "./index.js", "./renderer": "./renderer.js" },
+  "dependencies": { "@fitness-pair/contracts": "*" }
+}

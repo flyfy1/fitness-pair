@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "sessionId": "fixture-squat-v1",
+  "inputSeq": 45,
+  "tMs": 3680,
+  "source": {
+    "kind": "synthetic",
+    "id": "squat-step-geometry-v1"
+  },
+  "recognizerId": "squat-2d-hysteresis/1",
+  "action": "squat",
+  "phase": "completed",
+  "cue": "rep",
+  "progress": 0,
+  "calibrationProgress": null,
+  "completion": {
+    "id": "fixture-squat-v1:squat-2d-hysteresis/1:squat:1",
+    "repIndex": 1
+  }
+}

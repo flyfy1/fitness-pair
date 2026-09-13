@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "sessionId": "fixture-squat-v1",
+  "source": {
+    "kind": "synthetic",
+    "id": "squat-step-geometry-v1"
+  },
+  "seq": 0,
+  "tMs": 80,
+  "modelId": "synthetic-geometry/1",
+  "coordinateSpace": "image-normalized-unmirrored",
+  "image": {
+    "width": 640,
+    "height": 480
+  },
+  "joints": {
+    "leftShoulder": {
+      "x": 0.5,
+      "y": 0.2,
+      "confidence": 1
+    },
+    "leftHip": {
+      "x": 0.5,
+      "y": 0.45,
+      "confidence": 1
+    },
+    "leftKnee": {
+      "x": 0.5,
+      "y": 0.65,
+      "confidence": 1
+    },
+    "leftAnkle": {
+      "x": 0.5,
+      "y": 0.9,
+      "confidence": 1
+    },
+    "rightShoulder": {
+      "x": 0.5,
+      "y": 0.2,
+      "confidence": 1
+    },
+    "rightHip": {
+      "x": 0.5,
+      "y": 0.45,
+      "confidence": 1
+    },
+    "rightKnee": {
+      "x": 0.5,
+      "y": 0.65,
+      "confidence": 1
+    },
+    "rightAnkle": {
+      "x": 0.5,
+      "y": 0.9,
+      "confidence": 1
+    }
+  }
+}

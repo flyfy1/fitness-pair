@@ -1,0 +1,5 @@
+{
+  "name": "@fitness-pair/action-squat", "version": "0.1.0", "private": true,
+  "type": "module", "exports": "./index.js",
+  "dependencies": { "@fitness-pair/contracts": "*" }
+}
