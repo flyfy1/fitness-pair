@@ -24,7 +24,7 @@
     "explore:evaluation": "node experiments/evaluation/baseline.mjs",
     "build:arcade": "node scripts/build-arcade.mjs",
     "preview:arcade": "node scripts/preview-arcade.mjs",
-    "test:arcade": "node --test apps/arcade/server/worker.test.js",
+    "test:arcade": "node --test apps/arcade/server/*.test.js",
     "build:motion-quest": "npm run build --workspace @fitness-pair/motion-quest"
   },
   "dependencies": {

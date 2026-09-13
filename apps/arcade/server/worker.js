@@ -1,7 +1,7 @@
 import {isPlayableGame} from '../game-catalog.js';
 const MAX_POSTER_BYTES=256*1024;
 const MAX_BYTES=20*1024*1024, TTL=7*86400000, ID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const enc=new TextEncoder();
 const base64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
@@ -18,16 +18,18 @@ export function validateUpload(request,url){
  if(!Number.isFinite(duration)||duration<=0||duration>90)throw fail(400,'Record a clip of 90 seconds or less.');
  if(!['video/mp4','video/webm'].includes(mime))throw fail(415,'Use an MP4 or WebM recording.');
  const length=request.headers.get('Content-Length');if(length!==null&&(!Number.isSafeInteger(Number(length))||Number(length)<=0||Number(length)>MAX_BYTES))throw fail(413,'Clip must be nonempty and no larger than 20 MiB.');
- return {title,source,game,duration,mime};
+ const visibility=url.searchParams.get('visibility')||'public';
+ if(!['public','private'].includes(visibility))throw fail(400,'Choose public or private visibility.');
+ return {title,source,game,duration,mime,visibility};
 }
 async function readBounded(request,maxBytes=MAX_BYTES){
  if(!request.body)throw fail(400,'Empty recording.');const reader=request.body.getReader(),chunks=[];let total=0;
  try{while(true){const {value,done}=await reader.read();if(done)break;total+=value.length;if(total>maxBytes){await reader.cancel();throw fail(413,'Media exceeds its size limit.');}chunks.push(value);}}finally{reader.releaseLock();}
  if(total<12)throw fail(415,'This recording is too short to be a video.');const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
 }
-function publicClip(record){const {id,title,source,game,duration,mime,createdAt,expiresAt,bytes}=record;return {id,title,source,game,duration,mime,createdAt,expiresAt,bytes,url:'/clips/'+id};}
+function publicClip(record){const {id,title,source,game,duration,mime,createdAt,expiresAt,bytes}=record;return {id,title,source,game,duration,mime,createdAt,expiresAt,bytes,visibility:record.visibility||'public',url:'/clips/'+id+(record.visibility==='private'?(record.shareToken?'?share='+record.shareToken:new URL(record.url||'/', 'https://arcade.invalid').search):'')};}
 export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
- let tokenCache=null,uploadBusy=false;
+ let tokenCache=null,uploadBusy=false,anonymousInventory=null;
  async function accessToken(env){
   if(typeof env.GCP_ACCESS_TOKEN_PROVIDER==='function')return env.GCP_ACCESS_TOKEN_PROVIDER();
   if(tokenCache?.identity===env.GCP_SERVICE_ACCOUNT_JSON&&tokenCache.until>now())return tokenCache.token;
@@ -46,9 +48,45 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
   return fetcher(url,{method,headers,body,signal:AbortSignal.timeout(30000),redirect:'error'});
  }
  async function record(env,id){const response=await gcp(env,`gallery/${id}.json`,{query:'?alt=media'});if(response.status===404)throw fail(404,'This clip has expired or was removed.');if(!response.ok)throw fail(503,'The gallery is unavailable. Try again shortly.');const data=await response.json();if(data.id!==id||!ID.test(data.id)||data.expiresAt<=now())throw fail(404,'This clip has expired or was removed.');return data;}
+ // Import older ownerless publications before admitting anonymous uploads. Failed
+ // reservations remain in the ledger until deletion or expiry, including after restart.
+ async function anonymousQuota(env){
+  if(!anonymousInventory){
+   anonymousInventory=(async()=>{
+    const imported=[];let page='';const seen=new Set();
+    do{
+     if(seen.has(page))throw fail(503,'Anonymous storage inventory is unavailable.');seen.add(page);
+     const response=await gcp(env,'',{query:'?prefix=gallery%2F&maxResults=100'+(page?'&pageToken='+encodeURIComponent(page):'')});
+     if(!response.ok)throw fail(503,'Anonymous storage inventory is unavailable.');
+     const listing=await response.json();
+     for(const item of listing.items||[]){
+      if(!/^gallery\/[0-9a-f-]+\.json$/.test(item.name))continue;
+      try{const clip=await record(env,item.name.slice(8,-5));if(!clip.ownerId)imported.push({...publicClip(clip),keyHash:clip.keyHash});}
+      catch(error){if(error.status!==404)throw error;}
+     }
+     page=listing.nextPageToken||'';
+    }while(page);
+    await env.ACCOUNTS.syncAnonymous(imported);
+   })().catch(error=>{anonymousInventory=null;throw error;});
+  }
+  await anonymousInventory;
+  const {usedBytes,limitBytes}=await env.ACCOUNTS.list(null);return {usedBytes,limitBytes};
+ }
+ async function writeUser(request,env,url){
+  const user=await env.ACCOUNTS.user(request);
+  if(user)return env.ACCOUNTS.requireUser(request,true);
+  // An expired signed-in attempt must never silently publish anonymously.
+  if(request.headers.get('X-CSRF-Token'))throw fail(401,'Log in again before publishing this clip.');
+  if(request.headers.get('Origin')!==url.origin)throw fail(403,'Publish or remove clips from the arcade website.');
+  return null;
+ }
+ async function manageAnonymous(request,entry){
+  const key=(request.headers.get('Authorization')||'').replace(/^Bearer /,'')||request.headers.get('X-Management-Key')||'';
+  if(!entry.keyHash||!await equal(await digest(key),entry.keyHash))throw fail(403,'Use the device that published this clip to manage it.');
+ }
  async function routes(request,env){
   const url=new URL(request.url),path=url.pathname;
-  if(path==='/api/config'&&request.method==='GET')return json({sharingEnabled:enabled(env)});
+  if(path==='/api/config'&&request.method==='GET')return json({sharingEnabled:enabled(env),...(enabled(env)?{anonymous:await anonymousQuota(env)}:{})});
   if(path==='/api/auth/session'&&request.method==='GET')return json({enabled:false,user:null,csrfToken:null});
   if(path==='/api/account/clips'&&request.method==='GET'){
    if(!enabled(env))throw fail(503,'Account sharing is unavailable. Please try again later.');
@@ -69,7 +107,7 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
    const response=await gcp(env,'',{query:'?prefix=gallery%2F&maxResults=24'+(page?'&pageToken='+encodeURIComponent(page):'')});if(!response.ok)throw fail(503,'The gallery could not load. Please retry.');
    const listing=await response.json();const names=(listing.items||[]).map(x=>x.name).filter(n=>/^gallery\/[0-9a-f-]+\.json$/.test(n));
    const settled=await Promise.allSettled(names.map(n=>record(env,n.slice(8,-5))));for(const r of settled)if(r.status==='rejected'&&r.reason.status!==404)throw r.reason;
-   const clips=settled.filter(r=>r.status==='fulfilled').map(r=>publicClip(r.value)).sort((a,b)=>b.createdAt-a.createdAt);return json({enabled:true,clips,nextPageToken:listing.nextPageToken||null});
+   const clips=settled.filter(r=>r.status==='fulfilled'&&r.value.visibility!=='private').map(r=>publicClip(r.value)).sort((a,b)=>b.createdAt-a.createdAt);return json({enabled:true,clips,nextPageToken:listing.nextPageToken||null});
   }
   const match=/^\/api\/(clips|media|posters)\/([^/]+)$/.exec(path);
   if(match){
@@ -78,13 +116,17 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
    if(request.method==='DELETE'&&uploadBusy)throw fail(429,'An upload is finishing. Please retry removal shortly.');
    if(kind==='clips'&&request.method==='PUT'){
     if(!enabled(env))throw fail(503,'Log in is being connected. Your local clips remain on this device.');
-    const user=await env.ACCOUNTS.requireUser(request,true);
-    const info=validateUpload(request,url);if(uploadBusy)throw fail(429,'Another clip is uploading. Please retry shortly.');uploadBusy=true;
+    const user=await writeUser(request,env,url);
+    const info=validateUpload(request,url);
+    if(!user&&info.visibility!=='public')throw fail(403,'Log in to upload a private clip.');
+    const managementKey=request.headers.get('X-Management-Key')||'';
+    if(!user&&!/^[A-Za-z0-9_-]{32,128}$/.test(managementKey))throw fail(400,'A device management key is required for anonymous uploads.');if(uploadBusy)throw fail(429,'Another clip is uploading. Please retry shortly.');uploadBusy=true;
     try{
-     try{const existing=await record(env,id);if(existing.ownerId!==user.userId)throw fail(409,'This clip was published by another account.');return json(publicClip(existing));}catch(error){if(error.status!==404)throw error;}
+     try{const existing=await record(env,id);if(existing.ownerId){if(existing.ownerId!==user?.userId)throw fail(409,'This clip was published by another account.');}else await manageAnonymous(request,existing);return json(publicClip(existing));}catch(error){if(error.status!==404)throw error;}
      const body=await readBounded(request);const valid=info.mime==='video/webm'?body[0]===26&&body[1]===69&&body[2]===223&&body[3]===163:String.fromCharCode(...body.slice(4,8))==='ftyp';if(!valid)throw fail(415,'The recording does not match its video format.');
-     const entry={...info,id,createdAt:now(),expiresAt:now()+TTL,bytes:body.length,ownerId:user.userId};
-     await env.ACCOUNTS.reserve(user.userId,publicClip(entry));
+     const entry={...info,id,createdAt:now(),expiresAt:now()+TTL,bytes:body.length,ownerId:user?.userId||null,...(!user?{keyHash:await digest(managementKey)}:{}),...(info.visibility==='private'?{shareToken:base64(crypto.getRandomValues(new Uint8Array(32)))}:{})};
+     if(!user)await anonymousQuota(env);
+     await env.ACCOUNTS.reserve(entry.ownerId,{...publicClip(entry),...(!user?{keyHash:entry.keyHash}:{})});
      try{
       const upload=await gcp(env,`videos/${id}`,{method:'POST',body,mime:info.mime});if(!upload.ok)throw fail(503,'Upload did not finish. Check My shared clips before retrying.');
       const marker=await gcp(env,`gallery/${id}.json`,{method:'POST',body:JSON.stringify(entry),mime:'application/json'});
@@ -100,13 +142,16 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
    let entry;
    try{entry=await record(env,id);}catch(error){
     if(error.status!==404||kind!=='clips'||request.method!=='DELETE'||!env.ACCOUNTS)throw error;
-    const user=await env.ACCOUNTS.requireUser(request,true),account=await env.ACCOUNTS.list(user.userId);
-    if(!account.clips.some(clip=>clip.id===id))throw error;
+    const user=await writeUser(request,env,url);
+    let ownerId=user?.userId||null,account=await env.ACCOUNTS.list(ownerId),pending=account.clips.find(clip=>clip.id===id);
+    if(!pending&&user){ownerId=null;account=await env.ACCOUNTS.list(null);pending=account.clips.find(clip=>clip.id===id);}
+    if(!pending)throw error;
+    if(ownerId===null)await manageAnonymous(request,pending);
     const media=await gcp(env,`videos/${id}`,{method:'DELETE'});
     if(!media.ok&&media.status!==404)throw fail(503,'Could not remove this upload. Please retry.');
     const poster=await gcp(env,`videos/${id}.jpg`,{method:'DELETE'});
     if(!poster.ok&&poster.status!==404)throw fail(503,'Could not remove the thumbnail. Please retry.');
-    await env.ACCOUNTS.release(user.userId,id);return json({removed:true});
+    await env.ACCOUNTS.release(ownerId,id);return json({removed:true});
    }
    if(kind==='clips'&&request.method==='DELETE'){
     if(entry.ownerId){
@@ -114,20 +159,20 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
      const user=await env.ACCOUNTS.requireUser(request,true);
      if(entry.ownerId!==user.userId)throw fail(403,'Only the account that published this clip can remove it.');
     }else{
-     const key=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!entry.keyHash||!await equal(await digest(key),entry.keyHash))throw fail(403,'Use the device that published this older clip to remove it.');
+     await manageAnonymous(request,entry);
     }
     const result=await gcp(env,`gallery/${id}.json`,{method:'DELETE'});if(!result.ok&&result.status!==404)throw fail(503,'Could not remove this clip. Please retry.');
     const media=await gcp(env,`videos/${id}`,{method:'DELETE'});
     if(!media.ok&&media.status!==404)throw fail(503,'The link was removed. Retry removal in My shared clips to release its storage.');
     const poster=await gcp(env,`videos/${id}.jpg`,{method:'DELETE'});
     if(!poster.ok&&poster.status!==404)throw fail(503,'Could not remove the thumbnail. Please retry removal.');
-    if(entry.ownerId)await env.ACCOUNTS.release(entry.ownerId,id);
+    if(env.ACCOUNTS)await env.ACCOUNTS.release(entry.ownerId||null,id);
     return json({removed:true});
    }
    if(kind==='posters'&&request.method==='PUT'){
     if(!enabled(env))throw fail(503,'Account sharing is unavailable.');
-    const user=await env.ACCOUNTS.requireUser(request,true);
-    if(entry.ownerId!==user.userId)throw fail(403,'Only the publishing account can add this thumbnail.');
+    if(entry.ownerId){const user=await env.ACCOUNTS.requireUser(request,true);if(entry.ownerId!==user.userId)throw fail(403,'Only the publishing account can add this thumbnail.');}
+    else{await writeUser(request,env,url);await manageAnonymous(request,entry);}
     if(request.headers.get('X-Sharing-Consent')!=='gallery-v1')throw fail(400,'Confirm sharing before uploading a thumbnail.');
     if(request.headers.get('Content-Type')!=='image/jpeg')throw fail(415,'Use a JPEG thumbnail.');
     const length=Number(request.headers.get('Content-Length'));
@@ -144,14 +189,15 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
     }finally{uploadBusy=false;}
    }
    if(!['GET','HEAD'].includes(request.method))throw fail(405,'Method not allowed.');
+   const user=env.ACCOUNTS?await env.ACCOUNTS.user(request):null;
+   if(entry.visibility==='private'&&(!user||entry.ownerId!==user.userId)&&(!entry.shareToken||!await equal(url.searchParams.get('share'),entry.shareToken)))throw fail(404,'Clip not found.');
    if(kind==='clips'){
-    const user=env.ACCOUNTS?await env.ACCOUNTS.user(request):null;
     return json({...publicClip(entry),canDelete:!!(user&&entry.ownerId===user.userId),legacy:!entry.ownerId});
    }
    const range=request.headers.get('Range');if(range&&!/^bytes=(\d+-\d*|-\d+)$/.test(range))throw fail(416,'Invalid byte range.');
    const poster=kind==='posters';
    const media=await gcp(env,`videos/${id}${poster?'.jpg':''}`,{query:'?alt=media',range});if(![200,206,416].includes(media.status))throw fail(404,'This video is unavailable.');
-   const headers=new Headers({'Content-Type':poster?'image/jpeg':entry.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Disposition':'inline','Accept-Ranges':'bytes','Cross-Origin-Resource-Policy':'same-origin'});for(const name of ['Content-Length','Content-Range'])if(media.headers.has(name))headers.set(name,media.headers.get(name));
+   const headers=new Headers({'Content-Type':poster?'image/jpeg':entry.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Disposition':'inline','Accept-Ranges':'bytes','Cross-Origin-Resource-Policy':'same-origin'});for(const name of ['Content-Length','Content-Range'])if(media.headers.has(name))headers.set(name,media.headers.get(name));
    return new Response(request.method==='HEAD'?null:media.body,{status:media.status,headers});
   }
   if(path.startsWith('/api/'))throw fail(404,'Not found.');

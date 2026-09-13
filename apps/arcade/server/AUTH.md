@@ -7,7 +7,7 @@
 - Riskiest assumption: central login, durable ownership, and storage accounting remain consistent across redirects, retries, and restarts.
 - P1 loop: local clip → Integ.Life login → explicit publication → My shared clips → public playback → owner removal.
 - Success proof: protocol and quota tests; a browser login/publication/removal round trip; independent account isolation; actual production storage readback.
-- No-gos: private recording in tests, browser-held central tokens, cross-domain cookies, account merging by email, or anonymous upload fallback.
+- No-gos: private recording in tests, browser-held central tokens, cross-domain cookies, account merging by email, or silent anonymous fallback after a login expires.
 - Appetite: one account and sharing slice. Editing videos, moderation, billing, and broader social features are deferred.
 
 ## Protocol and identity
@@ -33,7 +33,7 @@ See the central `integ-auth/README.md` contract and
 ## Ownership and quota
 
 Each account has **2 GB = 2,000,000,000 bytes** of active published-video storage.
-The existing 60-second / 20 MiB per-clip limits and seven-day expiry remain.
+The existing 90-second / 20 MiB per-clip limits and seven-day expiry remain.
 Quota measures actual uploaded body bytes, never a client-declared size.
 Deleting or expiring clips frees logical quota. Cloud Storage soft-delete retention
 and lifecycle timing can retain billable bytes after logical removal.
@@ -97,3 +97,36 @@ recording checks also fail on the unmodified checkout at `59ae493`: the Motion Q
 forced WebM completion fixture does not save within its timeout. The account
 change does not modify recording composition or lifecycle, and these failures are
 not represented as passing tests or as human recording evidence.
+
+
+## Anonymous uploads and private links
+
+Anonymous players explicitly publish public videos against one global **10 GB =
+10,000,000,000 bytes** pool. Signed-in players use their own 2 GB quota for both
+public and private videos. An upload is rejected if its actual bytes would cross
+the applicable limit; deleting older videos releases space. Expiry still applies
+at seven days, and quotas describe active logical storage rather than GCS billing.
+
+The same atomic ledger accepts `ownerId: null` for anonymous reservations. Before
+anonymous usage is reported or a new upload is admitted, the gateway imports
+active ownerless Gallery records, across all storage listing pages. Initialization
+fails closed on an incomplete inventory. Partial uploads retain reservations.
+Anonymous device management keys are saved locally before upload; only their hashes
+are stored server-side. They authorize thumbnail uploads, idempotent retries and
+removal, including cleanup after a partial upload. They do not assign ownership to
+a later login. A signed-in attempt with an expired CSRF token returns 401 instead
+of silently becoming a public anonymous upload.
+
+`visibility` defaults to `public` for compatibility. Anonymous private uploads are
+rejected. Private uploads receive a separate random 256-bit share token and never
+appear in the public Gallery. Their metadata, video (including HEAD and Range),
+and poster require either the owner session or the complete `?share=...` link.
+The owner list returns that link for sharing across devices. Anyone who receives
+or is forwarded that link can watch without an account. Only the owner may delete;
+deleting or expiry revokes playback. Per-recipient invitations and changing an
+existing publication's visibility are outside this slice.
+
+Synthetic server checks: `node --test apps/arcade/deploy/gcp/*.test.mjs
+apps/arcade/server/*.test.js` covers exact pool boundaries, concurrency, restart,
+legacy inventory, failed writes/deletion retries, account isolation, private media
+and poster access, link forwarding, and owner revocation.
