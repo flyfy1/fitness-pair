@@ -2,19 +2,23 @@
 
 A standalone experiment for completing game setup while standing away from the
 screen. The camera fills the viewport; the current instruction is the primary UI.
-This app ends at **Ready to play** and does not launch Dino or another game.
+After setup, this app runs a continuous **jump detection test** over the live
+camera. It does not launch Dino or another game.
 
 ## MVP card
 
 - **Player:** someone standing far enough from a camera for body tracking.
 - **Job:** understand the current state and complete setup without reading a sidebar.
-- **Risk:** small text and hidden start conditions make successful calibration look stuck.
+- **Risk:** the player needs visible confirmation that each complete movement is detected
+  once, while noise and missing tracking must not create counts.
 - **Loop:** enable camera → stand still → choose a comfortable range with the slider → raise one hand
-  to confirm → stand steady for three seconds → Ready to play.
+  to confirm → stand steady for three seconds → jump/rise and return → see an
+  explicit detected-jump confirmation and count → repeat or finish the test.
 - **Proof:** browser geometry and screenshots, synthetic camera flow, readable
   interruption reasons, persisted/exported state logs and camera cleanup.
 - **No-gos:** no game, new model, backend, recording, physical-height claims or deployment.
-- **Appetite:** one setup loop, a range slider and an optional movement overlay.
+- **Appetite:** the existing setup plus repeated jump detection, a range slider and the
+  default-visible skeleton debug view.
 
 ## Run
 
@@ -43,7 +47,8 @@ Interrupted tracking clearly states why the countdown stopped and restarts it
 when steady tracking returns. Long torso loss/position drift still recalibrates.
 
 Camera tracks and the model worker stop on cancellation, errors, page exit,
-hidden tabs and POC completion. Try again starts a fresh camera session.
+hidden tabs and **Finish test**. Finishing setup keeps the camera active for the
+jump test. Try again starts a fresh camera session and resets the jump count.
 
 ## Local runtime log
 
@@ -54,7 +59,8 @@ the current session can still be inspected and exported from memory.
 
 Events include camera initialization/stopping/errors, calibration transitions,
 gesture detection, rejected/accepted height confirmation, visible waiting reasons,
-countdown start/interruption, and setup completion. Timestamps show their order.
+countdown start/interruption, setup completion, jump start/return/detection and
+test pause/finish. Each `jump-detected` carries a stable event ID and count. Timestamps show their order.
 Logs contain no image/video, body coordinates or landmarks and are never uploaded.
 The view shows the latest 40 entries; the JSON contains the retained 300 entries.
 `window.cameraSetup.getState()` and `.getLog()` expose the same compact diagnostic
@@ -130,3 +136,35 @@ page session. No camera-derived baseline is reused across sessions.
 
 The log marks `rangeSource: slider` on confirmation, and records range changes
 and overlay toggles. These settings are configuration, never evidence of a jump.
+
+
+## Jump detection test
+
+Once the existing range confirmation and countdown succeed, **Try a small jump**
+starts the test. Skeleton and response meter stay live. **Moving up** and
+**Coming back down** indicate the recognizer's current motion. **Jump detected!**
+is shown for 1.8 seconds after an explicit completed action; the confirmed count
+stays visible, and a new rise can immediately start another cycle. A stable
+completion ID prevents duplicate counts. Setup motions are not counted.
+
+The slider controls the full-response amplitude, not a required maximum jump.
+Detection still requires coherent upward movement above the standing reference,
+multiple observed samples and a stable return. A preparatory crouch alone,
+standing still, or an isolated noise spike does not count. No count is inferred
+from a missing frame. Sustained loss invalidates calibration, pauses testing and
+requires the standing/range/countdown steps again; previously confirmed counts
+remain until the user starts a fresh camera session.
+
+The test uses the existing upper-body recognizer, so **detected jump** means a
+tracked torso rise-and-return cycle, not independently verified feet leaving the
+floor. Feet can stay outside the picture. It is a movement-control POC, not a
+physical jump-height measurement. Peak response is a percentage of the selected
+slider range and is not centimeters.
+
+**Finish test** shows the count and stops the camera and worker. The local log
+includes `jump-test-started`, `jump-started`, `jump-returning`, `jump-detected`,
+`jump-cancelled`, `jump-test-paused` and `jump-test-finished`. No skeleton coordinates
+or camera images are recorded. Production-browser synthetic regressions cover two
+successive cycles, persistent confirmation, default skeleton rendering, responsive
+controls, noise rejection, loss recovery, setup-only movements and cleanup.
+Human detection accuracy still requires a trial at the user's camera distance.

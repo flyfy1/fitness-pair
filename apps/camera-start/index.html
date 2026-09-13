@@ -17,7 +17,7 @@
       <div class="tools"><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶ Fullscreen</button><button id="show-log" aria-expanded="false">Log</button><button id="stop" hidden>Stop camera</button></div>
     </header>
     <nav class="steps" aria-label="Setup progress">
-      <span id="step-standing">1 · Stand</span><span id="step-maximum">2 · Range</span><span id="step-confirm">3 · Confirm</span><span id="step-ready">4 · Ready</span>
+      <span id="step-standing">1 · Stand</span><span id="step-maximum">2 · Range</span><span id="step-confirm">3 · Confirm</span><span id="step-ready">4 · Jump</span>
     </nav>
     <section class="controls" aria-label="Movement settings">
       <label class="body-toggle"><input type="checkbox" id="show-body" checked> Skeleton debug view</label>
@@ -25,6 +25,7 @@
       <input id="jump-range" type="range" min="10" max="80" step="5" value="25" aria-describedby="range-help">
       <p id="range-help">Smaller movement ← → Bigger movement · % of torso length</p>
       <div class="movement-readout"><span id="movement-label">Live movement · enable camera</span><meter id="movement-meter" min="0" max="100" value="0" aria-label="Live jump response"></meter></div>
+      <p id="jump-results" hidden>Confirmed jumps <strong id="jump-count">0</strong></p>
       <p class="range-note">No maximum jump needed. Stand steady, then confirm.</p>
     </section>
     <section class="guidance" aria-label="Current instruction">

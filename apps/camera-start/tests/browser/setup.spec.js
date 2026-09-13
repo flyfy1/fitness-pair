@@ -68,7 +68,9 @@ test('standing, slider range, one-hand confirmation and countdown finish without
   await expect.poll(()=>page.evaluate(()=>window.cameraSetup.getState().heightConfirmed)).toBe(true);
   await page.evaluate(()=>{window.poseTest.wristsMissing=true;});
   await expect(page.locator('#status')).toHaveText('RANGE CONFIRMED · GET READY');
-  await expect(page.locator('#instruction')).toHaveText('Ready to play!',{timeout:6000});
+  await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
+  expect(await page.evaluate(()=>window.testStream.getTracks().some(t=>t.readyState==='live'))).toBe(true);
+  await page.getByRole('button',{name:'Finish test',exact:true}).click();
   expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
   const events=await page.evaluate(()=>window.cameraSetup.getLog());
   expect(events.some(e=>e.event==='height-confirmed'&&e.via==='gesture')).toBe(true);
@@ -135,7 +137,7 @@ test('crouch, takeoff and crouched landing preserve calibration and explain prep
   await page.evaluate(()=>{window.poseTest.crouch=false;});
   await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Ready to play!',{timeout:6000});
+  await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const events=await page.evaluate(()=>window.cameraSetup.getLog());
   expect(events.some(e=>e.event==='screen-state'&&e.reason==='prepare-jump')).toBe(true);
   expect(events.some(e=>e.event==='calibration-stage'&&e.from==='maximum'&&e.to==='standing')).toBe(false);
@@ -163,7 +165,7 @@ test('mixed takeoff noise preserves the jump step and short countdown loss pause
   await page.waitForTimeout(600);
   await page.evaluate(()=>{window.poseTest.noiseFrames=4;});
   await expect.poll(()=>page.evaluate(()=>window.poseTest.noiseFrames)).toBe(0);
-  await expect(page.locator('#instruction')).toHaveText('Ready to play!',{timeout:6000});
+  await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const after = await page.evaluate(()=>window.cameraSetup.getLog());
   expect(after.filter(e=>e.event==='countdown-started')).toHaveLength(1);
   expect(after.filter(e=>e.event==='countdown-interrupted')).toHaveLength(0);
@@ -210,7 +212,7 @@ test('slider changes live response and confirms without any jump; skeleton clear
   await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
   await expect(page.getByRole('slider')).toBeDisabled();
-  await expect(page.locator('#instruction')).toHaveText('Ready to play!',{timeout:6000});
+  await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const log = await page.evaluate(()=>window.cameraSetup.getLog());
   expect(log.some(e=>e.event==='height-confirmed'&&e.rangeSource==='slider'&&e.torsoPercent===80)).toBe(true);
 });
@@ -226,5 +228,61 @@ test('stopping after confirmation permits a new slider value for the next camera
   await standingSetup(page);
   await page.evaluate(()=>{window.poseTest.rise=.02;});
   await expect.poll(()=>page.locator('#movement-meter').evaluate(el=>el.value)).toBeGreaterThan(75);
+  await page.getByRole('button',{name:'Stop camera',exact:true}).click();
+});
+
+
+async function enterJumpTest(page) {
+  await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
+  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
+}
+
+test('jump test shows rise, return and a latched confirmation once per real cycle', async({page})=>{
+  await enterJumpTest(page);
+  for (const size of [{width:390,height:844},{width:844,height:390},{width:1440,height:960}]) {
+    await page.setViewportSize(size);
+    await expect(page.getByRole('button',{name:'Finish test',exact:true})).toBeInViewport();
+    await expect(page.locator('#jump-results')).toBeInViewport();
+  }
+  await page.evaluate(()=>{window.poseTest.crouch=true;}); await page.waitForTimeout(650);
+  await expect(page.locator('#jump-count')).toHaveText('0');
+  await page.evaluate(()=>{window.poseTest.crouch=false;}); await page.waitForTimeout(300);
+  for (let count=1;count<=2;count++) {
+    await page.evaluate(()=>{window.poseTest.rise=.04;});
+    await expect(page.locator('#instruction')).toHaveText('Moving up!');
+    await page.waitForTimeout(200);
+    await expect(page.locator('#jump-count')).toHaveText(String(count-1));
+    await page.evaluate(()=>{window.poseTest.rise=.02;});
+    await expect(page.locator('#instruction')).toHaveText('Coming back down.');
+    await page.evaluate(()=>{window.poseTest.rise=0;});
+    await expect(page.locator('#instruction')).toHaveText('Jump detected!');
+    await expect(page.locator('#jump-count')).toHaveText(String(count));
+    await page.waitForTimeout(400);
+    await expect(page.locator('#instruction')).toHaveText('Jump detected!');
+  }
+  await page.screenshot({path:'test-results/jump-confirmed.png'});
+  const events=await page.evaluate(()=>window.cameraSetup.getLog().filter(e=>e.event==='jump-detected'));
+  expect(events).toHaveLength(2); expect(new Set(events.map(e=>e.id)).size).toBe(2);
+  await page.getByRole('button',{name:'Finish test',exact:true}).click();
+  await expect(page.locator('#instruction')).toHaveText('2 jumps detected.');
+  expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
+});
+
+test('live detection rejects one-frame noise and cancels unobserved landing after sustained loss', async({page})=>{
+  await enterJumpTest(page);
+  await page.evaluate(()=>{
+    const worker=window.testWorker, post=worker.postMessage.bind(worker);
+    worker.postMessage=data=>{window.poseTest.rise=.12;post(data);window.poseTest.rise=0;worker.postMessage=post;};
+  });
+  await page.waitForTimeout(600); await expect(page.locator('#jump-count')).toHaveText('0');
+  await page.evaluate(()=>{window.poseTest.rise=.04;});
+  await expect(page.locator('#instruction')).toHaveText('Moving up!');
+  await page.evaluate(()=>{window.poseTest.missing=true;}); await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>window.cameraSetup.getState().testing)).toBe(false);
+  await page.evaluate(()=>{window.poseTest.missing=false;window.poseTest.rise=0;});
+  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await expect(page.locator('#jump-count')).toHaveText('0');
+  expect(await page.evaluate(()=>window.cameraSetup.getLog().some(e=>e.event==='jump-test-paused'))).toBe(true);
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
 });
