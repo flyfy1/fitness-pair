@@ -8,6 +8,6 @@ $('clip').addEventListener('error',()=>status('This clip is no longer available,
 $('remove').onclick=async()=>{
   if(!$('remove-confirm').checked){status('Select the removal confirmation first.');return;}
   $('remove').disabled=true;
-  try{const response=await fetch(`/api/clips/${location.pathname.split('/').pop()}`,{method:'DELETE',headers:{Authorization:`Bearer ${key}`}});if(!response.ok)throw new Error('The clip could not be removed. Check your management link and retry.');$('clip').pause();$('clip').removeAttribute('src');$('clip').load();$('management').hidden=true;status('Clip removed. Its public link is now unavailable.');}catch(error){status(error.message);$('remove').disabled=false;}
+  try{const response=await fetch(`/api/clips/${location.pathname.split('/').pop()}`,{method:'DELETE',headers:{Authorization:`Bearer ${key}`}});if(!response.ok)throw new Error('The clip could not be removed. Check your management link and retry.');$('clip').pause();$('clip').removeAttribute('src');$('clip').load();$('management').hidden=true;status('Clip removed. Its public link is now unavailable.');}catch{status('The clip could not be removed. Check your connection and management link, then retry.');$('remove').disabled=false;}
 };
 window.addEventListener('pagehide',()=>$('clip').pause());
