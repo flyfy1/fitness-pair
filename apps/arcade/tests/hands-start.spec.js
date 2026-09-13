@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {camera} from './start-camera-fixture.js';
-const games=[...['breakout','invaders','stack','knife','bubble','fruit'].map(id=>({id:'ar-'+id,start:'#start',stop:'#stop'})),{id:'motion-quest',start:'#start',stop:'#stop'},{id:'camera-start',start:'#primary',stop:'#stop'},{id:'plank-flight',start:'#start',stop:'#stop'},{id:'dino-run',start:'#start',stop:'#stop-camera'},{id:'dino-ar',start:'#primary',stop:'#stop'}];
+const games=[...['breakout','invaders','stack','knife','bubble','fruit'].map(id=>({id:'ar-'+id,start:'#start',stop:'#stop'})),{id:'motion-quest',start:'#start',stop:'#stop'},{id:'plank-flight',start:'#start',stop:'#stop'},{id:'dino-run',start:'#start',stop:'#stop-camera'},{id:'dino-ar',start:'#primary',stop:'#stop'}];
 for(const config of games)test(`${config.id}: camera play waits for both hands and release`,async({page},info)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await camera(page);await page.goto('/play/'+config.id);const game=page.frameLocator('#game-frame');
  const pose=value=>game.locator('body').evaluate((_,value)=>Object.assign(window.startPose,value),value);

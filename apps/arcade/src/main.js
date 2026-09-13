@@ -25,7 +25,8 @@ installGameGuides(app,games);
 document.querySelectorAll('[data-preview]').forEach(c=>drawPreview(c,c.dataset.preview));setupPlayground();mountTrackingLoader(document.querySelector('#tracking-preload'));
 }
 function play(id){
-const g=games.find(g=>g.id===id);if(!g){app.innerHTML=`${nav()}<main id="main" class="utility"><h1>Game not found.</h1><a class="button primary" href="/#arcade">Back to the arcade →</a></main>${footer()}`;return;}
+const g=games.find(g=>g.id===id||g.aliases?.includes(id));if(!g){app.innerHTML=`${nav()}<main id="main" class="utility"><h1>Game not found.</h1><a class="button primary" href="/#arcade">Back to the arcade →</a></main>${footer()}`;return;}
+if(g.id!==id)history.replaceState(null,'',`/play/${g.id}${location.search}${location.hash}`);
 if(g.kind==='playable'){mountGame(app,g);return;}
 app.innerHTML=`${nav()}<main id="main" class="play-page"><div class="play-heading"><a class="back" href="/#arcade">← All games</a><h1>${g.title}</h1><p>${g.description}</p></div><section class="concept-stage"><p class="concept-label">Interactive concept · button simulation · no camera</p><div class="concept-score"><strong id="pop-score">0</strong> / 10 pops</div><div id="pop-field"><button id="pop-target" aria-label="Pop the orbit">✳</button></div><p id="pop-status" role="status">Tap the star ten times. This preview uses buttons; camera controls are planned.</p><button class="button primary" id="pop-restart">Start again ↻</button></section></main>${footer()}`;
 startConcept();

@@ -1,4 +1,4 @@
-# Ready to Move — camera-controlled Dino POC
+# Jump Game — camera-controlled Dino
 
 A standalone experiment for completing game setup while standing away from the
 screen. The camera fills the viewport; the current instruction is the primary UI.
@@ -13,8 +13,8 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
 - **Risk:** a short body jump must trigger a complete, smooth Dino arc; longer
   observed rise-to-return time should produce a higher arc without noise or pause
   time increasing height.
-- **Loop:** enable camera → stand still → automatic movement setup → raise
-  both hands for one second, then lower them → three-second countdown → rise and return to control Dino
+- **Loop:** enable camera → stand still → automatic movement setup → select
+  Confirm & continue → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
 - **Proof:** production-browser synthetic setup, duration-based animation, obstacle
   clearance, collision, replay, pause/resume, tracking recovery and camera cleanup.
@@ -22,6 +22,12 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
   or deployment.
 - **Appetite:** connect the existing controls to the existing playable game, keep
   the skeleton, readable instructions, local logs and isolated detection mode.
+
+## Arcade links
+
+The arcade title is **Jump Game**, with `/play/jump-game` and the standalone
+`/games/jump-game/` route. Previous `camera-start` links and saved clip game IDs
+remain compatible; new arcade links and recordings use `jump-game`.
 
 ## Run
 
@@ -38,14 +44,14 @@ The desktop primary instruction is 64–112 px, supporting instruction 26–38 p
 and current status 22–34 px. Smaller windows retain large text and a single next
 action. The camera is mirrored and fills the whole viewport; joints cropped out
 of that visible image cannot satisfy calibration or gestures. Both shoulders and
-hips must be visible. Both wrists are needed only for the confirming hand gesture.
-A large **Confirm & continue** button is available as an alternative.
+hips must be visible. Wrists are not required for setup. The progress indicator has
+three steps: **Stand → Confirm → Jump**. Standing captures the baseline and sets
+the movement range automatically. Select **Confirm & continue** to enter the
+three-second countdown; there is no separate Ready step or hand-start gate.
 
 The existing Dino camera, torso-height recognizer, gesture recognizer and local
-model are reused directly. There is no second recognition implementation.
-Unlike Dino's prior start gate, this POC does **not** require wrists to reappear
-below the shoulders after confirmation. Confirmation is the intent to continue;
-only fresh, valid, steady torso tracking gates the three-second countdown.
+model are reused directly. Only fresh, valid, steady torso tracking gates the
+countdown after confirmation.
 Interrupted tracking clearly states why the countdown stopped and restarts it
 when steady tracking returns. Setup and detection-only mode still recalibrate
 on long torso loss; an active game retains its confirmed reference.
@@ -76,7 +82,7 @@ When setup appears stuck, the most useful events are `height-confirmed`,
 `countdown-started`, `countdown-interrupted` and the following `screen-state` reason.
 For example, `stale-tracking` means frames are at least 250 ms old or missing;
 `not-grounded` means torso height has not returned to its calibrated baseline;
-`missing-hands` blocks gesture confirmation, but never a confirmed countdown.
+missing wrists never block setup, confirmation or the countdown.
 
 ## Evidence
 
@@ -88,7 +94,7 @@ npm run test:browser --workspace camera-start
 
 Production Chrome checks on isolated port 5192 cover viewport camera coverage and
 large text at 1440×960, 390×844 and 844×390; automatic setup without a jump;
-hand/button confirmation; live response to small movement; optional body
+button confirmation without wrists; live response to small movement; optional body
 overlay visibility and cleanup; noisy takeoff; interrupted countdowns; persisted
 logs; permission recovery and fullscreen. Shared tests verify selected ranges,
 input validation and the unchanged default maximum-calibration mode.
@@ -147,8 +153,7 @@ maximum-jump requirement. The response scale uses 15% of standing torso length;
 this is a relative screen-space scale, not centimeters or a personal maximum.
 The **Live jump response** meter previews movement after baseline capture.
 A coherent rise reaching 12% of this response scale can trigger the animation;
-its final height depends on observed movement duration. Stand upright and raise
-one hand (or click **Confirm & continue**) to start the countdown.
+its final height depends on observed movement duration. Stand upright and select **Confirm & continue** to start the countdown.
 
 Each camera session captures a new baseline. The log marks `rangeSource: automatic`
 and the fixed response scale on confirmation, and records overlay toggles.

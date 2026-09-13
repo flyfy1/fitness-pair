@@ -2,7 +2,7 @@
 
 Owns the landing page, game selection, local clip library, gallery UI and optional GCP gateway. Existing games and recognizers retain their ownership.
 
-Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Dino Run, Dino AR, Push-up Flight and Ready to Move (guided camera Dino) under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
+Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Dino Run, Dino AR, Push-up Flight and Jump Game (guided camera Dino) under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
 
 Recording starts automatically when a game is running. Motion Quest starts after standing calibration reaches gameplay readiness, or immediately on entering its synthetic preview. Permission, model loading and initial calibration are excluded. A visible notice explains that the game, enabled camera and available game sound are recorded on this device; microphone audio is requested only after the player clicks Record conversation and is stored as a separate local track. Each finished round produces a replay without another recording choice. Explicit round identifiers distinguish immediate restarts; a previous replay can finish processing while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest retains the full charge, projectile, impact and victory animation before saving. Its camera stops at the final repetition; the recorder freezes the last camera frame while the game effects finish. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Dino uses a camera inset. Saved previews and gallery uploads contain the original game view without a promotional footer or invitation.
 
@@ -18,7 +18,7 @@ Cloud sharing on `fitness.integ.life` uses Integ.Life login and the VM storage i
 
 ## Add a game
 
-The homepage lists only Motion Quest, Push-up Flight and Ready to Move. Keep additional demos registered with `listed: false` until they are ready to appear in the arcade. This hides their homepage cards and links while preserving direct `/play/:id` access, mounted builds, recording and sharing.
+The homepage lists only Motion Quest, Push-up Flight and Jump Game. Keep additional demos registered with `listed: false` until they are ready to appear in the arcade. This hides their homepage cards and links while preserving direct `/play/:id` access, mounted builds, recording and sharing.
 
 Add one entry in `game-catalog.js` for the UI, build and publication allowlist, and select a presentation adapter. Prefer the native API described in [the shared gameplay host](src/gameplay/README.md); the recorder never needs a game-specific change. No generic event bus or new recognition semantics are introduced.
 
@@ -49,7 +49,7 @@ no landing-page class. These checks cover presentation, not human recognition.
 
 ## Latest game mounts
 
-Dino AR and Push-up Flight retain their camera and keyboard/pointer preview modes. Ready to Move uses its guided standing/range/countdown flow. Their cards label experimental controls. All five game adapters use existing read-only game state to detect start, round identity, and completion. Dino AR's already-projected skeleton is not mirrored twice. Ready to Move composites its smaller game canvas into the full camera viewport using DOM rectangles. Push-up Flight preserves its crash sequence using a frozen camera frame when the game has already stopped its camera. No recognition contract changes were needed.
+Dino AR and Push-up Flight retain their camera and keyboard/pointer preview modes. Jump Game uses its guided standing/range/countdown flow. Their cards label experimental controls. All five game adapters use existing read-only game state to detect start, round identity, and completion. Dino AR's already-projected skeleton is not mirrored twice. Jump Game composites its smaller game canvas into the full camera viewport using DOM rectangles. Push-up Flight preserves its crash sequence using a frozen camera frame when the game has already stopped its camera. No recognition contract changes were needed.
 
 All five playable `/play/` routes share `src/game-shell.js` and `src/game-shell.css`. The native game fills the browser viewport from entry, with its own stage, status and controls. The game title or home mark returns to the arcade; replay tools sit directly below the game and receive focus only when Share is selected. Landing navigation, duplicate game introductions and fixed-height cards are excluded from this layout. Standalone `/games/` routes and the labeled Orbit Pop concept retain their own pages. Motion Quest remains the primary recording reference.
 

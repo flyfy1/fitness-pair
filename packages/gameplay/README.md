@@ -27,8 +27,10 @@ hands down. A missing/stale frame or loss of readiness resets the attempt. Reset
 the gate for every camera session; hide its view on teardown. It emits permission
 to begin, never a scoring ActionFrame. Camera permission still requires a button.
 
-`createHandsStart` provides the shared large instruction overlay for all eleven
-camera routes, with transparent text and no panel or progress bar. Pointer and keyboard previews keep their existing controls.
+Jump Game does not use this gate; its standing calibration and Confirm & continue
+button lead directly to the countdown.
+
+`createHandsStart` provides the shared large instruction overlay for camera routes that opt into gesture start, with transparent text and no panel or progress bar. Pointer and keyboard previews keep their existing controls.
 Flight needs both shoulders and wrists in view for this initial confirmation;
 afterwards its existing head/one-shoulder framing remains sufficient.
 
@@ -47,4 +49,4 @@ native action effects remain independent. A documented game-specific requirement
 can choose another sound. Shared voice files are bundled by Vite for standalone
 and arcade builds. No live speech service or microphone is involved. The arcade
 shell owns the control panel and recording indicator. Current acceptance focuses
-on the three listed demos: Motion Quest, Push-up Flight and Ready to Move.
+on the three listed demos: Motion Quest, Push-up Flight and Jump Game.

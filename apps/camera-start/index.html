@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#111c19" />
   <link rel="icon" href="data:," />
-  <title>Ready to Move · Camera setup</title>
+  <title>Jump Game</title>
 </head>
 <body>
   <main id="setup" data-stage="off">
@@ -14,14 +14,14 @@
     <canvas id="game-world" aria-label="Dino game runway" hidden></canvas>
     <div class="scrim" aria-hidden="true"></div>
     <header>
-      <span class="brand">READY TO MOVE <small>CAMERA SETUP POC</small></span>
+      <span class="brand">JUMP GAME <small>JUMP OVER CACTI</small></span>
       <div class="header-right">
         <div id="game-stats" hidden><span>Score <strong id="game-score">0</strong></span><span>Cleared <strong id="game-cleared">0</strong></span></div>
         <div class="tools"><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶ Fullscreen</button><button id="show-log" aria-expanded="false">Log</button><button id="stop" hidden>Stop camera</button><button id="show-settings" aria-expanded="false" aria-controls="movement-settings" hidden>Settings</button></div>
       </div>
     </header>
     <nav class="steps" aria-label="Setup progress">
-      <span id="step-standing">1 · Stand</span><span id="step-maximum">2 · Ready</span><span id="step-confirm">3 · Confirm</span><span id="step-ready">4 · Jump</span>
+      <span id="step-standing">1 · Stand</span><span id="step-confirm">2 · Confirm</span><span id="step-jump">3 · Jump</span>
     </nav>
     <section id="movement-settings" class="controls" aria-label="Movement settings">
       <a id="mode-link" href="?mode=detect">Jump detection only</a>
