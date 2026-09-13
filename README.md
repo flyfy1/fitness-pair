@@ -51,8 +51,10 @@ regression cases. See [capture, privacy and test workflow](apps/recognition-lab/
 Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
 `npm run build:motion-quest` retains the standalone baseline build.
 The arcade lives in `apps/arcade/`; game sources remain independently owned.
-Opt-in recordings save to IndexedDB on the player’s device. GCP gallery publishing
-is prepared but disabled until the owner provides bucket and runtime identity settings.
+Gameplay records automatically to IndexedDB on the player’s device. Branded MP4
+exports use a supported native encoder, with an explicitly labeled WebM fallback.
+Full replays can produce a short local copy for website sharing. GCP publication
+remains disabled until a usable runtime identity and upload code are configured.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
 ## Team map
