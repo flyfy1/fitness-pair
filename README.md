@@ -14,8 +14,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:5178>. Enable the camera, raise both hands for one second,
-then lower them. Keep shoulders through ankles visible, turn slightly sideways,
+Open <http://127.0.0.1:5178>. Enable the camera. Keep shoulders through ankles visible, turn slightly sideways,
 and stand upright for about two seconds to calibrate.
 Squat to charge, then stand to attack. The button/Space preview is labeled synthetic.
 The arcade homepage preloads tracking files without camera access. Games reuse verified device-cached files when browser storage is available; first-time and uncached starts show download progress in Motion Quest.
@@ -165,4 +164,4 @@ Dino Run demonstrates direct keyboard/height controls plus an optional motion
 adapter. Conversation recording is opt-in and stored as a separate local track;
 players can export the original video or a version including conversation.
 
-Except for Jump Game, camera games share a deliberate start: raise both hands above the shoulders for one second, then lower them. Pixel Defense practice uses large instructions at the top of the AR view. See [the tutorial prototype](docs/invaders-tutorial-prototype.md).
+Camera games other than Motion Quest, Push-up Flight and Jump Game use a deliberate start: raise both hands above the shoulders for one second, then lower them. Pixel Defense practice uses large instructions at the top of the AR view. See [the tutorial prototype](docs/invaders-tutorial-prototype.md).

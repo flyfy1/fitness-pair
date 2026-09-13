@@ -1,6 +1,5 @@
 import {t,getLanguage,setLanguage,localizeDOM} from './i18n.js';
 import './style.css';
-import {createHandsStart} from '../../../../packages/gameplay/hands-start-view.js';
 import {drawBody} from '../../../../apps/camera-start/src/body-overlay.js';
 import { FlightAudio } from './audio.js';
 import { PoseCamera } from './camera.js';
@@ -15,7 +14,7 @@ import { projectHead, validHeadControl } from './projection.js';
 document.querySelector('#app').innerHTML = `
 <main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas><canvas id="body-overlay" aria-label="Recognized body joints"></canvas>
 <div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">AI-generated voices</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates<div class="current-speed">Speed <span id="current-speed">1.0×</span></div></div></div>
-<div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Show both hands and shoulders. Raise both hands for one second to start, then lower them and keep your head in view. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
+<div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view to begin the 3-second countdown. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
 <div id="countdown" class="countdown" role="status" aria-live="assertive" hidden></div>
 <div class="cue"><span id="cue" role="status">Head and one shoulder are enough. Lower down, then push up.</span><progress id="calibration" max="1" value="0" hidden aria-label="Automatic takeoff"></progress></div>
 <div class="difficulty" role="group" aria-label="Difficulty">
@@ -27,7 +26,6 @@ document.querySelector('#app').innerHTML = `
 
 const $ = id => document.getElementById(id);
 const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d'),stage=document.querySelector('.stage');
-const startGate=createHandsStart(stage,{translate:t});
 const controller=new HeadFlightController();
 const sound=new FlightAudio(getLanguage());
 $('language').value=getLanguage();
@@ -55,11 +53,11 @@ function interrupt(message) {
 const camera=new PoseCamera({video,
   onStatus(status){
     if(status.state==='requesting') {
-      $('cue').textContent=t('Waiting for camera permission…');startGate.reset(status);controller.reset(status);state=createFlight(status,difficulty);tracking.reset(performance.now());
+      $('cue').textContent=t('Waiting for camera permission…');controller.reset(status);state=createFlight(status,difficulty);tracking.reset(performance.now());
     }
     if(status.state==='loading') $('cue').textContent=t('Preparing the local pose model…');
     if(status.state==='ready') {
-      $('cue').textContent=t('Show both hands and shoulders. Raise both hands to start, then lower them.');starting=false;tracking.reset(performance.now());
+      $('cue').textContent=t('Show your head and either shoulder. Takeoff is automatic.');starting=false;tracking.reset(performance.now());
     }
   },
   onPose(frame){
@@ -83,7 +81,7 @@ const camera=new PoseCamera({video,
       if(state.trackingHeld)return;
     } else {tracking.reset(now);state.trackingHeld=false;}
     pose=input;
-    if(startGate.update(frame,true))consumeAction(state,action);
+    consumeAction(state,action);
     $('calibration').hidden=action.phase!=='calibrating';$('calibration').value=action.calibrationProgress??0;
     if(input.head&&video.readyState>=2){
       const {x,y,sizePx}=frame.head,s=Math.min(sizePx,video.videoWidth,video.videoHeight);
@@ -100,7 +98,6 @@ const camera=new PoseCamera({video,
     if(halted)panel(t('Let’s try that again.'),message,t('Start a fresh flight'));else interrupt(message);
   },
   onStop({reason}){
-    startGate.hide();
     if(!['finished','interrupted','restart','error'].includes(reason)&&!halted)
       interrupt(t('The camera stopped. Start again with your head and a shoulder in view.'));
   }

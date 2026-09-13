@@ -19,9 +19,7 @@ Presentation and recording are independently hosted by
 ## Camera start gesture
 
 `HandsStartGate` consumes named PoseFrames using the existing BodyGestures
-recognizer. Hosts choose a setup boundary for this gate. Motion Quest uses it before squat
-calibration, keeping hand commands separate from movement recognition; other
-hosts can finish calibration/practice first. Both wrists
+recognizer. Participating hosts choose a setup boundary for this gate. Both wrists
 must be visible above the shoulders for one second, followed by 400 ms with both
 hands down. A missing/stale frame or loss of readiness resets the attempt. Reset
 the gate for every camera session; hide its view on teardown. It emits permission
@@ -30,9 +28,10 @@ to begin, never a scoring ActionFrame. Camera permission still requires a button
 Jump Game does not use this gate; its standing calibration and Confirm & continue
 button lead directly to the countdown.
 
-`createHandsStart` provides the shared large instruction overlay for camera routes that opt into gesture start, with transparent text and no panel or progress bar. Pointer and keyboard previews keep their existing controls.
-Flight needs both shoulders and wrists in view for this initial confirmation;
-afterwards its existing head/one-shoulder framing remains sufficient.
+`createHandsStart` provides the large instruction overlay for participating
+camera routes, with transparent text and no panel or progress bar. Pointer and keyboard previews keep their existing controls.
+Motion Quest and Push-up Flight do not use this gate: standing calibration and
+the head/one-shoulder countdown respectively begin immediately after camera setup.
 
 ## Language preference
 
