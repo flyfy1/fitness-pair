@@ -112,3 +112,17 @@ Decision: keep as an isolated playable POC for a live, non-recorded side-view tr
 The remaining question is whether actual near-floor tracking is stable and whether
 the hold/rest flight cadence and encouragement feel good. No human accuracy or
 emotional-impact claim has been established; stop implementation at this boundary.
+
+## Full-window play
+
+The game opens edge to edge at the current window size. Camera video, body overlay,
+helicopter and gates share that stage; timer, instructions, encouragement and controls
+are overlays. The video remains contained so resizing never crops the player's body
+or changes recognition coordinates. Portrait and landscape layouts have no page scroll.
+
+The bottom-right fullscreen button enters browser fullscreen when available. In an
+embedded browser that denies fullscreen, the game continues filling its window and
+explains the limitation. Exit fullscreen or Escape restores the same full-window
+layout without restarting an active flight. Escape outside fullscreen still pauses.
+Desktop, portrait and landscape geometry, native fullscreen, fallback, camera
+continuity and exit controls are covered by browser checks using synthetic inputs.
