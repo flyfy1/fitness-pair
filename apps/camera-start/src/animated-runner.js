@@ -1,3 +1,4 @@
+import {createRunnerMotionInput} from '../../dino-run/src/motion-input.js';
 import { Runner } from '../../dino-run/src/engine.js';
 
 const DELAY_S = .03, GRAVITY = 1000, LIFT = 500, MAX_LIFT_S = .25;
@@ -14,8 +15,12 @@ export class AnimatedRunner extends Runner {
     this.motion = null; this.armed = false; this.lastObservedMs = null;
     this.lastAirMs = null; this.triggerCount = 0;
   }
-  reset() { super.reset(); this.resetAnimation(); }
-  bindMotionSession(session) { super.bindMotionSession(session); this.resetAnimation(); }
+  reset() { super.reset(); this.resetAnimation(); if(this.motionSession)this.motionInput?.reset(this.motionSession); }
+  bindMotionSession(session) {
+    this.motionInput??=createRunnerMotionInput(this);
+    this.motionSession={sessionId:session.sessionId,source:{...session.source}};
+    this.motionInput.reset(this.motionSession);this.y=0;this.resetAnimation();
+  }
   command(command) {
     const changed = super.command(command);
     if (changed && command === 'pause') {
@@ -27,7 +32,7 @@ export class AnimatedRunner extends Runner {
   }
   applyMotion(frame) {
     const height = this.y;
-    const accepted = super.applyMotion(frame);
+    const accepted = this.motionInput?.consume(frame);
     this.y = height;
     if (!accepted) return false;
     if (this.lastObservedMs !== null && frame.tMs - this.lastObservedMs >= 250) {

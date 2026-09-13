@@ -1,3 +1,5 @@
+import {scheduleGameMusic} from '../../../../packages/gameplay/soundtrack.js';
+import {sharedVoiceURL} from '../../../../packages/gameplay/voice-assets.js';
 import {encouragementPack,createEncouragementSchedule} from './encouragement.js';
 const VOICES=['three','two','one','start','nice','keep-going','finish'];
 const RESOURCES=[...VOICES.map(id=>({id,file:`${id}.wav`})),
@@ -27,7 +29,7 @@ export class FlightAudio {
         const data=this.noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
         this.ready=Promise.all(RESOURCES.map(async ({id,file})=>{
           try {
-            const url=new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
+            const url=sharedVoiceURL(file)||new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
             const response=await fetch(url);if(!response.ok)return;
             this.buffers.set(id,await c.decodeAudioData(await response.arrayBuffer()));
           } catch { /* Keep musical cues available if a voice asset cannot load. */ }
@@ -111,18 +113,9 @@ export class FlightAudio {
       if(clip){this.lastCue='encouragement';this.encourage(clip,'nice');}
     }
     if(status!=='flying'||this.muted||this.context?.state!=='running')return;
-    const now=this.context.currentTime;if(this.nextBeat<now)this.nextBeat=now;
-    const interval=60/Math.min(164,132+speed*3)/4;
-    while(this.nextBeat<now+.08){
-      const t=this.nextBeat,n=this.beat++%16;
-      if(n%4===0){this.tone(145,t,.2,.8,'sine',42);this.tone([55,55,65.41,73.42][n/4],t,.18,.35,'sawtooth');}
-      if(n%2===0)this.hiss(t,.045,.11);
-      if(n===4||n===12)this.hiss(t,.11,.22);
-      if(n%2===1)this.tone([220,261.63,329.63,440][Math.floor(n/2)%4],t,.11,.095,'triangle');
-      // Quiet repeating low pulses give the beat a rotor-like texture.
-      this.tone(42,t,.035,.07,'triangle');this.nextBeat+=interval;
-    }
+    scheduleGameMusic(this,speed);
   }
+
   clearNodes(){
     this.generation++;this.voiceSerial++;
     for(const n of this.nodes){try{n.stop();}catch{}}this.nodes.clear();this.nextBeat=0;

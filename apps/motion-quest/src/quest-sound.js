@@ -1,3 +1,5 @@
+import {sharedVoiceURL} from '../../../packages/gameplay/voice-assets.js';
+import {scheduleGameMusic} from '../../../packages/gameplay/soundtrack.js';
 // Original arcade synthesis plus the same bundled encouragement as Push-up Flight.
 // Game-only output is shared with the recorder; the microphone is never requested.
 const VOICES = ['start', 'nice', 'keep-going', 'finish'];
@@ -28,7 +30,7 @@ export class QuestSound {
         for (let i = 0; i < noise.length; i++) noise[i] = Math.random() * 2 - 1;
         this.voicesReady = Promise.all(VOICES.map(async name => {
           try {
-            const response = await fetch(new URL(`audio/${name}.wav`, new URL(import.meta.env.BASE_URL, location.href)));
+            const response = await fetch(sharedVoiceURL(`${name}.wav`));
             if (response.ok) this.buffers.set(name, await ctx.decodeAudioData(await response.arrayBuffer()));
           } catch { /* Music and effects remain available if a voice cannot load. */ }
         }));
@@ -86,24 +88,22 @@ export class QuestSound {
   }
   backing(power) {
     if (!this.playing || !this.enabled || this.context?.state !== 'running') return;
-    const now = this.context.currentTime; if (this.nextBeat < now) this.nextBeat = now;
-    const interval = 60 / (136 + power * 20) / 4;
-    while (this.nextBeat < now + .08) {
-      const delay = this.nextBeat - now, step = this.beat++ % 16;
-      if (step % 4 === 0) {
-        this.tone(155, 42, .19, delay, .7, 'sine', this.music);
-        const bass = [65.41, 65.41, 82.41, 98][step / 4];
-        this.tone(bass, bass, .17, delay, .3, 'sawtooth', this.music);
-      }
-      if (step % 2 === 0) this.noise(.035, delay, .15, 7000, 4500, this.music);
-      if (step === 4 || step === 12) this.noise(.12, delay, .32, 2200, 1300, this.music);
-      if (step % 2 === 1) {
-        const note = [261.63, 329.63, 392, 523.25, 392, 329.63, 587.33, 523.25][Math.floor(step / 2)];
-        this.tone(note, note, .1, delay, .12, 'triangle', this.music);
-      }
-      this.nextBeat += interval;
-    }
+    const sound=this;
+    scheduleGameMusic({
+      context:this.context,
+      get nextBeat(){return sound.nextBeat;},set nextBeat(value){sound.nextBeat=value;},
+      get beat(){return sound.beat;},set beat(value){sound.beat=value;},
+      tone(freq,at,duration,volume,type,end=freq){sound.tone(freq,end,duration,at-sound.context.currentTime,volume,type,sound.music);},
+      hiss(at,duration,volume){
+        const ctx=sound.context,source=ctx.createBufferSource(),gain=ctx.createGain();
+        source.buffer=sound.noiseBuffer;gain.gain.setValueAtTime(volume,at);gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+        source.connect(gain);gain.connect(sound.music);sound.nodes.add(source);sound.musicNodes.add(source);
+        source.onended=()=>{source.disconnect();gain.disconnect();sound.nodes.delete(source);sound.musicNodes.delete(source);};
+        source.start(at);source.stop(at+duration);
+      },
+    });
   }
+
   charge(power) {
     this.backing(power);
     const ctx = this.context; if (!this.enabled || !ctx || ctx.state !== 'running') return;

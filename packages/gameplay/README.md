@@ -15,3 +15,13 @@ Reset the controller with each recognition session; dispose it on teardown.
 The existing `PoseFrame → ActionFrame → GameSnapshot` contract is unchanged.
 Presentation and recording are independently hosted by
 `apps/arcade/src/gameplay`; see its README and typed presentation interface.
+
+## Default game audio
+
+Every game defaults to Push-up Flight's prerecorded countdown and original backing
+pattern. Existing engines call `scheduleGameMusic` and use `sharedVoiceURL`; their
+native action effects remain independent. A documented game-specific requirement
+can choose another sound. Shared voice files are bundled by Vite for standalone
+and arcade builds. No live speech service or microphone is involved. The arcade
+shell owns the control panel and recording indicator. Current acceptance focuses
+on the three listed demos: Motion Quest, Push-up Flight and Ready to Move.

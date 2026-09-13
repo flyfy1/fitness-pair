@@ -4,6 +4,10 @@ test.use({launchOptions:{args:['--use-fake-device-for-media-stream','--use-fake-
 async function syntheticMicrophone(page, mode='normal'){
  await page.addInitScript(mode=>{
   if(window!==window.top)return;
+  const NativeContext=window.AudioContext;
+  window.AudioContext=class extends NativeContext{
+   createBufferSource(){const source=super.createBufferSource(),connect=source.connect.bind(source);source.connect=target=>{const analyser=this.createAnalyser();connect(analyser);analyser.connect(target);window.voicePreviewAnalyser=analyser;return target;};return source;}
+  };
   window.microphoneCalls=[];window.syntheticMicrophones=[];
   navigator.mediaDevices.getUserMedia=async constraints=>{
    window.microphoneCalls.push(constraints);
@@ -43,9 +47,10 @@ test('conversation is a separate local track; selected export includes it and or
  expect(await energy(card.locator('[data-conversation-download]'))).toBeGreaterThan(.01);
  await expect(card.getByLabel('Listen to recorded voice in replay')).toBeChecked();
  await video.evaluate(video=>video.play());
- await expect.poll(()=>card.locator('[data-voice-track]').evaluate(audio=>!audio.paused&&audio.currentTime>0)).toBe(true);
+ await expect(card).toHaveAttribute('data-voice-playing','true');
+ await expect.poll(()=>page.evaluate(()=>{const a=window.voicePreviewAnalyser;if(!a)return 0;const d=new Float32Array(a.fftSize);a.getFloatTimeDomainData(d);return Math.sqrt(d.reduce((sum,x)=>sum+x*x,0)/d.length);})).toBeGreaterThan(.01);
  await video.evaluate(video=>video.pause());
- expect(await card.locator('[data-voice-track]').evaluate(audio=>audio.paused)).toBe(true);
+ await expect(card).toHaveAttribute('data-voice-playing','false');
  const originalURL=await video.getAttribute('src');
  await card.getByLabel('Include conversation in video').check();
  await expect(card.getByText('With conversation. Preview this version before sharing.')).toBeVisible({timeout:25000});
@@ -85,13 +90,18 @@ test('denied microphone does not block a guest game',async({page})=>{
 test.describe('native microphone capture',()=>{
 
  test('microphone armed before play persists audible voice and uses a compact top-right icon',async({page})=>{
-  await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
+  await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
   const mic=game.getByRole('button',{name:'Record conversation',exact:true});
   await expect(mic).toBeVisible();expect(await mic.textContent()).toBe('');
   const box=await mic.boundingBox();expect(box.width).toBe(40);expect(box.y).toBe(12);expect(box.x+box.width).toBe(1428);
+  await game.getByRole('button',{name:'Enter fullscreen',exact:true}).click();
+  await expect(mic).toBeVisible();
+  await expect.poll(()=>mic.evaluate(el=>!document.fullscreenElement||document.fullscreenElement.contains(el))).toBe(true);
+  await game.getByRole('button',{name:'Exit fullscreen',exact:true}).click();
   await mic.click();await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','ready');
-  await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+  await game.getByRole('button',{name:'Try a demo',exact:true}).click();
   await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','recording');
+  await page.waitForTimeout(1000);await game.locator('#stop').click();
   await expect(page.locator('#record-status')).toContainText('Saved on this device',{timeout:18000});
   await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','off');
   await page.goto('/library');await page.reload();

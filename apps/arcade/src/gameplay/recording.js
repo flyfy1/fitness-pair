@@ -15,9 +15,11 @@ export function mountRecording(game,runtime,{panel,result}){
   button.setAttribute('aria-label',label);button.title=label;
   conversationControls.dataset.state=state.pending?'pending':state.recording?'recording':state.enabled?'ready':'off';
   button.setAttribute('aria-pressed',String(state.enabled));
+  if(state.pending||state.enabled)delete conversationControls.dataset.error;
+  if(conversationControls.dataset.error)return;
   conversationControls.querySelector('[role=status]').hidden=true;
   conversationControls.querySelector('[role=status]').textContent=state.pending?'Waiting for microphone permission…':state.enabled?(state.recording?'Microphone on · separate local track':'Microphone ready · starts with the game'):'Microphone off';
- },onError:message=>{if(conversationControls){const status=conversationControls.querySelector('[role=status]');status.hidden=false;status.textContent=message;}}});
+ },onError:message=>{if(conversationControls){conversationControls.dataset.error='true';const status=conversationControls.querySelector('[role=status]');status.hidden=false;status.textContent=message;}}});
 
  const cameraLive=video=>!!(video?.srcObject&&video.readyState>=2&&video.videoWidth>0&&video.srcObject.getVideoTracks().some(track=>track.readyState==='live'));
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';

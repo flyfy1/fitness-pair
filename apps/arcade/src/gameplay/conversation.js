@@ -44,7 +44,7 @@ export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
   if(!navigator.mediaDevices?.getUserMedia){onError('Microphone recording is unavailable in this browser.');return;}
   const token=++generation;pending=true;emit();
   try{
-   context??=new AudioContext();
+   context??=new AudioContext();context.onstatechange=emit;
    timer=setTimeout(()=>{if(token===generation){disable();onError('Microphone permission took too long. Click Record conversation to retry.');}},20000);
    await context.resume();if(token!==generation)return;
    const acquired=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});

@@ -377,7 +377,7 @@ $('export-log').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([diagnostics.export()], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = 'camera-start-log.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-window.cameraSetup = Object.freeze({ getState: () => ({ stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false, testing, jumpCount, audio: sound.snapshot(), mode: gameMode ? 'game' : 'detect',
+window.cameraSetup = Object.freeze({ getAudioStream:()=>sound.getAudioStream(), getState: () => ({ stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false, testing, jumpCount, audio: sound.snapshot(), mode: gameMode ? 'game' : 'detect',
   gesture: hands ? { kind: hands.kind, latched: hands.latched, progress: hands.progress, tracked: hands.tracked } : null,
   game: gameMode ? { ...runner.snapshot(), pauseReason, nextObstacleDistance: runner.obstacles[0] ? runner.obstacles[0].x - 116 : null,
     playfield: (() => { const {width,height} = $('game-world').getBoundingClientRect(); const g = sceneGeometry(width,height); return { width, height, groundY: g.origin.y, player: g.player(runner.y) }; })() } : null }), getLog: () => diagnostics.entries() });
