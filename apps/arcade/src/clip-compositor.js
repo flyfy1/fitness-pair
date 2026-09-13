@@ -1,4 +1,4 @@
-import {BRAND_NAME,SITE_HOST,LOGO_URL} from './brand.js';
+import {BRAND_NAME,SITE_HOST,SITE_URL,LOGO_URL} from './brand.js';
 export const CLIP_WIDTH=1280,CLIP_HEIGHT=800,PLAY_HEIGHT=720;
 export async function loadRecordingLogo(){
  const img=new Image();img.src=LOGO_URL;
@@ -32,8 +32,18 @@ function drawWatermark(c,{title,score,includesCamera,logo}){
  c.font='16px Arial';c.fillText(SITE_HOST,1254,776,470);c.textAlign='left';
 }
 export function drawClipEnding(c,title,score,logo,includesCamera){
- drawWatermark(c,{title,score,logo,includesCamera});
- c.fillStyle='#182346e8';c.fillRect(290,255,700,190);
- c.fillStyle='#eeff41';c.textAlign='center';c.font='bold 42px Arial';c.fillText('Round complete',640,320);
- c.fillStyle='#fff';c.font='26px Arial';c.fillText(`${title} · ${score}`,640,375,650);c.textAlign='left';
+ c.save();c.setTransform(1,0,0,1,0,0);c.textBaseline='alphabetic';
+ c.fillStyle='#eeff41';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
+ c.fillStyle='#2347ee';c.font='900 48px Arial';c.textAlign='left';
+ const name=BRAND_NAME.toLowerCase(),brandX=(CLIP_WIDTH-88-c.measureText(name).width)/2;
+ c.drawImage(logo,brandX,48,72,72);c.fillText(name,brandX+88,100);
+ c.textAlign='center';c.font='900 88px Arial';c.fillText('GAMES THAT GET',640,267,1136);
+ c.font='900 106px Arial';c.fillText('YOU MOVING.',640,378,1136);
+ c.fillStyle='#182346';c.font='30px Arial';c.fillText('Movement games for kids and adults',640,449,1136);
+ c.fillStyle='#2347ee';c.beginPath();c.roundRect(72,506,1136,144,24);c.fill();
+ c.fillStyle='#fff';c.font='bold 24px Arial';c.fillText('Play your next game at',640,553);
+ c.font='bold 30px Arial';c.fillText(SITE_URL,640,605,1064);
+ c.fillStyle='#182346';c.font='bold 26px Arial';c.fillText(`${title} · ${score}`,640,721,1136);
+ c.font='18px Arial';c.fillText(includesCamera?'Player recording · round complete':'Synthetic gameplay preview · round complete',640,759,1136);
+ c.restore();
 }
