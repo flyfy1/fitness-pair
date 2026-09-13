@@ -21,8 +21,8 @@ links are pinned to the inspected baseline commit. There are no fabricated quali
 scores or cross-device speed rankings. Human accuracy remains unmeasured.
 
 The page does not request a camera. Comparison selection is temporary page state;
-no user data is persisted. The seven implemented entries include two parameterized
-views of the same pose model and two heuristic cues, not seven independent models.
+no user data is persisted. The eight implemented entries include two parameterized
+views of the same pose model and two heuristic cues, not eight independent models.
 The retained standalone hand folder is explicitly identified as a historical host.
 
 ## Verification — 2026-09-13
@@ -38,3 +38,8 @@ narrow viewport screenshots were inspected. Generated outputs remain ignored.
 
 These checks prove the overview interaction and preserve the lab path. They do not
 add comparative tracking-accuracy evidence to the catalog.
+
+The catalog includes the newly integrated Dino upper-body height path from `7e2435b`. It distinguishes shoulders/hips for torso motion from the lab’s six shoulder/elbow/wrist points. Full-body and torso control appear as separate comparable methods, with different observability limits.
+After integrating that update, the production build, all three overview browser
+checks and all 38 repository/recognizer tests passed again. The catalog now lists
+8 implemented approaches and 10 research candidates.

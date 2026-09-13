@@ -11,7 +11,7 @@ const guidance = {
   desk: 'For detailed fingers, inspect Hand landmarks and its pinch cue. For arm movement, inspect Upper-body landmarks and Wrist above shoulder. These are current implementation fits, not accuracy rankings.',
   body: 'Pose Lite is the implemented body baseline. Upper body is a filtered view of the same model. Research alternatives need identical-input evaluation before a quality claim.',
   squat: 'The current path combines Full-body landmarks with the Squat state machine. Alternative classifiers need temporal completion logic as well as pose labels.',
-  jump: 'The current Dino implementation combines Full-body landmarks with Calibrated jump height. Its baseline requires hips and both ankles, so an upper-body view alone does not satisfy it.',
+  jump: 'Dino offers full-body jump height (hips + ankles) and upper-body height control (shoulders + hips). The latter cannot confirm takeoff. It differs from the lab’s six-joint arm view, which omits hips.',
   multi: 'Simultaneous people are not supported by the integrated single-person body contract. Two detected hands do not establish two-player support. See Research for RTMO.',
 };
 function evidenceLinks(m) { return link(m.evidencePath ?? m.path, 'Recorded evidence / implementation') + (m.reference ? ` · <a href="${esc(m.reference)}" target="_blank" rel="noopener noreferrer">Original source ↗</a>` : ''); }

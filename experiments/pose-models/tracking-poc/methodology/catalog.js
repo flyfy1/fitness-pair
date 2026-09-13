@@ -1,4 +1,4 @@
-export const baseline = '95fc57b';
+export const baseline = '7e2435b';
 export const repo = `https://github.com/flyfy1/fitness-pair/blob/${baseline}/`;
 const lab = 'experiments/pose-models/tracking-poc/';
 const research = 'docs/research.md';
@@ -48,7 +48,7 @@ export const methods = [
     'Angle/viewpoint sensitivity and thresholds need human validation. It does not assess exercise form.',
     'Synthetic repetitions, jitter, occlusion, stale-input and completion-deduplication tests; camera model tested separately.', 'packages/action-squat/',
     'Annotate slow and natural squats plus bends that should not count.', { evidencePath: 'docs/motion-tracking-boundary.md', command: 'npm run dev', host: 'Motion Quest · localhost:5178' }),
-  make('jump', 'Calibrated jump height', 'Action rules', ['jump'], 'Continuous height for Dino Run.',
+  make('jump', 'Full-body jump height', 'Action rules', ['jump'], 'Continuous height for Dino Run.',
     'Calibrate standing and one maximum jump. Use the minimum upward displacement of the hips and both ankles, smooth it, and divide by the calibrated peak.',
     'Relative heightRatio from 0 to 1, plus a deduplicatable landing event.', 'Fixed camera; shoulders through ankles visible. Standing + maximum-jump calibration.',
     'Dino follows rise and descent rather than triggering a fixed-height animation.',
@@ -56,6 +56,15 @@ export const methods = [
     'Synthetic geometry and browser game-control checks; public-image model inference. Human camera-to-Dino response unverified.', 'packages/action-jump-height/',
     'Compare perceived delay and false movement during squats, foot lifts and actual jumps.', { evidencePath: 'apps/dino-run/README.md', command: 'npm run dev --workspace dino-run', host: 'Dino Run · localhost:5180' }),
 ];
+methods.push(make('torso', 'Upper-body height control', 'Action rules', ['jump','body'], 'Control Dino from coherent torso movement.',
+  'With shoulders and hips visible, calibrate standing and a maximum rise. Use the minimum rise of shoulder and hip midpoints, with smoothing and body-scale/position guards.',
+  'Relative heightRatio and a return-to-baseline cycle. Feet leaving or touching the ground are not observed.',
+  'Both shoulders and both hips required. Mode locks after calibration; full-body leg loss needs a stable 750 ms torso hold and fresh calibration before fallback.',
+  'Allows the Dino control loop when knees and ankles are outside the camera frame.',
+  'Tiptoe or other coherent torso rise may control the game. Not verified jump height. The lab’s six-joint shoulder/elbow/wrist view alone omits the required hips.',
+  'Recorded synthetic geometry and production-browser checks cover upper-body calibration, mode locking, fallback and proportional control. Human reliability is unmeasured.',
+  'packages/action-jump-height/', 'Compare false motion from tiptoe, bends and camera movement against full-body control on the same setup.',
+  { evidencePath: 'apps/dino-run/README.md', command: 'npm run dev --workspace dino-run', host: 'Dino Run · localhost:5180' }));
 const candidate = (id,name,layer,tags,summary,how,output,setup,strength,limit,next,url) => make(
   id,name,layer,tags,summary,how,output,setup,strength,limit,
   'Repository literature review only. No implementation or same-input benchmark in this project.',research,next,
@@ -106,7 +115,7 @@ export const directoryMap = [
   [lab, 'Current three-mode observation host, hand adapter, cues and overlays.'],
   ['packages/pose-mediapipe/', 'Shared Pose Lite worker, named body-joint adapter and runtime assets.'],
   ['packages/action-squat/', 'Calibrated squat cycle and stable completion events.'],
-  ['packages/action-jump-height/', 'Standing/maximum-jump calibration, relative height and landing events.'],
+  ['packages/action-jump-height/', 'Full-body jump and upper-body torso calibration, relative height and motion cycles.'],
   ['apps/motion-quest/', 'Squat game host; consumes actions and owns its camera lifecycle.'],
   ['apps/dino-run/', 'Jump-height game host; continuous height controls the sprite.'],
   ['contracts/', 'PoseFrame → ActionFrame → GameSnapshot; time, provenance and event identity.'],

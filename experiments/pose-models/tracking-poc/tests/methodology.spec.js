@@ -4,15 +4,15 @@ test('method library filters real catalog data and exposes evidence without came
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => { window.cameraCalls = 0; navigator.mediaDevices.getUserMedia = async () => { window.cameraCalls++; throw new Error('Overview must not request camera'); }; });
   await page.goto('/methodology/');
-  await expect(page.locator('.method-card')).toHaveCount(7);
-  await expect(page.locator('#result-count')).toHaveText('7 of 17 methods shown');
+  await expect(page.locator('.method-card')).toHaveCount(8);
+  await expect(page.locator('#result-count')).toHaveText('8 of 18 methods shown');
   await page.locator('#scenario').selectOption('desk');
   await expect(page.locator('.method-card')).toHaveCount(4);
   await page.locator('#layer').selectOption('Landmarks');
   await expect(page.locator('.method-card')).toHaveCount(2);
   await page.locator('[data-method="upper"] summary').click();
   await expect(page.locator('[data-method="upper"] details')).toContainText('same Pose Lite');
-  await expect(page.locator('[data-method="upper"] details a').first()).toHaveAttribute('href', /github.com\/flyfy1\/fitness-pair\/blob\/95fc57b\//);
+  await expect(page.locator('[data-method="upper"] details a').first()).toHaveAttribute('href', /github.com\/flyfy1\/fitness-pair\/blob\/7e2435b\//);
   await page.locator('#reset').click();
   await page.locator('[data-status="research"]').click();
   await expect(page.locator('.method-card')).toHaveCount(10);
@@ -20,7 +20,8 @@ test('method library filters real catalog data and exposes evidence without came
   await page.locator('[data-method="rtmo"] summary').click();
   await expect(page.locator('[data-method="rtmo"]')).toContainText('no local demo implemented');
   await page.locator('#search').fill('not-a-method'); await expect(page.locator('#empty')).toBeVisible();
-  await page.locator('#show-all').click(); await expect(page.locator('.method-card')).toHaveCount(17);
+  await page.locator('#show-all').click(); await expect(page.locator('.method-card')).toHaveCount(18);
+  await expect(page.locator('[data-method="torso"]')).toContainText('shoulder/elbow/wrist view alone omits the required hips');
   expect(await page.evaluate(() => window.cameraCalls)).toBe(0); expect(errors).toEqual([]);
 });
 
