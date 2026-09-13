@@ -53,8 +53,9 @@ Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
 The arcade lives in `apps/arcade/`; game sources remain independently owned.
 Gameplay records automatically to IndexedDB on the player’s device. Branded MP4
 exports use a supported native encoder, with an explicitly labeled WebM fallback.
-Full replays can produce a short local copy for website sharing. GCP publication
-remains disabled until a usable runtime identity and upload code are configured.
+Full replays can produce a short local copy for website sharing. Gallery publication is enabled on
+`fitness.integ.life` with the existing private upload code; GPT Sites retains its
+separate, disabled gallery configuration.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
 The complete arcade also has an independent GCP deployment at

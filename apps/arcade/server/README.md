@@ -25,7 +25,7 @@ Grant the service account object create/get/list/delete permissions only on this
 4. Gallery and `/clips/:id` read publication records. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.
 5. Deletion removes the publication record first; downloads no longer resolve. Local deletion and public revocation are independent.
 
-This is an access-code-gated integration with live verification pending a usable runtime credential, not a fully moderated public video platform. Header checks do not establish video codec safety or actual duration: duration is client-declared. GCP live upload, lifecycle, range playback, authentication and quotas need verification after configuration. The existing Node/FFmpeg sharing experiment contains deeper media validation and remains unchanged.
+This access-code-gated integration is live on GCP. Synthetic browser upload, GCS readback, public playback/ranges, rejected unauthorized deletion and owner revocation passed; see [deployment evidence](../deploy/gcp/EVIDENCE.md). Moderation and per-player quotas are not implemented. Header checks do not establish video codec safety or actual duration: duration is client-declared. The seven-day lifecycle rule is configured; elapsed-time cleanup has not been observed in this release check. The existing Node/FFmpeg sharing experiment contains deeper media validation and remains unchanged.
 
 The site hosts clip links but cannot prevent viewers from saving videos or recording their screen. An iframe does not provide copy protection. Sites access controls still determine who can open shared pages; a private deployment is not a public growth loop.
 

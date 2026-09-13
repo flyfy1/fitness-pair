@@ -14,7 +14,7 @@ Recordings include a permanent Hopmodo mark, name, game score, and the canonical
 
 MP4 is preferred and confirmed from actual encoded bytes. Browsers without an available MP4 encoder save clearly labeled WebM files; files are never renamed to claim MP4. See [recording evidence and browser limits](RECORDING.md).
 
-Cloud sharing is disabled until a usable GCP runtime identity and upload code are configured. The bucket setting alone does not enable uploads. The gallery shows an honest setup state, never fabricated players. See `server/README.md`. The separate teammate sharing experiment remains untouched.
+Cloud sharing is enabled on `fitness.integ.life` using the VM identity and the existing private upload code. GPT Sites remains separately configured with sharing disabled. The bucket setting alone does not enable uploads. The gallery shows an honest setup state, never fabricated players. See `server/README.md`. The separate teammate sharing experiment remains untouched.
 
 ## Add a game
 
@@ -22,7 +22,7 @@ Add a registry entry in `src/games.js`, add its static build to `scripts/build-a
 
 ## Evidence
 
-Automated synthetic browser checks cover navigation, concept controls, keyboard game entry, automatic recording, round completion, repeat rounds and local clip persistence. Server tests cover disabled configuration, consent, authorization, size and format checks. These checks do not establish human movement accuracy, exercise benefits or enjoyment. GCP persistence needs live verification after the owner supplies a project, bucket and runtime identity.
+Automated synthetic browser checks cover navigation, concept controls, keyboard game entry, automatic recording, round completion, repeat rounds and local clip persistence. Server tests cover disabled configuration, consent, authorization, size and format checks. These checks do not establish human movement accuracy, exercise benefits or enjoyment. Live GCP synthetic upload, stored-object readback, anonymous playback/range requests and owner deletion passed on 2026-09-13. See [deployment evidence](deploy/gcp/EVIDENCE.md).
 
 ## Identity
 
