@@ -81,10 +81,10 @@ test('login returns to the clip, publishes with consent, isolates accounts, and 
  await expect(page.locator('input[name="code"]')).toHaveCount(0);
  await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Publish this clip'}).click();
  await expect(page.getByText('Published.',{exact:false})).toBeVisible();
- expect(objects.get('videos/'+clip.id).length).toBe(clip.bytes);
+ expect(objects.get('videos/'+clip.id).length).toBe(clip.bytes);expect(objects.get('videos/'+clip.id+'.jpg').length).toBeGreaterThan(100);
  await page.goto('/shared');await expect(page.locator('meter')).toHaveAttribute('value',String(clip.bytes));
  const stranger=await browser.newContext({baseURL:origin}),other=await stranger.newPage();
- await other.goto(origin+'/clips/'+clip.id);await other.locator('video').evaluate(video=>video.play());await expect.poll(()=>other.locator('video').evaluate(video=>video.currentTime)).toBeGreaterThan(0);
+ await other.goto(origin+'/clips/'+clip.id);await expect(other.locator('video')).not.toHaveAttribute('src');await other.getByRole('button',{name:/Play replay:/}).click();await expect.poll(()=>other.locator('video').evaluate(video=>video.currentTime)).toBeGreaterThan(0);
  await expect(other.getByRole('button',{name:'Remove shared clip'})).toBeHidden();
  await login(other,'bob');await expect(other.getByRole('heading',{name:'NO SHARED CLIPS YET.'})).toBeVisible();
  const forbidden=await other.evaluate(async id=>{const session=await(await fetch('/api/auth/session')).json();return (await fetch('/api/clips/'+id,{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}})).status;},clip.id);expect(forbidden).toBe(403);
@@ -92,7 +92,7 @@ test('login returns to the clip, publishes with consent, isolates accounts, and 
  await expect(second.getByRole('heading',{name:'Synthetic account clip'})).toBeVisible();
  await second.getByRole('button',{name:'Remove',exact:true}).click();await second.getByRole('button',{name:'Remove shared clip',exact:true}).click();
  await expect(second.locator('meter')).toHaveAttribute('value','0');expect(objects.has('videos/'+clip.id)).toBe(false);
- expect((await page.request.get('/api/media/'+clip.id)).status()).toBe(404);
+ expect((await page.request.get('/api/media/'+clip.id)).status()).toBe(404);expect(objects.has('videos/'+clip.id+'.jpg')).toBe(false);
  await page.goto('/library');await expect(page.locator('video')).toHaveCount(1);
  await second.getByRole('button',{name:'Log out',exact:true}).click();await expect(second.getByRole('link',{name:'Log in with Integ.Life'})).toBeVisible();
  await stranger.close();await secondDevice.close();

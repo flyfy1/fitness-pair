@@ -34,3 +34,16 @@ The site hosts clip links but cannot prevent viewers from saving videos or recor
 - [GCP object upload API](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert)
 - [GCP object download API](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/get)
 - [Service-account JWT OAuth flow](https://developers.google.com/identity/protocols/oauth2/service-account)
+
+## Clip thumbnails
+
+`/api/posters/:id` serves a JPEG from `videos/:id.jpg` only while the original
+publication is visible. Authenticated owners can PUT a JPEG of up to 256 KiB
+with the existing CSRF and gallery-consent headers. Conditional creation makes
+retries idempotent. Deletion removes the publication, video, and thumbnail;
+expired or removed videos cannot expose their thumbnails. The existing seven-day
+`videos/` lifecycle also covers these derived images. Account quota continues to
+measure uploaded video bytes; bounded thumbnails are derived presentation data.
+
+Gallery and account cards do not fetch video bytes just to obtain a preview.
+Thumbnails do not change the original video, publication expiry, ownership or quota.

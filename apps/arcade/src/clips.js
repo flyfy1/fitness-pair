@@ -1,11 +1,12 @@
-import {mountClipPreview} from './clip-preview.js';
+import {mountClipPreview,mountSharedPreview} from './clip-preview.js';
+import {thumbnailFromVideo} from './clip-thumbnail.js';
 import {attachConversationPlayback} from './conversation-playback.js';
 import {games} from './games.js';
 import {getSession,loginURL,accountAPI,storageLabel,removeSharedClip,confirmRemoval} from './account.js';
 import {createShareCopy,fitsWebsiteShare} from './share-copy.js';
 import {videoExtension,formatLabel} from './video-format.js';
 import {BRAND_NAME,SITE_URL} from './brand.js';
-import {saveClip,listClips,deleteClip,updateClip,MAX_CLIPS} from './local-clips.js';
+import {saveClip,listClips,deleteClip,updateClip,updateClipThumbnail,MAX_CLIPS} from './local-clips.js';
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const urls=new Set();function objectURL(blob){const u=URL.createObjectURL(blob);urls.add(u);return u;}function releaseURL(u){URL.revokeObjectURL(u);urls.delete(u);}
 window.addEventListener('pagehide',()=>{urls.forEach(u=>URL.revokeObjectURL(u));urls.clear();});
@@ -18,12 +19,24 @@ function playClipGame(clip, className='button primary'){
  return game?`<a class="${className}" href="/play/${game.id}">Play ${escape(game.title)} ↗</a>`:'';
 }
 export function mountClipCard(container,clip){
- let copyController=null,selectedClip=clip,mixedClip=null,voicePlayback=null;
+ let copyController=null,thumbnailController=null,selectedClip=clip,mixedClip=null,voicePlayback=null;
  const card=document.createElement('article');card.className='clip-card';card.dataset.clipId=clip.id;card.dataset.createdAt=clip.createdAt;if(clip.unsaved)card.dataset.unsaved='true';const url=objectURL(clip.blob),ownedURLs=[url];
- card.innerHTML=`<h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds${clip.playbackRate===2?' · 2× speed':''} · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-voice-preview checked> Listen to recorded voice in replay</label><label><input type="checkbox" data-conversation> Include conversation in video downloads &amp; sharing</label><p data-conversation-status>Video downloads exclude voice until selected above. The recorded voice stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version. The original video is kept separately.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
+ card.innerHTML=`<h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds${clip.playbackRate===2?' · 2× speed':''} · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-voice-preview checked> Listen to recorded voice in replay</label><label><input type="checkbox" data-conversation> Include conversation in video downloads &amp; sharing</label><p data-conversation-status>Video downloads exclude voice until selected above. The recorded voice stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version. The original video is kept separately.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button><button data-thumbnail ${clip.thumbnail?'hidden':''}>Generate thumbnail</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
  const posterURL=value=>{if(!(value.thumbnail instanceof Blob))return null;const poster=objectURL(value.thumbnail);ownedURLs.push(poster);return poster;};
  const preview=mountClipPreview(card,{src:url,poster:posterURL(clip),title:clip.title,width:clip.width,height:clip.height});
- card.dispose=()=>{copyController?.abort();voicePlayback?.dispose();preview.dispose();ownedURLs.forEach(releaseURL);card.remove();};
+ card.dispose=()=>{thumbnailController?.abort();copyController?.abort();voicePlayback?.dispose();preview.dispose();ownedURLs.forEach(releaseURL);card.remove();};
+ const thumbnailButton=card.querySelector('[data-thumbnail]');
+ thumbnailButton.onclick=async()=>{
+  if(thumbnailController){thumbnailController.abort();return;}
+  thumbnailController=new AbortController();thumbnailButton.textContent='Cancel thumbnail';
+  const status=card.querySelector('[data-share-status]');status.textContent='Generating the first-frame thumbnail on this device…';
+  try{
+   await prepareThumbnail(clip,thumbnailController.signal);
+   if(selectedClip===clip)preview.setPoster(posterURL(clip));
+   thumbnailButton.hidden=true;status.textContent='Thumbnail saved. Your original video is unchanged.';
+  }catch(error){status.textContent=error.message;}
+  finally{thumbnailController=null;thumbnailButton.textContent='Generate thumbnail';}
+ };
  card.querySelector('[data-delete]').onclick=async()=>{copyController?.abort();try{if(!selectedClip.unsaved)await deleteClip(selectedClip.id);if(selectedClip!==clip){mixedClip=null;card.querySelector('[data-conversation]').checked=false;selectClip(clip);return;}card.dispose();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
  const download=card.querySelector('.clip-actions [download]');let downloadClip=null;
  download.onclick=async event=>{
@@ -57,7 +70,7 @@ export function mountClipCard(container,clip){
 
  function selectClip(value){
   selectedClip=value;const mediaURL=value===clip?url:objectURL(value.blob);if(value!==clip)ownedURLs.push(mediaURL);
-  preview.select({src:mediaURL,poster:posterURL(value)});
+  preview.select({src:mediaURL,poster:posterURL(value)});thumbnailButton.hidden=!!value.thumbnail||value!==clip;
   const listen=card.querySelector('[data-voice-preview]');if(listen)listen.disabled=value!==clip;
   const download=card.querySelector('.clip-actions [download]');download.href=mediaURL;download.download=`hopmodo-${clip.game}${value.conversationEmbedded?'-with-conversation':''}.${videoExtension(value.blob)}`;
   const note=card.querySelector('[data-conversation-status]');if(note)note.textContent=value===clip?'Video downloads exclude voice until selected above. The recorded voice stays on this device.':'With conversation. Preview this version before sharing.';
@@ -116,6 +129,14 @@ function mountFriendSharing(card,clip){
   catch{status.textContent='Copy this game link. Your clip stays on this device.';const input=document.createElement('input');input.className='copy-fallback';input.readOnly=true;input.value=gameURL;input.setAttribute('aria-label','Game link');status.append(input);input.select();}
  };
 }
+async function prepareThumbnail(clip,signal){
+ clip.thumbnail??=await thumbnailFromVideo(clip.blob,{signal});
+ if(!clip.unsaved)await updateClipThumbnail(clip.id,clip.thumbnail);
+}
+async function publishThumbnail(clip,session){
+ await prepareThumbnail(clip);
+ await api('/api/posters/'+clip.id,{method:'PUT',headers:{'Content-Type':'image/jpeg','X-CSRF-Token':session.csrfToken,'X-Sharing-Consent':'gallery-v1'},body:clip.thumbnail});
+}
 async function publishForm(container,clip){
  container.innerHTML='<p role="status">Checking your account…</p>';
  try{
@@ -126,7 +147,7 @@ async function publishForm(container,clip){
   const session=await getSession();
   if(!session.user){container.innerHTML=`<div class="publish-form"><h3>Log in to publish your clip.</h3><p>Use your Integ.Life account to manage your shared videos from any device. You get 2 GB of shared storage.</p><a class="button primary" href="${loginURL('/library?publish='+clip.id)}">Log in with Integ.Life ↗</a><p>Your saved video stays on this device. After login, you can review it before publishing.</p></div>`;return;}
   if(clip.shared){
-   try{await api('/api/clips/'+clip.id);container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
+   try{await api('/api/clips/'+clip.id);await publishThumbnail(clip,session);container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
    catch(error){if(error.status!==404)throw error;clip.shared=false;await updateClip(clip);}
   }
   const account=await api('/api/account/clips'),remaining=Math.max(0,account.limitBytes-account.usedBytes);
@@ -136,9 +157,11 @@ async function publishForm(container,clip){
    event.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Publishing your clip…';
    try{
     const title=String(new FormData(form).get('title'));
+    await prepareThumbnail(clip);
     const result=await api(`/api/clips/${clip.id}?title=${encodeURIComponent(title)}&game=${encodeURIComponent(clip.game)}&source=${clip.source}&duration=${clip.duration}`,{method:'PUT',headers:{'Content-Type':clip.blob.type,'X-CSRF-Token':session.csrfToken,'X-Sharing-Consent':'gallery-v1'},body:clip.blob});
     clip.shared=true;clip.title=title;
     try{await updateClip(clip);}catch{/* Account ownership persists even if local storage becomes unavailable. */}
+    await publishThumbnail(clip,session);
     container.innerHTML=`<p>Published. <a class="text-link" href="${escape(result.url)}">Open your gallery page →</a> · <a href="/shared">Manage my shared clips</a></p>`;
    }catch(error){
     status.textContent=error.message;status.className='error';button.disabled=false;
@@ -156,12 +179,14 @@ export async function renderGallery(container){
  const body=container.querySelector('#gallery-body');try{const data=await api('/api/clips'+location.search);
  if(data.enabled&&data.nextPageToken){const next=document.createElement('a');next.className='text-link';next.href='/gallery?page='+encodeURIComponent(data.nextPageToken);next.textContent='More clips →';body.after(next);}
  if(!data.enabled||!data.clips.length){body.innerHTML=`<div class="empty-state"><span class="empty-icon" aria-hidden="true">↗</span><h2>${data.enabled?(data.nextPageToken?'NO CLIPS ON THIS PAGE.':'NO SHARED CLIPS YET.'):'SHARING IS COMING SOON.'}</h2><p>${data.enabled?(data.nextPageToken?'Continue to the next page to find more shared clips.':'Record a game, then choose whether to share your clip here.'):'Gallery sharing isn’t available yet. In the meantime, play a game and keep your favorite moments on this device.'}</p><a class="button primary" href="/#arcade">Take me to the arcade ↗</a></div>`;return;}
- body.className='clip-grid';body.innerHTML=data.clips.map(c=>`<article class="clip-card"><video preload="none" controls playsinline src="/api/media/${c.id}" aria-label="${escape(c.title)}"></video><h3><a href="/clips/${c.id}">${escape(c.title)}</a></h3><p>${c.source==='synthetic'?'Synthetic gameplay':'Player recording'}</p><div class="clip-actions"><a href="/clips/${c.id}">Watch clip →</a>${playClipGame(c,'play-clip-game')}</div></article>`).join('');
+ body.className='clip-grid';body.innerHTML=data.clips.map(c=>`<article class="clip-card"><h3><a href="/clips/${c.id}">${escape(c.title)}</a></h3><p>${c.source==='synthetic'?'Synthetic gameplay':'Player recording'}</p><div class="clip-actions"><a href="/clips/${c.id}">Watch clip →</a>${playClipGame(c,'play-clip-game')}</div></article>`).join('');
+ data.clips.forEach((clip,index)=>mountSharedPreview(body.children[index],clip));
  }catch(error){body.innerHTML=`<div class="empty-state"><h2>COULDN’T LOAD THE GALLERY.</h2><p>${escape(error.message)}</p><a class="text-link" href="/gallery">Try again ↻</a></div>`;}
 }
 export async function renderClip(container,id){
  container.innerHTML='<p role="status">Loading clip…</p>';
- try{const clip=await api('/api/clips/'+encodeURIComponent(id));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><div class="clip-game-invite">${playClipGame(clip)}<p>No login needed to play.</p></div><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><video controls playsinline src="/api/media/${clip.id}" aria-label="${escape(clip.title)}"></video><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><div id="remove-confirmation"></div><p id="share-status" role="status"></p></article>`;
+ try{const clip=await api('/api/clips/'+encodeURIComponent(id));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><div class="clip-game-invite">${playClipGame(clip)}<p>No login needed to play.</p></div><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><div data-shared-preview></div><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><div id="remove-confirmation"></div><p id="share-status" role="status"></p></article>`;
+ mountSharedPreview(container.querySelector('[data-shared-preview]'),clip);
  const url=location.origin+'/clips/'+clip.id,status=container.querySelector('#share-status');document.title=clip.title+' · '+BRAND_NAME;
  container.querySelector('#copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(url);status.textContent='Link copied.';}catch{status.textContent='Copy this link: '+url;}};
  const share=container.querySelector('#native-share');share.hidden=!navigator.share;share.onclick=async()=>{try{await navigator.share({title:clip.title,url});}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable. Use Copy link.';}};

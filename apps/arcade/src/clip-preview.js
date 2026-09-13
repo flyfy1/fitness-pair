@@ -24,5 +24,9 @@ export function mountClipPreview(container,{src,poster,title,width=640,height=40
  function dispose(){video.pause();video.removeAttribute('src');video.removeAttribute('poster');video.load();window.removeEventListener('pagehide',dispose);}
  window.addEventListener('pagehide',dispose,{once:true});
  select({src,poster});
- return {video,select,dispose};
+ return {video,select,dispose,setPoster:poster=>{video.poster=poster;}};
+}
+
+export function mountSharedPreview(container,clip){
+ return mountClipPreview(container,{src:'/api/media/'+clip.id,poster:'/api/posters/'+clip.id,title:clip.title,width:clip.width,height:clip.height});
 }
