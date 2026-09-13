@@ -80,3 +80,20 @@ Automated tests cover PKCE/state/expiry/cancellation, safe return paths, token
 containment, session restart/logout, CSRF, account isolation, idempotent publication,
 actual byte accounting, exact 2 GB boundary, concurrent reservations, ID ownership,
 deletion and expiry. This is synthetic/mock evidence, not production login proof.
+
+## Browser checkpoint evidence
+
+Three real Chrome browser tests use the production gateway and file-backed store,
+a mock central identity service, and mock cloud storage. They generate an actual
+synthetic WebM without camera/microphone access and verify login return to the
+saved clip, consent, publication byte count, public playback, account isolation,
+same-account management from a second browser, revocation, local copy retention,
+quota UI/API enforcement, partial-upload cleanup, logout and 320/390px layout.
+Run `npx playwright test -c apps/arcade/playwright.accounts.config.js` after building.
+
+The broader arcade/game-shell/gallery suite passed 23 of 25 tests. Two existing
+recording checks also fail on the unmodified checkout at `59ae493`: the Motion Quest
+0.5-second decoded-frame check sees the ending instead of the footer logo, and the
+forced WebM completion fixture does not save within its timeout. The account
+change does not modify recording composition or lifecycle, and these failures are
+not represented as passing tests or as human recording evidence.

@@ -14,7 +14,7 @@ Recordings include a permanent Hopmodo mark, name, game score, and the canonical
 
 MP4 is preferred and confirmed from actual encoded bytes. Browsers without an available MP4 encoder save clearly labeled WebM files; files are never renamed to claim MP4. See [recording evidence and browser limits](RECORDING.md).
 
-Cloud sharing is enabled on `fitness.integ.life` using the VM identity and the existing private upload code. GPT Sites remains separately configured with sharing disabled. The bucket setting alone does not enable uploads. The gallery shows an honest setup state, never fabricated players. See `server/README.md`. The separate teammate sharing experiment remains untouched.
+Cloud sharing on `fitness.integ.life` uses Integ.Life login and the VM storage identity. Each account has 2 GB (2,000,000,000 bytes) of shared storage. `/shared` lists that account's publications across devices, shows usage, and lets the owner remove a clip and release its quota. Logging in from a local clip returns to that saved clip for review and explicit consent; it never publishes automatically. Local recordings remain device-local. GPT Sites remains separately configured with sharing disabled. See [account and quota details](server/AUTH.md). The separate teammate sharing experiment remains untouched.
 
 ## Add a game
 

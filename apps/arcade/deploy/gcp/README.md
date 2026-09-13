@@ -38,7 +38,7 @@ Local automatic recordings, the clip library, downloads, and file sharing work
 independently on each origin; IndexedDB clips do not migrate between the two sites.
 The UUID-based Gallery API uses the same Worker semantics as GPT Sites. On GCP,
 `/etc/fitness-arcade.env` configures the private bucket, dedicated storage identity
-and upload code. Systemd reads this root-only file; it is never in an archive or Git.
+and Integ.Life client credentials. Systemd reads this root-only file; it is never in an archive or Git.
 The existing VM identity obtains a short-lived token for the storage account using
 IAM Credentials. No private keys are created and the organization key-creation
 restriction remains enforced. A complete `serviceAccounts` field inspection found
@@ -58,10 +58,14 @@ the attached identity; an earlier nested CLI projection incorrectly appeared emp
   lifecycle rule deletes `gallery/` and `videos/` objects after seven days; the app
   denies expired records immediately. Existing seven-day soft-delete retention
   can retain deleted bytes beyond their availability through the app.
-- Set `GCP_BUCKET`, `GCP_IMPERSONATE_SERVICE_ACCOUNT`, and `SHARE_UPLOAD_CODE` in
-  `/etc/fitness-arcade.env` (mode 0600), then restart `fitness-arcade.service`.
-  The upload code reuses the existing private code from the standalone sharing
-  pilot. Never paste it into source, public links, logs or a shell argument.
+- Set `GCP_BUCKET`, `GCP_IMPERSONATE_SERVICE_ACCOUNT`, `INTEG_AUTH_ISSUER`,
+  `INTEG_AUTH_CLIENT_ID=hopmodo`, and its independent `INTEG_AUTH_CLIENT_SECRET`
+  in `/etc/fitness-arcade.env` (mode 0600). Register the exact callback
+  `https://fitness.integ.life/api/auth/callback` on central Auth before restarting.
+  The service owns `/var/lib/fitness-arcade` for sessions and the atomic quota ledger.
+  The installer backs up this directory with the sole writer stopped; normal
+  release rollback preserves current account state. Never reset the ledger or
+  restore an older ledger without reconciling GCS publications. See [account recovery](../../server/AUTH.md).
 - Check `/api/config`, then verify a synthetic upload through the browser, GCS
   readback, public playback and owner deletion. Configuration alone is not proof.
 

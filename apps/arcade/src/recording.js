@@ -1,3 +1,4 @@
+import {getSession,loginURL,accountAPI,storageLabel,removeSharedClip,confirmRemoval} from './account.js';
 import {createShareCopy,fitsWebsiteShare} from './share-copy.js';
 import {startVideoRecorder,recordedBlob,videoExtension,formatLabel} from './video-format.js';
 import {BRAND_NAME,SITE_URL} from './brand.js';
@@ -6,7 +7,7 @@ import {saveClip,listClips,deleteClip,updateClip,MAX_BYTES} from './local-clips.
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const urls=new Set();function objectURL(blob){const u=URL.createObjectURL(blob);urls.add(u);return u;}function releaseURL(u){URL.revokeObjectURL(u);urls.delete(u);}
 window.addEventListener('pagehide',()=>{urls.forEach(u=>URL.revokeObjectURL(u));urls.clear();});
-async function api(path,options){const r=await fetch(path,options);const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');return data;}
+const api=accountAPI;
 export function mountRecording(game,frame){
  const panel=document.querySelector('#record-panel');
  panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. It stays on this device.</p><p class="record-note">Game + enabled camera · game sound when available · no microphone · nothing shared automatically</p></div><a href="/library">My clips →</a>';
@@ -199,21 +200,39 @@ function mountFriendSharing(card,clip){
  };
 }
 async function publishForm(container,clip){
- container.innerHTML='<p role="status">Checking gallery availability…</p>';
- try{const config=await api('/api/config');if(!config.sharingEnabled){container.innerHTML='<p class="notice">Gallery sharing isn’t available yet. Your clip stays on this device. You can download it now.</p>';return;}
- if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 60 seconds / 20 MiB. Make a short share copy, preview it, then publish that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
- if(clip.shared){container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
- container.innerHTML=`<form class="publish-form"><h3>Share this clip in the gallery?</h3><label>Clip title<input name="title" maxlength="90" required value="${escape(clip.title)}"></label><label>Early-access upload code<input name="code" type="password" autocomplete="off" required minlength="12"></label><label><input type="checkbox" name="consent" required>I agree to publish this clip in the gallery and have permission from everyone shown.</label><p>People who can access this site can view and copy shared clips. You can remove yours using this device’s management key. Clips expire after 7 days.</p><button class="button primary" type="submit">Publish this clip ↗</button><p data-status role="status"></p></form>`;
- const form=container.querySelector('form');form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Publishing your clip…';
- try{clip.manageToken??=crypto.randomUUID()+crypto.randomUUID();if(clip.unsaved)throw new Error('Save this clip on the device before publishing so its management key is retained.');await updateClip(clip);
- const values=new FormData(form);const result=await api(`/api/clips/${clip.id}?title=${encodeURIComponent(values.get('title'))}&game=${encodeURIComponent(clip.game)}&source=${clip.source}&duration=${clip.duration}`,{method:'PUT',headers:{'Content-Type':clip.blob.type,'Authorization':`Bearer ${values.get('code')}`,'X-Sharing-Consent':'gallery-v1','X-Management-Key':clip.manageToken},body:clip.blob});
- clip.shared=true;clip.title=String(values.get('title'));await updateClip(clip);container.innerHTML=`<p>Published. <a class="text-link" href="${escape(result.url)}">Open your gallery page →</a></p>`;
- }catch(error){status.textContent=error.message;status.className='error';button.disabled=false;}};
+ container.innerHTML='<p role="status">Checking your account…</p>';
+ try{
+  const config=await api('/api/config');
+  if(!config.sharingEnabled){container.innerHTML='<p class="notice">Gallery sharing isn’t available yet. Your clip stays on this device. You can download it now.</p>';return;}
+  if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 60 seconds / 20 MiB. Make a short share copy, preview it, then publish that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
+  if(clip.unsaved){container.innerHTML='<p class="notice">Save or download this clip before leaving the page to log in. It has not been saved on this device yet.</p>';return;}
+  const session=await getSession();
+  if(!session.user){container.innerHTML=`<div class="publish-form"><h3>Log in to publish your clip.</h3><p>Use your Integ.Life account to manage your shared videos from any device. You get 2 GB of shared storage.</p><a class="button primary" href="${loginURL('/library?publish='+clip.id)}">Log in with Integ.Life ↗</a><p>Your saved video stays on this device. After login, you can review it before publishing.</p></div>`;return;}
+  if(clip.shared){
+   try{await api('/api/clips/'+clip.id);container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
+   catch(error){if(error.status!==404)throw error;clip.shared=false;await updateClip(clip);}
+  }
+  const account=await api('/api/account/clips'),remaining=Math.max(0,account.limitBytes-account.usedBytes);
+  container.innerHTML=`<form class="publish-form"><h3>Share this clip in the gallery?</h3><p>Publishing as <strong>${escape(session.user.email)}</strong> · <a href="/shared">My shared clips</a></p><label>Clip title<input name="title" maxlength="90" required value="${escape(clip.title)}"></label><p>${storageLabel(clip.blob.size)} to upload · ${storageLabel(remaining)} available of 2 GB</p><label><input type="checkbox" name="consent" required>I agree to publish this clip in the gallery and have permission from everyone shown.</label><p>Anyone with the link can view and copy this clip. You can remove it from My shared clips on any device. Clips expire after 7 days.</p><button class="button primary" type="submit" ${clip.blob.size>remaining?'disabled':''}>Publish this clip ↗</button><p data-status role="status">${clip.blob.size>remaining?'Your shared storage is full. Remove a clip from My shared clips to free space.':''}</p></form>`;
+  const form=container.querySelector('form');
+  form.onsubmit=async event=>{
+   event.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Publishing your clip…';
+   try{
+    const title=String(new FormData(form).get('title'));
+    const result=await api(`/api/clips/${clip.id}?title=${encodeURIComponent(title)}&game=${encodeURIComponent(clip.game)}&source=${clip.source}&duration=${clip.duration}`,{method:'PUT',headers:{'Content-Type':clip.blob.type,'X-CSRF-Token':session.csrfToken,'X-Sharing-Consent':'gallery-v1'},body:clip.blob});
+    clip.shared=true;clip.title=title;
+    try{await updateClip(clip);}catch{/* Account ownership persists even if local storage becomes unavailable. */}
+    container.innerHTML=`<p>Published. <a class="text-link" href="${escape(result.url)}">Open your gallery page →</a> · <a href="/shared">Manage my shared clips</a></p>`;
+   }catch(error){
+    status.textContent=error.message;status.className='error';button.disabled=false;
+    if(error.status===401){const link=document.createElement('a');link.className='text-link';link.href=loginURL('/library?publish='+clip.id);link.textContent='Log in again →';status.append(' ',link);}
+   }
+  };
  }catch(error){container.innerHTML=`<p class="error">${escape(error.message)} Your clip is still on this device.</p>`;}
 }
 export async function renderLibrary(container){
- container.innerHTML='<div class="utility-head"><div><p class="kicker">Saved on this device</p><h1>MY CLIPS.</h1><p>Saved on this device. Nothing is shared automatically.</p></div><a class="button primary" href="/#arcade">Choose a game ↗</a></div><div class="clip-grid" role="status">Loading your clips…</div>';
- const grid=container.querySelector('.clip-grid');try{const clips=await listClips();grid.innerHTML='';if(!clips.length){grid.className='empty-state';grid.innerHTML='<span class="empty-icon" aria-hidden="true">↻</span><h2>NO CLIPS YET.</h2><p>Start a game. Your replay saves here automatically when the round ends.</p><a class="text-link" href="/#arcade">Choose a game →</a>';}else clips.forEach(c=>mountClipCard(grid,c));}catch{grid.innerHTML='<p>Local storage is unavailable. Allow site storage in your browser and reload. You can still play games.</p>';}
+ container.innerHTML='<div class="utility-head"><div><p class="kicker">Saved on this device</p><h1>MY CLIPS.</h1><p>Saved on this device. Nothing is shared automatically. <a class="text-link" href="/shared">Manage my shared clips →</a></p></div><a class="button primary" href="/#arcade">Choose a game ↗</a></div><div class="clip-grid" role="status">Loading your clips…</div>';
+ const grid=container.querySelector('.clip-grid');try{const clips=await listClips();grid.innerHTML='';if(!clips.length){grid.className='empty-state';grid.innerHTML='<span class="empty-icon" aria-hidden="true">↻</span><h2>NO CLIPS YET.</h2><p>Start a game. Your replay saves here automatically when the round ends.</p><a class="text-link" href="/#arcade">Choose a game →</a>';}else{clips.forEach(c=>mountClipCard(grid,c));const resume=new URLSearchParams(location.search).get('publish');if(resume&&!new URLSearchParams(location.search).has('login')){const clip=clips.find(c=>c.id===resume);if(clip){const card=grid.children[clips.indexOf(clip)];await publishForm(card.querySelector('[data-publish]'),clip);card.scrollIntoView({block:'start'});}}}}catch{grid.innerHTML='<p>Local storage is unavailable. Allow site storage in your browser and reload. You can still play games.</p>';}
 }
 export async function renderGallery(container){
  container.innerHTML='<div class="utility-head"><div><p class="kicker">Player recordings</p><h1>THE GALLERY.</h1><p class="lead">Watch shared game clips, then try a game yourself.</p></div><a class="button outline" href="/library">My local clips ↗</a></div><div id="gallery-body" role="status">Loading the gallery…</div>';
@@ -225,10 +244,13 @@ export async function renderGallery(container){
 }
 export async function renderClip(container,id){
  container.innerHTML='<p role="status">Loading clip…</p>';
- try{const clip=await api('/api/clips/'+encodeURIComponent(id));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><video controls playsinline src="/api/media/${clip.id}" aria-label="${escape(clip.title)}"></video><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><p id="share-status" role="status"></p><a class="button primary" href="/play/${encodeURIComponent(clip.game)}">Try this game ↗</a></article>`;
+ try{const clip=await api('/api/clips/'+encodeURIComponent(id));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><video controls playsinline src="/api/media/${clip.id}" aria-label="${escape(clip.title)}"></video><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><div id="remove-confirmation"></div><p id="share-status" role="status"></p><a class="button primary" href="/play/${encodeURIComponent(clip.game)}">Try this game ↗</a></article>`;
  const url=location.origin+'/clips/'+clip.id,status=container.querySelector('#share-status');document.title=clip.title+' · '+BRAND_NAME;
  container.querySelector('#copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(url);status.textContent='Link copied.';}catch{status.textContent='Copy this link: '+url;}};
  const share=container.querySelector('#native-share');share.hidden=!navigator.share;share.onclick=async()=>{try{await navigator.share({title:clip.title,url});}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable. Use Copy link.';}};
- try{const local=(await listClips()).find(c=>c.id===clip.id&&c.manageToken);if(local){const remove=container.querySelector('#remove-shared');remove.hidden=false;remove.onclick=async()=>{remove.disabled=true;try{await api('/api/clips/'+clip.id,{method:'DELETE',headers:{Authorization:'Bearer '+local.manageToken}});local.shared=false;await updateClip(local);container.innerHTML='<h1>SHARED CLIP REMOVED.</h1><p>The shared clip has been removed. Your local copy is still in My clips.</p><a class="button primary" href="/library">My clips →</a>';}catch(error){status.textContent=error.message;remove.disabled=false;}};}}catch{/* Viewing a shared clip does not require local storage. */}
+ let legacyKey=null;
+ if(clip.legacy){try{legacyKey=(await listClips()).find(c=>c.id===clip.id)?.manageToken;}catch{/* Public viewing does not require local storage. */}}
+ if(clip.canDelete||legacyKey){const remove=container.querySelector('#remove-shared');remove.hidden=false;remove.onclick=()=>confirmRemoval(container.querySelector('#remove-confirmation'),async()=>{await removeSharedClip(clip.id,legacyKey);container.innerHTML='<h1>SHARED CLIP REMOVED.</h1><p>The shared link is no longer available. Your local video is kept on this device.</p><a class="button primary" href="/shared">My shared clips →</a>';});}
+
  }catch{container.innerHTML='<div class="empty-state"><h1>CLIP UNAVAILABLE.</h1><p>This clip may have expired, been removed, or isn’t available yet.</p><a class="button primary" href="/#arcade">Choose a game ↗</a></div>';}
 }

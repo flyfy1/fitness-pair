@@ -1,3 +1,4 @@
+import {mountAccountNav,renderShared} from './account.js';
 import {mountTrackingLoader} from './tracking-loader.js';
 import {brandLink} from './brand.js';
 import './style.css';
@@ -8,8 +9,8 @@ import {drawPreview, setupPlayground, startConcept} from './playground.js';
 import {renderLibrary, renderGallery, renderClip} from './recording.js';
 const app=document.querySelector('#app');
 const arrow='<span aria-hidden="true">↗</span>';
-const nav=()=>`<a class="skip" href="#main">Skip to content</a><header class="nav"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><nav aria-label="Main navigation"><a href="/#arcade">The arcade</a><a href="/#why">Why movement games</a><a href="/#built">How we built it</a><a href="/gallery">The gallery</a></nav><a class="nav-play" href="/#arcade">Let’s play ${arrow}</a></header>`;
-const footer=()=>`<footer class="footer"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><p>Get moving. Have fun.</p><div><a href="/library">My clips</a><a href="/gallery">Gallery</a><a href="/#built">Built with Astra</a></div></footer>`;
+const nav=()=>`<a class="skip" href="#main">Skip to content</a><header class="nav"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><nav aria-label="Main navigation"><a href="/#arcade">The arcade</a><a href="/#why">Why movement games</a><a href="/#built">How we built it</a><a href="/gallery">The gallery</a></nav><span data-account-nav></span><a class="nav-play" href="/#arcade">Let’s play ${arrow}</a></header>`;
+const footer=()=>`<footer class="footer"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><p>Get moving. Have fun.</p><div><a href="/library">My clips</a><a href="/shared">My shared clips</a><a href="/gallery">Gallery</a><a href="/#built">Built with Astra</a></div></footer>`;
 function home(){
 document.body.classList.add('landing-page');
 app.innerHTML=`${nav()}<main id="main"><section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><p class="hero-note"><span class="live-dot"></span> Movement games for kids and adults</p><h1 id="hero-title">Games that get<br><span>you moving.</span></h1><div class="hero-bottom"><p>Jump over cacti. Squat to cast spells.<br>Get active while you play.</p><a class="button primary hero-cta" href="#arcade">Take me to the arcade ${arrow}</a><p class="hero-aside">Use your camera.<br>Leave some room to move.</p></div><div class="tracking-preload" id="tracking-preload" aria-label="Movement controls preparation"></div></div><div class="playground" id="playground"><img src="/assets/playground.png" alt="A blue player and orange dinosaur leap through a bright floating playground." fetchpriority="high" width="1536" height="768"><canvas id="hero-motion" aria-hidden="true"></canvas><span id="landing-status" role="status"></span><button class="playground-poke" id="poke" aria-label="Launch a playground jump">Try a jump <span>↗</span></button><button class="motion-toggle" id="motion-toggle" aria-pressed="false">Pause motion</button><span class="scene-caption">Playground illustration · try the games below</span></div></section>
@@ -29,9 +30,12 @@ startConcept();
 }
 const path=location.pathname;
 if(path.startsWith('/play/'))play(path.split('/')[2]);
-else if(path==='/library'||path==='/gallery'||path.startsWith('/clips/')){
+else if(path==='/library'||path==='/gallery'||path==='/shared'||path.startsWith('/clips/')){
 app.innerHTML=`${nav()}<main class="utility section" id="main"><div id="content"></div></main>${footer()}`;
 if(path==='/library')renderLibrary(document.querySelector('#content'));
+else if(path==='/shared')renderShared(document.querySelector('#content'));
 else if(path==='/gallery')renderGallery(document.querySelector('#content'));
 else renderClip(document.querySelector('#content'),path.split('/')[2]);
 }else home();
+
+mountAccountNav();

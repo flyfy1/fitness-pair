@@ -54,7 +54,7 @@ The arcade lives in `apps/arcade/`; game sources remain independently owned.
 Gameplay records automatically to IndexedDB on the player’s device. Branded MP4
 exports use a supported native encoder, with an explicitly labeled WebM fallback.
 Full replays can produce a short local copy for website sharing. Gallery publication is enabled on
-`fitness.integ.life` with the existing private upload code; GPT Sites retains its
+`fitness.integ.life` with Integ.Life account login and 2 GB per-account storage; GPT Sites retains its
 separate, disabled gallery configuration.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 

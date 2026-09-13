@@ -82,3 +82,14 @@
   .tracking-preload:has(progress[hidden]) .tracking-copy { grid-column: 1 / -1; }
   .tracking-preload:has(progress[hidden]) button { grid-column: 2; }
 }
+/* Account controls remain reachable on narrow layouts without changing game UI. */
+.account-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; white-space: nowrap; }
+.account-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 24px; }
+.account-summary strong { overflow-wrap: anywhere; }
+.account-summary button, [data-confirmation] button, #remove-confirmation button { min-height: 44px; padding: 10px 16px; cursor: pointer; }
+.account-summary [role="status"] { flex-basis: 100%; }
+.storage-summary { border: 2px solid currentColor; padding: 20px; margin-bottom: 32px; }
+.storage-summary > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.storage-summary meter { display: block; width: 100%; height: 28px; margin-top: 12px; }
+.storage-summary p { font-size: 14px; line-height: 1.5; }
+@media(max-width: 760px) { .nav { flex-wrap: wrap; gap: 10px 16px; } .nav [data-account-nav] { margin-left: auto; } .nav [data-account-nav]:not(:empty) + .nav-play { display: none; } }
