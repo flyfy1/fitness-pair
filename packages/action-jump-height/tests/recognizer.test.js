@@ -406,3 +406,65 @@ test('manual maximum survives slow return; jitter and stale or missing evidence 
   assert.equal(h.update().stage, 'standing');
   assert.equal(h.recognizer.measuredRise, 0);
 });
+
+// A preparatory squat lowers both anchors and foreshortens/tilts the torso.
+function crouch(frame) {
+  for (const side of ['left', 'right']) {
+    frame.joints[`${side}Hip`].y += .10;
+    frame.joints[`${side}Shoulder`].y += .19;
+    frame.joints[`${side}Shoulder`].x += .08;
+  }
+}
+
+test('pre-jump crouch retains standing reference through manual calibration and live jumps', () => {
+  const h = harness(() => {}, { manualMaximum: true, preferUpperBody: true });
+  h.hold(); const baseline = { ...h.recognizer.baseline };
+  const prep = h.hold(25, 0, crouch); // 1 second exceeds the old 400 ms reset timer.
+  assert.ok(prep.every(f => f.stage === 'maximum' && f.phase !== 'missing'));
+  assert.ok(prep.every(f => f.cue === 'prepare-jump' && !f.canConfirmMaximum && f.heightRatio === 0 && !f.completion));
+  assert.deepEqual(h.recognizer.baseline, baseline);
+  const unfolding = h.hold(3, 0, f => {
+    for (const side of ['left', 'right']) {
+      f.joints[side+'Hip'].y += .004;
+      f.joints[side+'Shoulder'].y += .10;
+      f.joints[side+'Shoulder'].x += .05;
+    }
+  });
+  assert.ok(unfolding.every(f => f.phase !== 'missing' && f.stage === 'maximum'));
+  h.hold(8, .14); h.hold(25, 0, crouch); // Land into a crouch, then stand back up.
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(8); assert.equal(h.recognizer.confirmMaximum(), true); h.update();
+  const peak = h.recognizer.peakRise;
+  const livePrep = h.hold(25, 0, crouch);
+  assert.ok(livePrep.every(f => f.calibrated && f.heightRatio === 0 && !f.completion));
+  const jump = [...h.hold(8, .07), ...h.hold(8)];
+  assert.ok(Math.abs(Math.max(...jump.map(f => f.heightRatio)) - .5) < .02);
+  assert.equal(jump.filter(f => f.completion).length, 1);
+  assert.equal(h.recognizer.peakRise, peak); assert.deepEqual(h.recognizer.baseline, baseline);
+});
+
+test('crouching and rising to baseline alone never calibrates or scores, including quick start', () => {
+  for (const options of [{ manualMaximum: true, preferUpperBody: true }, { quickStart: true, preferUpperBody: true }, {}]) {
+    const h = harness(() => {}, options); h.hold(); const baseline = { ...h.recognizer.baseline };
+    for (let cycle = 0; cycle < 3; cycle++) {
+      const frames = [...h.hold(20, 0, crouch), ...h.hold(8)];
+      assert.ok(frames.every(f => f.stage === 'maximum' && !f.calibrated && !f.completion && f.heightRatio === 0));
+    }
+    assert.deepEqual(h.recognizer.baseline, baseline);
+    if (options.quickStart) assert.equal(h.hold(3, .03).at(-1).calibrated, true);
+    else if (!options.manualMaximum) assert.equal(h.jump().at(-1).calibrated, true);
+  }
+});
+
+test('crouching cannot bypass missing joints, sideways relocation or depth change guards', () => {
+  for (const change of [
+    f => { delete f.joints.leftHip; },
+    f => { for (const joint of Object.values(f.joints)) joint.x += .17; },
+    f => { for (const joint of Object.values(f.joints)) joint.x = .5 + (joint.x - .5) * 1.35; },
+  ]) {
+    const h = harness(() => {}, { manualMaximum: true, preferUpperBody: true }); h.hold();
+    const frames = h.hold(30, 0, f => { crouch(f); change(f); });
+    assert.ok(frames.every(f => !f.calibrated && !f.completion && f.heightRatio === 0));
+    assert.equal(h.recognizer.baseline, null);
+  }
+});

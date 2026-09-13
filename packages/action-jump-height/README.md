@@ -126,3 +126,19 @@ and 2.5-second maximum-flight timeouts; long joint loss, position/scale drift an
 explicit recalibration still discard them. Live motion keeps the existing timeout
 and completion rules. `confirm-maximum` is an additive cue. Dino uses this option
 because missed feet/landing and automatic timeout resets made calibration hard to finish.
+
+## Countermovement before a jump
+
+After the upright standing reference is captured, a visible preparatory crouch
+may shorten or tilt the torso. When the shoulder/hip anchors stay at or below
+that reference, joint widths remain stable and the person stays in position,
+the recognizer retains the original baseline and emits `prepare-jump` with zero
+height. Unfolding back through the reference does not disarm the next jump.
+A crouch followed only by standing never calibrates or completes a jump; both
+tracked signals still have to rise above the original standing height.
+
+The same rule preserves calibrated live controls and quick-start entry. A crouched
+landing may end a tracked flight, but manual height confirmation requires a return
+to upright baseline. Missing joints, significant sideways/depth changes and initial
+crouched calibration retain their existing rejection rules. These are bounded 2D
+heuristics verified with synthetic sequences; human crouch/jump accuracy is unverified.

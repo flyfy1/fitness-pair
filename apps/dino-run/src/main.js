@@ -128,6 +128,7 @@ function calibrationCopy() {
   if (cameraState === 'loading') return { title: 'Loading local tracking', detail: 'Keep the camera fixed. Leave room above your head; your legs may be outside the frame.' };
   if (latestAction?.quality === 'position-changed') return { title: 'Return to your starting position', detail: 'Your body position or size changed. Keep the camera fixed, face it and stand at the same distance.' };
   if (latestAction?.phase === 'missing') return { title: 'Keep shoulders and hips in view', detail: 'Face the camera with both shoulders and hips visible. Legs can stay outside the frame.' };
+  if (latestAction?.cue === 'prepare-jump') return { title: 'Ready when you are', detail: 'A small crouch before jumping is OK. Your standing baseline is saved.' };
   if (latestAction?.canConfirmMaximum) return { title: 'Height captured — confirm it', detail: 'Raise one hand above your shoulder for 1 second, or choose Use measured height. You can jump again to record a higher maximum.' };
   if (latestAction?.cue === 'jump-higher-and-retry') return { title: 'Let’s measure that again', detail: 'That jump was too small to calibrate. Stand steady, then try one clear jump.' };
   if (latestAction?.stage === 'maximum' && latestAction.measuredRise > 0) return { title: 'Movement captured', detail: 'Return to your starting height and hold steady. Keep both shoulders and hips visible; your feet do not need to be in view.' };

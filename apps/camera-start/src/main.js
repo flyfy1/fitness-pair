@@ -84,6 +84,7 @@ function presentation(now) {
   if (!lastPoseAt || now - lastPoseAt >= 250) return { stage: 'missing', status: 'WAITING FOR LIVE TRACKING', title: 'Tracking paused.', detail: 'Stay in view. We’re waiting for a fresh frame.', feedback: 'Nothing will start until tracking returns.', reason: 'stale-tracking' };
   if (!action || action.phase === 'missing') return { stage: 'missing', status: 'WE NEED TO SEE YOU', title: action?.quality === 'position-changed' ? 'Return to your spot.' : 'Step into view.', detail: 'Show both shoulders and hips. Face the camera.', feedback: 'Your legs can stay outside the picture.', reason: action?.quality ?? 'missing-body' };
   if (action.stage === 'standing') return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand tall.\nHold still.', detail: 'Stay where you are for two seconds.', feedback: action.quality === 'unstable-stance' ? 'Keep your shoulders and hips steady.' : 'We can see you. Keep holding…', progress: (action.calibrationProgress ?? 0) * 2, step: 'standing', reason: action.quality };
+  if (action.cue === 'prepare-jump') return { stage: action.calibrated ? 'ready' : 'maximum', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'A small crouch is OK. Jump when ready.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'ready' : 'maximum', reason: 'prepare-jump' };
   if (action.stage === 'maximum') {
     if (action.canConfirmMaximum) {
       const holding = hands?.kind === 'one-hand' && !hands.latched;

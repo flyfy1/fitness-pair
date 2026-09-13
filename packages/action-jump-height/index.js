@@ -159,7 +159,17 @@ export class JumpHeightRecognizer {
     const movedSideways = Math.abs(pose.centerX - baseline.centerX) > .12;
     const movedDown = upperBody ? false
       : Math.min(pose.leftAnkleY - baseline.leftAnkleY, pose.rightAnkleY - baseline.rightAnkleY) > .045;
-    if (scaleChanged || movedSideways || movedDown || bentTorso) {
+    // A countermovement lowers both anchors and can tilt/foreshorten the torso.
+    // Keep the original standing reference; rising out of a squat is not a jump.
+    const hipDrop = pose.hipY - baseline.hipY, shoulderDrop = pose.shoulderY - baseline.shoulderY;
+    const preparingJump = hipDrop >= -.005 && shoulderDrop >= -.005
+      && Math.max(hipDrop, shoulderDrop) > Math.max(.012, baseline.torso * .04)
+      && pose.torso / baseline.torso >= .45 && pose.torso / baseline.torso <= 1.4
+      && Math.abs(pose.shoulderWidth / baseline.shoulderWidth - 1) <= .15
+      && Math.abs(pose.hipWidth / baseline.hipWidth - 1) <= .15
+      && !movedSideways && (upperBody || Math.abs(pose.leftAnkleY - baseline.leftAnkleY) < .025
+        && Math.abs(pose.rightAnkleY - baseline.rightAnkleY) < .025);
+    if (movedSideways || movedDown || !preparingJump && (scaleChanged || bentTorso)) {
       this.confirmGroundedSince = null;
       this.driftSince ??= frame.tMs;
       this.flight = null; this.landingSince = null; this.armed = false;
@@ -181,7 +191,7 @@ export class JumpHeightRecognizer {
     const landThreshold = Math.max(.005, baseline.torso * .025);
     const airborne = rawRise > liftThreshold;
     const grounded = leftRise <= landThreshold && rightRise <= landThreshold && hipRise <= liftThreshold;
-    if (grounded) this.confirmGroundedSince ??= frame.tMs;
+    if (grounded && !preparingJump && pose.upright && hipRise >= -liftThreshold) this.confirmGroundedSince ??= frame.tMs;
     else this.confirmGroundedSince = null;
 
     if (!this.armed) {
@@ -243,6 +253,10 @@ export class JumpHeightRecognizer {
         return this.output(frame, { phase: 'calibrating', cue: 'rebaseline', quality: 'position-changed', calibrationProgress: 0 });
       }
     }
+    if (preparingJump) return this.output(frame, {
+      phase: this.stage === 'maximum' ? 'calibrating' : 'ready', cue: 'prepare-jump',
+      calibrationProgress: this.stage === 'maximum' ? .5 : null,
+    });
     if (this.stage === 'maximum') {
       if (!this.quickStart && !this.manualMaximum && !this.flight && frame.tMs - this.maximumSince > MAXIMUM_WAIT_MS) {
         this.recalibrate();

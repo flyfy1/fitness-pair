@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 async function syntheticCamera(page) {
   await page.addInitScript(() => {
-    window.poseTest = { rise: 0, hand: 'down', missing: false, wristsMissing: false, delay: 0 };
+    window.poseTest = { rise: 0, hand: 'down', missing: false, wristsMissing: false, delay: 0, crouch: false };
     navigator.mediaDevices.getUserMedia = async () => {
       const c = document.createElement('canvas'); c.width = 640; c.height = 480;
       const ctx = c.getContext('2d'); const stream = c.captureStream(30); window.testStream = stream;
@@ -22,6 +22,10 @@ async function syntheticCamera(page) {
         data.bitmap.close(); const points=[]; const s=window.poseTest;
         if (!s.missing) {
           for (const [indices,x] of [[[11,23],.44],[[12,24],.56]]) indices.forEach((id,i)=>{points[id]={x,y:[.28,.52][i]-s.rise,visibility:.99};});
+          if (s.crouch) {
+            for (const i of [11,12]) { points[i].y += .19; points[i].x += .08; }
+            for (const i of [23,24]) points[i].y += .10;
+          }
           if (!s.wristsMissing) {
             points[15]={x:.43,y:(s.hand==='up'?.12:.59)-s.rise,visibility:.99};
             points[16]={x:.57,y:.59-s.rise,visibility:.99};
@@ -106,4 +110,29 @@ test('permission error is actionable and recorded; native fullscreen can be exit
   await expect(page.locator('#detail')).toHaveText('Allow camera access, then try again.');
   expect(await page.evaluate(()=>window.cameraSetup.getLog().some(e=>e.event==='camera-error'&&e.name==='NotAllowedError'))).toBe(true);
   await expect(page.getByRole('button',{name:'Retry camera',exact:true})).toBeInViewport();
+});
+
+
+test('crouch, takeoff and crouched landing preserve calibration and explain preparation in the log', async({page})=>{
+  await syntheticCamera(page);await page.goto('/');
+  await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await expect(page.locator('#instruction')).toHaveText('Jump once.');
+  await page.evaluate(()=>{window.poseTest.crouch=true;});await page.waitForTimeout(1200);
+  await expect(page.locator('#status')).toHaveText('JUMP PREPARATION');
+  expect(await page.evaluate(()=>window.cameraSetup.getState().calibration)).toBe('maximum');
+  expect(await page.evaluate(()=>window.cameraSetup.getState().canConfirm)).toBe(false);
+  await page.screenshot({path:'test-results/crouch-preparation.png'});
+  await page.evaluate(()=>{window.poseTest.crouch=false;});await page.waitForTimeout(300);
+  expect(await page.evaluate(()=>window.cameraSetup.getState().canConfirm)).toBe(false);
+  await page.evaluate(()=>{window.poseTest.rise=.08;});await page.waitForTimeout(300);
+  await page.evaluate(()=>{window.poseTest.rise=0;window.poseTest.crouch=true;});await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>window.cameraSetup.getState().calibration)).toBe('maximum');
+  expect(await page.evaluate(()=>window.cameraSetup.getState().canConfirm)).toBe(false);
+  await page.evaluate(()=>{window.poseTest.crouch=false;});
+  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  await expect(page.locator('#instruction')).toHaveText('Ready to play!',{timeout:6000});
+  const events=await page.evaluate(()=>window.cameraSetup.getLog());
+  expect(events.some(e=>e.event==='screen-state'&&e.reason==='prepare-jump')).toBe(true);
+  expect(events.some(e=>e.event==='calibration-stage'&&e.from==='maximum'&&e.to==='standing')).toBe(false);
 });
