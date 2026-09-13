@@ -1,3 +1,4 @@
+import '../../../../packages/gameplay/page-language.js';
 import {createRunnerMotionInput} from '../../../../apps/dino-run/src/motion-input.js';
 import './style.css';
 import {createHandsStart} from '../../../../packages/gameplay/hands-start-view.js';

@@ -142,3 +142,11 @@ the backdrop dismiss it and restore focus/scrolling. Long guides scroll inside
 the dialog, while the heading and entry button remain available. Mobile guides
 stack the person diagrams with readable captions instead of shrinking the text.
 Instructions and diagrams live in `src/game-guides.js` and `src/movement-art.js`.
+
+## Languages
+
+The menu, illustrated guides, hosted games and replay/share controls support
+English and Simplified Chinese. First visits follow the browser language; an
+explicit selector choice takes precedence and persists on this origin. The game
+control panel shares the same choice without restarting a round.
+See [translation workflow and evidence](../../docs/multilingual.md).

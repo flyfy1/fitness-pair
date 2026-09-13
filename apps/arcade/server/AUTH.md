@@ -17,7 +17,7 @@ Code with S256 PKCE, a random state, and a ten-minute HttpOnly transaction cooki
 The corresponding verifier and return path stay in a bounded server transaction
 map. Restarting during login requires starting again. Only local, allowlisted
 return paths are accepted. The callback is exactly
-`https://fitness.integ.life/api/auth/callback`; the interface locale is `en`.
+`https://fitness.integ.life/api/auth/callback`; the interface locale follows the selected `en` or `zh-CN` language.
 
 The backend exchanges the code and reads `/userinfo` from the configured issuer.
 A hash of `(issuer, sub)` is the internal owner identity; email is display-only.

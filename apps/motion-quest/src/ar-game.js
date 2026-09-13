@@ -1,3 +1,4 @@
+import {translateText} from '../../../packages/gameplay/i18n.js';
 import { ForestGame } from '@fitness-pair/game-forest/renderer';
 import { cameraPoint } from './camera-projection.js';
 import { QuestSound } from './quest-sound.js';
@@ -116,7 +117,7 @@ export class ARGame extends ForestGame {
       c.beginPath(); c.ellipse(Math.cos(a) * d, Math.sin(a) * d + p * p * 65 * scale, (7 - p * 4) * scale, 3 * scale, a + p, 0, TAU); c.fill();
     }
     c.fillStyle = '#fffde5'; c.font = `800 ${Math.max(28, 32 * scale)}px system-ui`; c.textAlign = 'center';
-    c.fillText(final ? 'QUEST COMPLETE!' : '−20', 0, -85 * scale - (this.reducedMotion ? 0 : easeOut(p) * 32 * scale));
+    c.fillText(translateText(final ? 'QUEST COMPLETE!' : '−20'), 0, -85 * scale - (this.reducedMotion ? 0 : easeOut(p) * 32 * scale));
     c.restore();
   }
 }

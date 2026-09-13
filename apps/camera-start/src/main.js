@@ -1,3 +1,4 @@
+import '../../../packages/gameplay/page-language.js';
 import './style.css';
 import { DinoAudio } from './audio.js';
 import { AnimatedRunner } from './animated-runner.js';
@@ -314,7 +315,7 @@ function paint() {
   view = next;
   if (key !== lastViewKey) {
     lastViewKey = key; log('screen-state', { stage: next.stage, instruction: next.title, reason: next.reason ?? null });
-    $('announcement').textContent = `${next.status}. ${next.title}. ${next.detail}`;
+    $('announcement').replaceChildren(...[next.status, next.title, next.detail].map(text => { const span = document.createElement('span'); span.textContent = text + ' '; return span; }));
   }
   sound.update({ phase: !gameMode ? 'idle' : complete ? 'finished' : !camera.active ? 'idle'
     : next.stage === 'countdown' && !next.paused ? 'countdown'

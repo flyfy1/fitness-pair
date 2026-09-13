@@ -219,4 +219,4 @@ encouragement/endings together, and remembers the choice on this origin. Switchi
 mid-flight preserves the current game and recording. English and Chinese variants
 share stable voice IDs, timing and musical motifs. Audio is served as committed
 resources without runtime speech API calls. See `resources/README.md` for translation,
-generation, provenance and scope; other arcade interfaces are not yet localized.
+generation, provenance and scope; the arcade shares the same language preference and bilingual interface.

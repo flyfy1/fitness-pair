@@ -35,6 +35,10 @@ test('PKCE login verifies state, resolves central identity server-side, persists
     assert.match(response.headers.get('set-cookie'), /HttpOnly; SameSite=Lax.*Secure/);
     return {state: target.searchParams.get('state'), headers: {Cookie: '__Host-hopmodo_login=' + getCookie(response, '__Host-hopmodo_login')}};
   }
+  for (const [lang, expected] of [['zh-CN','zh-CN'],['zh-TW','zh-CN'],['en','en'],['fr','en'],['bad value','en']]) {
+    const response = await auth.handle(request('/api/auth/start?lang=' + encodeURIComponent(lang)));
+    assert.equal(new URL(response.headers.get('location')).searchParams.get('ui_locales'), expected);
+  }
   let tx = await start();
   const invalid = await auth.handle(request('/api/auth/callback?code=x&state=wrong', {headers: tx.headers}));
   assert.equal(invalid.headers.get('location'), '/shared?login=expired'); assert.equal(network, 0);

@@ -1,3 +1,4 @@
+import {readLanguage,subscribeLanguage} from '../../../../packages/gameplay/locale.js';
 import {scheduleGameMusic} from '../../../../packages/gameplay/soundtrack.js';
 import {sharedVoiceURL} from '../../../../packages/gameplay/voice-assets.js';
 import {encouragementPack,createEncouragementSchedule,voiceResource,voiceResources} from './encouragement.js';
@@ -7,7 +8,9 @@ const RESOURCES=[...VOICES.map(id=>({id,file:`${id}.wav`})),
 
 /** Original synthesized backing track and local prerecorded speech; no microphone input. */
 export class FlightAudio {
-  constructor(language='en') {
+  constructor(language=readLanguage()) {
+    this.releaseLanguage=subscribeLanguage(value=>this.setLanguage(value));
+    globalThis.addEventListener?.('pagehide',this.releaseLanguage,{once:true});
     this.language=language;this.loading=new Map();this.speechNodes=new Set();
     this.encouragement=createEncouragementSchedule();this.lastEncouragement=null;this.lastVoice=null;
     this.muted=false;this.context=null;this.nodes=new Set();this.buffers=new Map();
@@ -40,7 +43,7 @@ export class FlightAudio {
     const context=this.context;
     const pending=(async()=>{
       try{
-        const url=sharedVoiceURL(file)||new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
+        const url=(/^(?:https?:|\/)/.test(file)?file:sharedVoiceURL(file))||new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
         const response=await fetch(url,{signal:AbortSignal.timeout(10000)});if(!response.ok)return;
         const buffer=await context.decodeAudioData(await response.arrayBuffer());
         if(this.context===context&&context.state!=='closed')this.buffers.set(id,buffer);
@@ -50,6 +53,7 @@ export class FlightAudio {
   }
   loadLanguage(){
     if(!this.context)return;
+    if(this.language==='zh')for(const name of ['nice','keep-going','finish'])this.load(`zh:${name}`,sharedVoiceURL(`${name}.wav`,'zh'));
     for(const resource of voiceResources(this.language))this.load(this.resourceKey(resource),`encouragement/${resource.file}`);
   }
   setLanguage(language){
@@ -81,7 +85,7 @@ export class FlightAudio {
     n.connect(g);g.connect(this.music);this.track(n,g);n.start(time);n.stop(time+duration);
   }
   voice(name) {
-    const resource=voiceResource(name,this.language),key=resource?this.resourceKey(resource):this.language==='en'?name:null;
+    const resource=voiceResource(name,this.language),key=resource?this.resourceKey(resource):this.language==='en'?name:`zh:${name}`;
     if(!key)return;
     const generation=this.generation,serial=++this.voiceSerial;
     const play=()=>{

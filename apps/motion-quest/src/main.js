@@ -1,3 +1,4 @@
+import '../../../packages/gameplay/page-language.js';
 import './style.css';
 import { SquatRecognizer } from '@fitness-pair/action-squat';
 import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';

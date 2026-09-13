@@ -73,8 +73,7 @@ to fit one-second steps. Existing English files keep their original URLs.
 
 `ui.zh.json` pairs the game's English source copy with Chinese. The language selector
 updates native Flight UI, canvas labels and audio without restarting gameplay or
-recording. It starts in English, then remembers only the user’s explicit language choice.
+recording. It follows the browser language until the user explicitly selects a language.
 Only the selected speech language is loaded, alongside shared music and legacy effects.
 Switching stops an active old-language voice and cancels its pending playback.
-The arcade recorder/library and other games retain their current UI language; their
-future integrations can reuse `packages/gameplay/locale.js` and this resource format.
+The arcade recorder/library and other hosted games now share the same language preference through `packages/gameplay/locale.js`.

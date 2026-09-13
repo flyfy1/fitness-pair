@@ -71,15 +71,16 @@ test.describe('Chinese voices and interface',()=>{
    await page.screenshot({path:info.outputPath(`chinese-${width}.png`)});
   }
  });
- test('Chinese browsers default to English; explicit language choices persist without resetting the round',async({page})=>{
+ test('Chinese browsers default to Chinese; explicit language choices persist without resetting the round',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
-  await expect(game.locator('#language')).toHaveValue('en');
-  await expect(game.getByRole('button',{name:'Enable camera',exact:true})).toBeVisible();
+  await expect(game.locator('#language')).toHaveValue('zh');
+  await expect(game.getByRole('button',{name:'开启摄像头',exact:true})).toBeVisible();
   await game.locator('#language').selectOption('zh');await page.reload();
   await expect(game.locator('#language')).toHaveValue('zh');
   await expect(game.getByRole('button',{name:'开启摄像头',exact:true})).toBeVisible();
-  await expect(game.locator('.privacy')).toContainText('游戏过程中会自动录下');
+  await expect(game.locator('.privacy')).toContainText('90');
+  expect(await game.locator('.privacy').innerText()).toMatch(/[\u3400-\u9fff]/);
   await game.getByRole('button',{name:'试玩演示',exact:true}).click();
   await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastVoice?.language)).toBe('zh');
   await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');

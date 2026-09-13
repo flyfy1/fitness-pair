@@ -35,10 +35,12 @@ the head/one-shoulder countdown respectively begin immediately after camera setu
 
 ## Language preference
 
-`locale.js` stores a shared `hopmodo.language` preference (`en` or `zh`) on this
-origin. Without an explicitly saved choice, every browser starts in English. Unavailable storage does not prevent an in-page change.
-The helper owns no game state or UI. Push-up Flight is the first integration;
-other games can independently resolve their own text/audio resources from it.
+`locale.js` stores an explicit shared `hopmodo.language` choice (`en` or `zh`).
+Without one, the browser's first preferred language selects Simplified Chinese for
+Chinese tags and English otherwise. Automatic detection does not save a choice.
+The arcade menu, shared game controls and standalone hosts use the same preference;
+a manual change also works for the current page and frames when storage is blocked.
+See [translation resources, boundaries and validation](../../docs/multilingual.md).
 
 ## Default game audio
 

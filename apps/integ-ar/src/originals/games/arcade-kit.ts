@@ -1,3 +1,4 @@
+import {translateText} from '../../../../../packages/gameplay/i18n.js';
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
 import type { GameServices } from '../core/game-types';
 
@@ -38,5 +39,5 @@ export function makeKit(host: HTMLElement, services: GameServices, slug: string,
 }
 
 
-export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size = 16, color = '#f7f9ff', align: CanvasTextAlign = 'center') { ctx.fillStyle=color; ctx.font=`700 ${size}px system-ui`; ctx.textAlign=align; ctx.fillText(value,x,y); }
+export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size = 16, color = '#f7f9ff', align: CanvasTextAlign = 'center') { ctx.fillStyle=color; ctx.font=`700 ${size}px system-ui`; ctx.textAlign=align; ctx.fillText(translateText(value),x,y); }
 export function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }

@@ -62,7 +62,7 @@ export function createAuth({origin, issuer, clientId, clientSecret, store, fetch
         transactions.set(transaction, {state, verifier, next: returnPath(url.searchParams.get('returnTo')), expiresAt: now() + 600000});
         const target = new URL('/authorize', issuer);
         target.search = new URLSearchParams({response_type: 'code', client_id: clientId, redirect_uri: callback, state,
-          code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', ui_locales: 'en', theme: clientId});
+          code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', ui_locales: /^zh(?:-|$)/i.test(url.searchParams.get('lang') || '') ? 'zh-CN' : 'en', theme: clientId});
         return redirect(target.href, [cookie(transactionName, transaction, 600)]);
       }
       if (path === '/api/auth/callback' && request.method === 'GET') {

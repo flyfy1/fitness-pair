@@ -1,3 +1,4 @@
+import {readLanguage,subscribeLanguage} from '../../../packages/gameplay/locale.js';
 import {sharedVoiceURL} from '../../../packages/gameplay/voice-assets.js';
 import {scheduleGameMusic} from '../../../packages/gameplay/soundtrack.js';
 // Original arcade synthesis plus the same bundled encouragement as Push-up Flight.
@@ -5,6 +6,14 @@ import {scheduleGameMusic} from '../../../packages/gameplay/soundtrack.js';
 const VOICES = ['start', 'nice', 'keep-going', 'finish'];
 export class QuestSound {
   constructor() {
+    this.language = readLanguage(); this.speechNodes = new Set(); this.voiceSerial = 0;
+    this.releaseLanguage = subscribeLanguage(language => {
+      this.language = language; this.voiceSerial++;
+      for (const node of this.speechNodes) { try { node.stop(); } catch {} }
+      this.speechNodes.clear();
+      if (this.context) this.loadVoices();
+    });
+    window.addEventListener('pagehide', this.releaseLanguage, {once:true});
     this.enabled = true; this.context = null; this.nodes = new Set(); this.musicNodes = new Set(); this.charging = null;
     this.buffers = new Map(); this.playing = false; this.beat = 0; this.nextBeat = 0; this.generation = 0; this.hits = 0;
     this.button = document.createElement('button');
@@ -28,18 +37,24 @@ export class QuestSound {
         this.noiseBuffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .6), ctx.sampleRate);
         const noise = this.noiseBuffer.getChannelData(0);
         for (let i = 0; i < noise.length; i++) noise[i] = Math.random() * 2 - 1;
-        this.voicesReady = Promise.all(VOICES.map(async name => {
-          try {
-            const response = await fetch(sharedVoiceURL(`${name}.wav`));
-            if (response.ok) this.buffers.set(name, await ctx.decodeAudioData(await response.arrayBuffer()));
-          } catch { /* Music and effects remain available if a voice cannot load. */ }
-        }));
+        this.loadVoices();
         const limiter = ctx.createDynamicsCompressor(); limiter.threshold.value = -12; limiter.ratio.value = 8;
         this.master.connect(limiter); limiter.connect(ctx.destination);
         this.destination = ctx.createMediaStreamDestination(); limiter.connect(this.destination);
       }
       this.resuming = this.context.resume().catch(() => {});
     } catch { this.button.disabled = true; this.button.textContent = 'Sound unavailable'; }
+  }
+  loadVoices() {
+    const language = this.language, ctx = this.context;
+    this.voicesReady = Promise.all(VOICES.map(async name => {
+      const key = `${language}:${name}`;
+      if (this.buffers.has(key)) return;
+      try {
+        const response = await fetch(sharedVoiceURL(`${name}.wav`, language), {signal:AbortSignal.timeout(10000)});
+        if (response.ok && ctx.state !== 'closed') this.buffers.set(key, await ctx.decodeAudioData(await response.arrayBuffer()));
+      } catch { /* Game effects remain available without speech. */ }
+    }));
   }
   get stream() { return this.destination?.stream ?? null; }
   tone(frequency, endFrequency, duration, delay = 0, volume = .22, type = 'sine', bus = this.master) {
@@ -64,14 +79,14 @@ export class QuestSound {
   }
   voice(name, delay = 0) {
     if (!this.enabled) return;
-    const generation = this.generation;
+    const generation = this.generation, serial = this.voiceSerial, language = this.language;
     const expiresAt = performance.now() + 1500;
     const play = () => {
-      if (generation !== this.generation || performance.now() > expiresAt || !this.enabled || this.context?.state !== 'running') return;
-      const buffer = this.buffers.get(name); if (!buffer) return;
+      if (serial !== this.voiceSerial || generation !== this.generation || performance.now() > expiresAt || !this.enabled || this.context?.state !== 'running') return;
+      const buffer = this.buffers.get(`${language}:${name}`); if (!buffer) return;
       const ctx = this.context, source = ctx.createBufferSource(), gain = ctx.createGain(), at = ctx.currentTime + delay;
-      source.buffer = buffer; gain.gain.value = .85; source.connect(gain); gain.connect(this.master); this.nodes.add(source);
-      source.onended = () => { source.disconnect(); gain.disconnect(); this.nodes.delete(source); }; source.start(at);
+      source.buffer = buffer; gain.gain.value = .85; source.connect(gain); gain.connect(this.master); this.nodes.add(source); this.speechNodes.add(source);
+      source.onended = () => { source.disconnect(); gain.disconnect(); this.nodes.delete(source); this.speechNodes.delete(source); }; source.start(at);
       this.music.gain.cancelScheduledValues(at); this.music.gain.setValueAtTime(.07, at);
       this.music.gain.setTargetAtTime(.22, at + buffer.duration, .12);
     };
@@ -153,5 +168,5 @@ export class QuestSound {
     this.nodes.clear();
   }
   suspend() { this.quiet(); return this.context?.suspend().catch(() => {}); }
-  close() { this.quiet(); this.destination?.stream.getTracks().forEach(track => track.stop()); return this.context?.close().catch(() => {}); }
+  close() { this.releaseLanguage(); this.quiet(); this.destination?.stream.getTracks().forEach(track => track.stop()); return this.context?.close().catch(() => {}); }
 }

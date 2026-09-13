@@ -1,3 +1,5 @@
+import {subscribeLanguage} from '../../../../packages/gameplay/locale.js';
+import '../../../../packages/gameplay/page-language.js';
 import {t,getLanguage,setLanguage,localizeDOM} from './i18n.js';
 import './style.css';
 import {drawBody} from '../../../../apps/camera-start/src/body-overlay.js';
@@ -29,6 +31,8 @@ const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d'),stage=docum
 const controller=new HeadFlightController();
 const sound=new FlightAudio(getLanguage());
 $('language').value=getLanguage();
+const releaseLanguage=subscribeLanguage(()=>{sound.setLanguage(getLanguage());updateDifficulty();});
+window.addEventListener('pagehide',releaseLanguage,{once:true});
 $('language').onchange=()=>{setLanguage($('language').value);sound.setLanguage(getLanguage());localizeDOM();updateDifficulty();};
 localizeDOM();
 const tracking=new TrackingGate();tracking.reset(performance.now());

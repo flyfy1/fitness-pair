@@ -1,3 +1,4 @@
+import '../../../packages/gameplay/page-language.js';
 import './style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { Runner } from './engine.js';
