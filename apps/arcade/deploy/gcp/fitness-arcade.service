@@ -9,6 +9,9 @@ User=fitness-arcade
 Group=fitness-arcade
 WorkingDirectory=/opt/fitness-arcade/current
 EnvironmentFile=-/etc/fitness-arcade.env
+Environment=FITNESS_STATE_DIR=/var/lib/fitness-arcade
+StateDirectory=fitness-arcade
+StateDirectoryMode=0700
 ExecStart=/usr/bin/node /opt/fitness-arcade/current/apps/arcade/deploy/gcp/gateway.mjs
 Restart=on-failure
 RestartSec=3

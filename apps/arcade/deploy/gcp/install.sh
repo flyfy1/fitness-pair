@@ -35,6 +35,12 @@ rollback() {
     systemctl restart fitness-sharing-proxy.service
 }
 trap rollback EXIT
+if test -d /var/lib/fitness-arcade; then
+    # Stop the sole ledger writer before taking a consistent private state backup.
+    systemctl stop fitness-arcade.service
+    tar -czf "$backup/account-state.tar.gz" -C /var/lib fitness-arcade
+    chmod 0600 "$backup/account-state.tar.gz"
+fi
 ln -sfn "$target" "$base/current-next"
 mv -Tf "$base/current-next" "$base/current"
 install -m 0644 "$target/apps/arcade/deploy/gcp/fitness-arcade.service" /etc/systemd/system/fitness-arcade.service
