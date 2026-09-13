@@ -74,7 +74,15 @@ review pass. Do not invent team members or assign people without their agreement
 - Verify using this checkout; never silently reuse a preview from another repo.
 - Commit independently verified work, stage only task-owned files, and push the
   working branch promptly. Preserve other people's uncommitted work.
+- Treat every independently verifiable checkpoint as a delivery: validate,
+  review the diff, commit, and push before starting the next checkpoint. Do not
+  wait for the entire feature or another reminder; no extra permission is needed
+  for these routine commits and pushes within the agreed task.
+- Report each checkpoint's branch, commit, checks, push result, and remaining
+  work. If validation or push fails, report the blocker and do not claim delivery.
 - Use `codex/<short-task>` for agent branches unless the user specifies otherwise.
+- Push checkpoints to the task branch; pushing does not authorize merging into
+  `main`. Never overwrite teammates' history to resolve a rejected push.
 - Keep PRs narrow: problem, changed behavior, evidence, remaining limitations.
 - Do not merge another contributor's work or publish a public service unless
   authorized. Ordinary local development and validation should proceed directly.
