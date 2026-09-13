@@ -103,7 +103,12 @@ test('real local model on a public image emits head control without external run
   await page.addInitScript(data=>{navigator.mediaDevices.getUserMedia=async()=>{
     const image=new Image();image.src=data;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const ctx=c.getContext('2d');ctx.drawImage(image,0,0);const stream=c.captureStream(30);window.testStream=stream;const timer=setInterval(()=>{if(stream.getTracks().every(t=>t.readyState==='ended'))clearInterval(timer);else ctx.drawImage(image,0,0);},33);return stream;
   };},`data:image/jpeg;base64,${bytes.toString('base64')}`);
-  const external=[];page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:5185')&&!r.url().startsWith('data:'))external.push(r.url());});
+  const external=[];page.on('request',r=>{
+    const url=new URL(r.url());
+    // The shared cache loader imports its verified local bytes through same-origin blobs.
+    const local=['http:','blob:'].includes(url.protocol)&&url.origin==='http://127.0.0.1:5185';
+    if(!local&&url.protocol!=='data:')external.push(r.url());
+  });
   await page.goto('/');await page.getByRole('button',{name:'Enable camera'}).click();await expect.poll(async()=>(await state(page)).headVisible,{timeout:30000}).toBe(true);
   await expect.poll(async()=>(await state(page)).status).toBe('flying');await page.getByRole('button',{name:'Finish & rest'}).click();
   await expect.poll(()=>page.workers().length).toBe(0);expect(external).toEqual([]);expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
