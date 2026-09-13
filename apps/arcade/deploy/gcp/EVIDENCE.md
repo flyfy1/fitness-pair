@@ -130,3 +130,26 @@ its sessions and quota ledger. Configuration backups are root-only:
 `/etc/fitness-arcade.env.hopmodo-20260913T090425Z.bak` on GCP and
 `/etc/integ-auth.env.hopmodo-20260913T085815Z.bak` on Pi. This release does not change
 the standalone `/highlights` service or publish a GPT Sites build.
+
+
+## Guest play from shared clips
+
+Source `64ff577554a2290cbd38cd0c894cfeeb793aa147` was deployed as
+`20260913T101155Z-64ff577554a2` from clean, pushed `main`.
+
+- Gallery cards and clip pages show `Play <game name>` links to the recorded
+  game. The detail action sits above the video and is visible at 390px width.
+  Watching clips and opening/starting games do not require an account. Gallery
+  publication retains the existing Integ.Life login and explicit consent flow.
+- The complete build, 65 repository tests, 12 backend tests, six gallery/game-entry
+  browser checks and three account-flow browser checks passed. The account tests
+  use mock identity/storage and cover login return, consent, ownership, a second
+  device, logout, quota recovery and mobile cancellation.
+- Five game-entry checks also passed against the deployed GCP frontend and actual
+  game mounts. These use browser-local synthetic clip metadata because the public
+  gallery was empty; no fake publication was written to production. All five
+  links reach their correct iframe, and the guest Push-up Flight demo starts and
+  records locally. No camera/microphone was requested and no video was uploaded.
+- Public health matches the release. The real anonymous session endpoint returns
+  `user: null`; an anonymous publication attempt returns 401. GPT Sites still
+  serves `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; it was not deployed or changed.
