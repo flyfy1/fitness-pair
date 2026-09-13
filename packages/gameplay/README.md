@@ -15,3 +15,11 @@ Reset the controller with each recognition session; dispose it on teardown.
 The existing `PoseFrame → ActionFrame → GameSnapshot` contract is unchanged.
 Presentation and recording are independently hosted by
 `apps/arcade/src/gameplay`; see its README and typed presentation interface.
+
+## Language preference
+
+`locale.js` stores a shared `hopmodo.language` preference (`en` or `zh`) on this
+origin. Without a saved choice, Chinese browser locales select Chinese; other
+locales select English. Unavailable storage does not prevent an in-page change.
+The helper owns no game state or UI. Push-up Flight is the first integration;
+other games can independently resolve their own text/audio resources from it.
