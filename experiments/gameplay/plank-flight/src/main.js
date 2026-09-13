@@ -12,7 +12,7 @@ import { projectHead, validHeadControl } from './projection.js';
 
 document.querySelector('#app').innerHTML = `
 <main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas><canvas id="body-overlay" aria-label="Recognized body joints"></canvas>
-<div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">Push-up play · head tracking</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates<div class="current-speed">Speed <span id="current-speed">1.0×</span></div></div></div>
+<div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">AI-generated voices</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates<div class="current-speed">Speed <span id="current-speed">1.0×</span></div></div></div>
 <div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view to begin the 3-second countdown. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
 <div id="countdown" class="countdown" role="status" aria-live="assertive" hidden></div>
 <div class="cue"><span id="cue" role="status">Head and one shoulder are enough. Lower down, then push up.</span><progress id="calibration" max="1" value="0" hidden aria-label="Automatic takeoff"></progress></div>
@@ -100,7 +100,7 @@ const camera=new PoseCamera({video,
 async function startCamera(){
   sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='camera';lastAction=null;halted=false;starting=true;
-  $('mode').textContent='HEAD & SHOULDERS';$('demo-note').textContent='Push-up play · head tracking';
+  $('mode').textContent='HEAD & SHOULDERS';$('demo-note').textContent='Camera · AI-generated voices';
   $('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='Stop camera';
   await camera.start();
 }
@@ -109,7 +109,7 @@ function startDemo(){
   halted=true;camera.stop('restart');clearHead();mode='synthetic';halted=false;starting=false;lastAction=null;demoSeq=0;
   state=createFlight({sessionId:crypto.randomUUID(),source:{kind:'synthetic',id:'pointer-demo'}},difficulty);
   const rect=stage.getBoundingClientRect();demoHead={x:.65,y:.52,image:{width:Math.round(rect.width),height:Math.round(rect.height)}};
-  $('mode').textContent='SYNTHETIC DEMO';$('demo-note').textContent='Pointer / touch / arrows · no camera';
+  $('mode').textContent='SYNTHETIC DEMO';$('demo-note').textContent='Pointer demo · AI-generated voices';
   $('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='Cancel countdown';$('calibration').hidden=true;
 }
 function finishOrStop(){

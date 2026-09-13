@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -20,12 +21,13 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def key_for(args):
-    key = os.environ.get('OPENAI_API_KEY')
+    key = os.environ.get(args.env_name)
     if args.env_file:
         for line in Path(args.env_file).read_text().splitlines():
-            name, sep, value = line.removeprefix('export ').partition('=')
-            if sep and name.strip() == 'OPENAI_API_KEY':
-                key = value.strip().strip('\"\'')
+            name, sep, value = line.strip().removeprefix('export ').partition('=')
+            if sep and name.strip() == args.env_name:
+                parts = shlex.split(value, comments=True)
+                key = parts[0] if parts else None
     if args.keychain_service:
         command = ['security', 'find-generic-password', '-s', args.keychain_service]
         if args.keychain_account:
@@ -66,6 +68,7 @@ def main():
     parser.add_argument('--generate', action='store_true')
     parser.add_argument('--music-only', action='store_true')
     parser.add_argument('--env-file')
+    parser.add_argument('--env-name', default='OPENAI_API_KEY')
     parser.add_argument('--keychain-service')
     parser.add_argument('--keychain-account')
     args = parser.parse_args()

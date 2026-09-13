@@ -1,5 +1,150 @@
 {
-  "clips": {},
+  "clips": {
+    "spark-01": {
+      "requestSHA256": "a0b182c92c8cec2409b96a3fed7a9fc88bed225783a6cac173c2feea3e5dd0c9",
+      "sha256": "d9b1dbbe888b0f1d90f2b81fdcf0517cc809be4089f9fe52a813f34a170843af",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "coral",
+      "duration": 2.952,
+      "generatedAt": "2026-09-13T12:19:59.439998+00:00"
+    },
+    "spark-02": {
+      "requestSHA256": "31389149be1a796a39d34021095be481b960106c3f8c00bc567aef265a9732ae",
+      "sha256": "0dc88642d13392a233ec128431215ccfdb8c5e75740c293155d7de7b2bd20eaa",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "coral",
+      "duration": 3.648,
+      "generatedAt": "2026-09-13T12:20:02.535950+00:00"
+    },
+    "calm-01": {
+      "requestSHA256": "004917355bd042534c38b60cd63576c80737ed6cab62d70b36abe6f5bd1fd1ac",
+      "sha256": "cf7994dab63483baf94302cedc4ced030aee1a2fa0f74031b7d8a14c7f14c6f8",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "sage",
+      "duration": 3.96,
+      "generatedAt": "2026-09-13T12:20:04.603087+00:00"
+    },
+    "calm-02": {
+      "requestSHA256": "7d4c52038cb7fd19b40043f0dfce2194f657a29792134d7c0e3b18748a182586",
+      "sha256": "78808296a17780f0df910f20c8f968f8d0923d4197de52ee847fb17644cdd6a7",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "sage",
+      "duration": 3.6,
+      "generatedAt": "2026-09-13T12:20:06.503937+00:00"
+    },
+    "playful-01": {
+      "requestSHA256": "eb30c399a91005e4cf41fbcb7b20b934926806d71be89bf899a20687c761c336",
+      "sha256": "fd399b6050d4275f657878255acdda447db4309d096d499559df84f42da84952",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "verse",
+      "duration": 3.264,
+      "generatedAt": "2026-09-13T12:20:09.314591+00:00"
+    },
+    "playful-02": {
+      "requestSHA256": "20420c55ad463baf64cccc17f920d9bf9d91c866e3ae6b34fac4add0b778defe",
+      "sha256": "bb223eab370a688e84eb16f570201dc35a5b723ed4241175a4f2c517ff85fb6a",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "verse",
+      "duration": 4.608,
+      "generatedAt": "2026-09-13T12:20:10.887575+00:00"
+    },
+    "steady-01": {
+      "requestSHA256": "db3d83a861910b0c2abc40fbab336707b89413c3251f9cd9cccb644b6fcdf0fb",
+      "sha256": "62d576c19581e843b27e4cb08677c59baaa17e987f50bb3fb431ce1c07ca5e3c",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "cedar",
+      "duration": 2.904,
+      "generatedAt": "2026-09-13T12:20:12.503394+00:00"
+    },
+    "steady-02": {
+      "requestSHA256": "bfcd8ca94e643286ddf4ef29d46011ccf68d2765cd4debe3654bf273919f07a1",
+      "sha256": "244438dbd29532a90a5e5169396d754a2cc50e5511f0332b4baf4b8c66447737",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "cedar",
+      "duration": 4.008,
+      "generatedAt": "2026-09-13T12:20:14.584958+00:00"
+    },
+    "wonder-01": {
+      "requestSHA256": "64315ee3c6dbd2a38a348a09e1f29634afd19145339b69473bbcc23dfdb2a707",
+      "sha256": "81c6a82955424c6550ad5e9b0f383601369ed2ef6d9be961e2604ec81fb70d44",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "marin",
+      "duration": 3.504,
+      "generatedAt": "2026-09-13T12:20:16.399298+00:00"
+    },
+    "wonder-02": {
+      "requestSHA256": "8dab0b2fc0d6bfa5da4548f313e78a5ae3b24e96db9887862e366d5a65f65f8f",
+      "sha256": "7bfb99ca12732d29fe925cc984902170e59bd51ca5bdc6cc412526e4a6733ab5",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "marin",
+      "duration": 2.304,
+      "generatedAt": "2026-09-13T12:20:17.849662+00:00"
+    },
+    "celebrate-01": {
+      "requestSHA256": "8a17178efe57cc849c71289346feb63b1ea4a6666c8ce76473a6cfa79d590d6d",
+      "sha256": "eaad971004796451be7b2176b105130e26ace3d05c7d05266e35b9eb2b3924d0",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "ballad",
+      "duration": 3.504,
+      "generatedAt": "2026-09-13T12:20:19.477094+00:00"
+    },
+    "celebrate-02": {
+      "requestSHA256": "a697752197883239dd66a46f26773f327b57f839dbe828b5f089de2319de66fa",
+      "sha256": "bb4cbec716aaffea9c28b0bea48d5abfb9468423474453cba2c665bd401eabb8",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "ballad",
+      "duration": 3.72,
+      "generatedAt": "2026-09-13T12:20:21.194282+00:00"
+    },
+    "spark-end": {
+      "requestSHA256": "7ae168a2a3b77a9861ef9727cc9f8acf83988a8533175206f2863f5f7067c25b",
+      "sha256": "ff6bc79b3cce8fec256067b596f8ee41ade2fed11c5492d50863363e9ef2986c",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "coral",
+      "duration": 5.208,
+      "generatedAt": "2026-09-13T12:20:22.926692+00:00"
+    },
+    "calm-end": {
+      "requestSHA256": "39365c1ab270aec6ab02c14f430f480e192fe77a8c24aa8b315fdf314f9997d9",
+      "sha256": "9026c603ca8c7ed0628f35f4667d1a1444be4c351c12989391a8f10013d3af12",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "sage",
+      "duration": 4.656,
+      "generatedAt": "2026-09-13T12:20:24.430442+00:00"
+    },
+    "playful-end": {
+      "requestSHA256": "439db542500f08dafdacd16d3224ef69f170239bf3338e256f18adfe79954432",
+      "sha256": "2b7a62565a305f3ca5728a8aea1a38a37f6e2bc61eba0a1f36bd3725a428546a",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "verse",
+      "duration": 4.608,
+      "generatedAt": "2026-09-13T12:20:25.961207+00:00"
+    },
+    "steady-end": {
+      "requestSHA256": "5d7eeca8b418fbfd339ad3fefcbe7e83d4c70ab8d6bedad37ab7b6dda3587f9d",
+      "sha256": "aa34dbd57affe9a68d39340a65565a368d1a2518aebe67c09fca0a2e1888f369",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "cedar",
+      "duration": 4.512,
+      "generatedAt": "2026-09-13T12:20:28.087004+00:00"
+    },
+    "wonder-end": {
+      "requestSHA256": "ffc7845ff67805e95a45fbcad65c56d7e8dfdb29dbbe6128fa9bf1a928776728",
+      "sha256": "2a1d8492341b315f4f388285fa833e35dc9e68bf5b90b042986cf478d899c513",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "marin",
+      "duration": 3.504,
+      "generatedAt": "2026-09-13T12:20:29.612127+00:00"
+    },
+    "celebrate-end": {
+      "requestSHA256": "a44a821f9ca53c3a2d260708c85a21761499922a7fd1ab4bc5d3f011a90ebde6",
+      "sha256": "5762992c00108e3a1021ed9f89b47dafab6f2a125411f7f25156879de12646ed",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "voice": "ballad",
+      "duration": 4.248,
+      "generatedAt": "2026-09-13T12:20:31.654537+00:00"
+    }
+  },
   "music": {
     "spark": {
       "sha256": "63f211677b35cc894907185bc4edbe3c9b82f60d86bde129ca0b8059a98a4a68",
