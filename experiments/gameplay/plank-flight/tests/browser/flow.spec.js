@@ -70,3 +70,44 @@ test('real local model on a public image emits head hint without external runtim
   await page.goto('/');await page.getByRole('button',{name:'Enable camera'}).click();await expect.poll(async()=>(await state(page)).headVisible,{timeout:30000}).toBe(true);
   expect((await state(page)).status).toBe('waiting');await page.getByRole('button',{name:'Stop camera'}).click();await expect.poll(()=>page.workers().length).toBe(0);expect(external).toEqual([]);expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
+
+async function fillsWindow(page) {
+  expect(await page.locator('.stage').evaluate(el => {
+    const r=el.getBoundingClientRect();
+    return r.x===0&&r.y===0&&Math.abs(r.width-innerWidth)<1&&Math.abs(r.height-innerHeight)<1&&
+      document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight;
+  })).toBe(true);
+}
+test('game fills desktop and mobile windows with reachable overlay controls',async({page})=>{
+  await page.goto('/');
+  for(const viewport of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]){
+    await page.setViewportSize(viewport);await fillsWindow(page);
+    for(const id of ['start','demo','fullscreen']){
+      const box=await page.locator(`#${id}`).boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);
+    }
+    await page.screenshot({path:`test-results/full-window-${viewport.width}.png`});
+  }
+});
+test('native fullscreen enter and exit preserve a synthetic camera flight',async({page})=>{
+  await syntheticCamera(page);await page.goto('/');await start(page);const session=(await state(page)).sessionId;
+  await page.getByRole('button',{name:'Enter fullscreen'}).click();
+  await expect(page.getByRole('button',{name:'Exit fullscreen'})).toBeVisible();
+  expect(await page.evaluate(()=>document.fullscreenElement?.classList.contains('stage'))).toBe(true);
+  await fillsWindow(page);expect((await state(page)).status).toBe('flying');
+  await page.getByRole('button',{name:'Exit fullscreen'}).click();
+  await expect(page.getByRole('button',{name:'Enter fullscreen'})).toBeVisible();
+  expect((await state(page)).sessionId).toBe(session);expect((await state(page)).cameraActive).toBe(true);
+  await page.getByRole('button',{name:'Stop camera'}).click();await cleaned(page);
+});
+test('embedded fullscreen fallback and Escape preserve the flight and viewport',async({page})=>{
+  await page.addInitScript(()=>{Element.prototype.requestFullscreen=async()=>{throw new Error('Embedded browser');};});
+  await syntheticCamera(page);await page.goto('/');await start(page);
+  await page.getByRole('button',{name:'Enter fullscreen'}).click();
+  await expect(page.locator('#view-status')).toContainText('still fills this window');await fillsWindow(page);
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Enter fullscreen'})).toBeVisible();
+  expect((await state(page)).status).toBe('flying');expect((await state(page)).cameraActive).toBe(true);
+  await expect(page.locator('#view-status')).toBeEmpty();
+  await page.getByRole('button',{name:'Stop camera'}).click();await cleaned(page);
+});
