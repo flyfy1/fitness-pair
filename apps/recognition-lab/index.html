@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Recognition Lab · Fitness Pair</title></head>
+<body>
+<main>
+<section id="stage" aria-label="AR movement capture">
+  <video id="camera" autoplay muted playsinline></video><div class="scrim"></div><canvas id="skeleton" aria-label="Mirrored skeleton overlay"></canvas>
+  <header><div class="brand">RECOGNITION LAB<small>FITNESS PAIR / LOCAL MOVEMENT DATA</small></div><button id="fullscreen">Fullscreen</button></header>
+  <div class="capture-badge"><span id="mode">CAMERA OFF</span><span id="stats">0 frames · 0.0 s</span></div>
+  <div class="guidance"><p class="eyebrow">CAPTURE → REVIEW → TEST</p><h1 id="cue">Make movement<br>reproducible.</h1><p id="hint">Capture your skeleton, mark what went wrong, and replay it against the recognizer.</p></div>
+  <div class="capture-controls">
+    <label>Action <select id="profile"><option value="squat">Squat</option><option value="jump-height">Jump height</option></select></label>
+    <p>Start capture saves your skeleton and recognition states on this device. Video and audio are not recorded or uploaded.</p>
+    <div class="buttons"><button id="start" class="primary">Start capture</button><button id="stop" disabled>Stop & review</button><button id="mark" disabled>Mark issue · M</button></div>
+    <button id="demo" class="quiet">Try synthetic demo</button>
+  </div>
+  <div id="notice" role="status">Local only · Up to 5 minutes per session</div>
+</section>
+<section class="workbench" aria-label="Session review">
+  <div class="section-title"><div><p class="eyebrow">YOUR LOCAL LIBRARY</p><h2>Review & build a test case</h2></div><label class="import">Import JSON<input id="import" type="file" accept=".json,application/json"></label></div>
+  <label>Saved sessions <select id="library"><option value="">No saved sessions yet</option></select></label>
+  <p id="storage-status" role="status">Loading local library…</p>
+  <div id="review" hidden>
+    <div class="review-grid"><div>
+      <label>Session name<input id="name" maxlength="120"></label>
+      <p id="evidence"></p>
+      <div class="buttons"><button id="play">Play replay</button><button id="export">Export JSON</button><button id="delete" class="danger">Delete session</button></div>
+      <canvas id="review-skeleton" aria-label="Skeleton at selected frame"></canvas>
+      <label for="scrub">Frame <output id="position">0</output></label><input id="scrub" type="range" min="0" max="0" value="0">
+      <div class="comparison"><div><h3>Recorded</h3><pre id="recorded"></pre></div><div><h3>Current replay</h3><pre id="current"></pre></div></div>
+      <label>Issue note<input id="issue-note" maxlength="500" placeholder="What happened? What should happen?"></label><button id="add-marker">Mark this frame</button><ul id="markers"></ul>
+    </div><div class="case-panel">
+      <h3>Manual expectations</h3><p>Keep the calibration prefix. Only the selected window is scored.</p>
+      <div class="buttons"><button id="set-start">Set window start</button><button id="set-end">Set window end</button><button id="reset-window">Full session</button></div><p id="window"></p>
+      <label>Expected completions in window<input id="expected" type="number" min="0" max="9000" step="1" placeholder="Unknown / unlabeled"></label>
+      <label>Expected phase at this frame<select id="expected-phase"><option>missing</option><option>calibrating</option><option>ready</option><option>active</option><option>completed</option></select></label>
+      <button id="add-state">Expect current state</button><ul id="assertions"></ul>
+      <label>Test case notes<textarea id="case-note" maxlength="500" placeholder="Describe the movement and the failure you want to prevent."></textarea></label>
+      <button id="save-case" class="primary">Save test case</button><button id="run">Run test</button>
+      <p id="test-status" role="status">UNLABELED</p><pre id="report"></pre><button id="export-report">Export report</button>
+    </div></div>
+  </div>
+</section>
+</main><script type="module" src="/src/main.js"></script></body></html>

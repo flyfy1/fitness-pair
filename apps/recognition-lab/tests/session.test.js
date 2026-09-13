@@ -39,3 +39,23 @@ test('empty detections and sampling gaps survive recording and replay', () => {
   s.samples.forEach((sample, i) => { if (i >= 35 && i < 50) sample.pose.joints = {}; sample.observed = r.update(sample.pose); });
   assert.equal(replaySession(s).outputs[40].phase, 'missing');
 });
+test('jump replay reconstructs automatic maximum calibration and landing completions', () => {
+  const s = newSession('jump-height', 'synthetic'), r = createRecognizer(s.profile);
+  const source = { kind: 'synthetic', id: 'jump-replay-test' }, sessionId = 'jump-calibration';
+  r.reset({ source, sessionId });
+  const add = rise => {
+    const joints = {};
+    for (const [side, x] of [['left', .44], ['right', .56]]) for (const [name, y] of [['Shoulder', .25], ['Hip', .48], ['Knee', .68], ['Ankle', .88]]) joints[side + name] = { x, y: y - rise, confidence: .99 };
+    const pose = { version: 1, sessionId, source, seq: s.samples.length, tMs: (s.samples.length + 1) * 40,
+      modelId: 'synthetic-jump/1', coordinateSpace: 'image-normalized-unmirrored', image: { width: 640, height: 480 }, joints };
+    s.samples.push({ pose, observed: r.update(pose), resultDelayMs: 0 });
+  };
+  for (let i = 0; i < 45; i++) add(0);
+  for (let rep = 0; rep < 3; rep++) for (const ratio of [0, .25, .7, 1, 1, .7, .25, 0, 0, 0, 0, 0, 0, 0]) add(.14 * ratio);
+  s.test.expectedCount = 2;
+  const { outputs, report } = replaySession(s);
+  assert.equal(report.status, 'PASS');
+  assert.equal(outputs[44].stage, 'maximum');
+  assert.ok(outputs.at(-1).calibrated);
+  assert.deepEqual(outputs.map(a => [a.phase, a.heightRatio]), s.samples.map(a => [a.observed.phase, a.observed.heightRatio]));
+});

@@ -61,7 +61,7 @@ export function replaySession(session, runId = crypto.randomUUID()) {
   const labeled = expectedCount !== null || assertions.length > 0;
   const passed = labeled && (expectedCount === null || count === expectedCount) && assertions.every(a => a.passed);
   const report = { format: 'recognition-lab-report/1', fixtureId: session.id, runId, evidence: session.evidence,
-    recognizerId: outputs[0].recognizerId, profile: session.profile, modelId: session.samples[0].pose.modelId,
+    recordedRuntime: session.runtime ?? null, recognizerId: outputs[0].recognizerId, profile: session.profile, modelId: session.samples[0].pose.modelId,
     window: { start, end }, expectedCount, observedCount: count, assertions,
     status: !labeled ? 'UNLABELED' : passed ? 'PASS' : 'FAIL',
     falseCompletions: null, missedCompletions: null };
