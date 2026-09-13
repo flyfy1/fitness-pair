@@ -27,6 +27,7 @@ window.motionQuest = {
 function setReplayPhase(phase) {
   if (phase === replayPhase) return;
   replayPhase = phase;
+  game.sound.setPlaying(phase === 'playing');
   window.dispatchEvent(new Event('motionquest:replay-state'));
 }
 
