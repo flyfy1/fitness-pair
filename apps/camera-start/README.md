@@ -88,3 +88,10 @@ screen at their actual camera distance. This POC isolates that evaluation from g
 The preview uses its own origin on port 5274. Port 5190 was previously controlled
 by an unrelated cached games app in the desktop browser; its cache/storage were
 left untouched. This POC registers no Service Worker.
+
+The preparatory-crouch regression covers a one-second crouch, torso unfolding,
+takeoff, a crouched landing and upright confirmation. The screen shows **JUMP
+PREPARATION** and retains the standing reference; the runtime log records
+`prepare-jump` instead of resetting to standing calibration. Six production Chrome
+checks and 46 shared/recognizer tests pass for this update. Synthetic coverage does
+not replace a trial of the player's actual movement.
