@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f5ef" />
+    <title>Gesture Lab — Fitness Pair</title>
+  </head>
+  <body>
+    <main>
+      <header><a class="brand" href="/">FITNESS PAIR <span>/ GESTURE LAB</span></a><span class="pill">LOCAL CAMERA POC</span></header>
+      <section class="intro"><p class="eyebrow">A LITTLE LESS CLICKING</p><h1>Let your hands do the talking.</h1><p>Thumbs up to confirm. Wave side to side to say no.<br>Explore what your camera can recognize, one hand at a time.</p></section>
+      <div class="workspace">
+        <section class="camera-panel" aria-label="Live camera">
+          <div class="camera-top"><span id="camera-tag">CAMERA OFF</span><span>ON-DEVICE · NO RECORDING</span></div>
+          <div class="viewfinder"><video id="video" muted playsinline></video><canvas id="overlay" aria-hidden="true"></canvas><div id="placeholder"><span>👋</span><p>Your hands are the controller.</p><small>Keep your full hand in view, in good light.</small></div></div>
+          <div class="camera-bottom"><div><strong id="status" role="status">Ready when you are</strong><p id="detail">Enable your camera to start exploring.</p></div><div class="buttons"><button id="start">Enable camera</button><button id="stop" class="secondary" disabled>Stop</button></div></div>
+          <p class="privacy">Video stays in this browser. Nothing is recorded or uploaded. Switching tabs stops the camera.</p>
+        </section>
+        <section class="readout" aria-label="Recognition and commands">
+          <p class="eyebrow">LIVE RECOGNITION</p><div id="gesture-icon" class="current-icon">—</div><h2 id="gesture-name">No hand detected</h2><p id="confidence">Model confidence —</p><progress id="hold" max="1" value="0" aria-label="Gesture hold progress"></progress><p id="cue">Hold thumbs up briefly, or wave an open palm.</p>
+          <div class="commands"><div><span>👍 Confirm</span><strong id="confirm-count">0</strong></div><div><span>👋 No</span><strong id="no-count">0</strong></div></div>
+          <div id="feedback" role="status" aria-live="polite">Your next gesture goes here.</div><p id="timing">Waiting for camera</p>
+        </section>
+      </div>
+      <section class="library"><div class="section-heading"><div><p class="eyebrow">THE GESTURE LIBRARY</p><h2>Seven poses. One motion.</h2></div><p>7 built-in model gestures + 1 experimental wave rule</p></div><div id="catalog"></div><p class="note"><strong>None</strong> means a hand was found, but no supported pose was recognized. It is not an extra gesture. Pinch, OK, finger counting and sign-language translation are not included in this POC.</p></section>
+      <section class="history-panel"><h2>Recent recognized actions</h2><p>Session only. Release your hand for a moment between actions. Open palm is a live pose; only a sideways wave triggers No.</p><ol id="history"><li>No actions yet.</li></ol></section>
+      <footer><span>Experimental controls · Human accuracy not yet measured</span><a href="https://developers.google.com/edge/mediapipe/solutions/vision/gesture_recognizer/web_js" target="_blank" rel="noreferrer">MediaPipe model documentation ↗</a></footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
