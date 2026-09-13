@@ -1,51 +1,70 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PlankRecognizer, supportGeometry } from '../src/recognizer.js';
+import { HeadFlightController, TAKEOFF_MS } from '../src/recognizer.js';
 import { fromMediaPipe } from '../src/pose-provider.js';
-import { createFlight,consumeAction,stepFlight } from '../src/engine.js';
+import { createFlight,consumeAction,stepFlight,crash } from '../src/engine.js';
+import { projectHead } from '../src/projection.js';
 import { assertActionFrame } from '../../../../contracts/index.js';
 import { pose } from './fixtures.js';
 
-test('synthetic high plank, forearm and low push-up support; reject upright, bent and prone shapes',()=>{
-  for(const name of ['high','forearm','low'])assert.equal(supportGeometry(pose(0,name)).supported,true,name);
-  for(const name of ['rest','prone','standing'])assert.equal(supportGeometry(pose(0,name)).supported,false,name);
-  assert.equal(supportGeometry(pose(0,'missing')),null);
-  const f=pose();for(const p of Object.values(f.joints))p.confidence=null;assert.equal(supportGeometry(f),null);
+function active(t,x=.4,y=.35){return {version:1,sessionId:'test',source:{kind:'synthetic',id:'fixture'},inputSeq:t+1,tMs:t,
+  recognizerId:'fixture',action:'head-flight',phase:'active',progress:1,calibrationProgress:null,cue:'Head follows',completion:null,
+  headControl:{x,y,image:{width:640,height:480}}};}
+test('head and one shoulder take off automatically without full-body geometry or extra motion',()=>{
+  const r=new HeadFlightController();
+  for(let t=0;t<TAKEOFF_MS;t+=100){const a=r.update(pose(t));assertActionFrame(a);assert.equal(a.phase,'calibrating');assert.equal(a.progress,0);}
+  const a=r.update(pose(TAKEOFF_MS));assert.equal(a.phase,'active');assert.equal(a.completion,null);
+  assert.deepEqual(a.headControl,{x:.4,y:.35,image:{width:640,height:480}});
+  assert.equal(r.update(pose(900,{y:.7})).headControl.y,.7);
+  assert.equal(r.update(pose(1000,{y:.3})).headControl.y,.3);
 });
-test('calibration requires contiguous support, gaps reset it, stale and foreign input ignored',()=>{
-  const r=new PlankRecognizer();r.reset(pose());
-  for(let t=0;t<1200;t+=100){const a=r.update(pose(t));assertActionFrame(a);assert.equal(a.phase,'calibrating');assert.equal(a.progress,0);}
-  assert.equal(r.update(pose(1200)).phase,'active');assert.equal(r.update(pose(1200)),null);
-  assert.equal(r.update(pose(1300,'high',{sessionId:'other'})),null);
-  assert.equal(r.update(pose(1300,'high',{source:{kind:'camera',id:'x'}})),null);
-  assert.equal(r.update(pose(1300,'rest')).phase,'ready');assert.equal(r.update(pose(1400,'missing')).phase,'missing');
-  r.recalibrate();assert.equal(r.update(pose(1500)).phase,'calibrating');assert.equal(r.update(pose(3000)).calibrationProgress,0);
-  assert.throws(()=>r.update(pose(3100,'high',{modelId:'new'})));
+test('missing head/shoulder and low confidence explain waiting; gaps reset takeoff',()=>{
+  const r=new HeadFlightController();
+  assert.equal(r.update(pose(0,{head:false})).phase,'missing');
+  assert.match(r.update(pose(100,{shoulder:false})).cue,/shoulder/);
+  assert.equal(r.update({...pose(200),head:{x:.3,y:.2,confidence:null}}).phase,'missing');
+  r.update(pose(300));r.update(pose(400));
+  assert.equal(r.update(pose(1000)).calibrationProgress,0);
+  assert.equal(r.update(pose(1100,{x:1.2})).phase,'missing');
 });
-function action(t,active=true){return {version:1,...pose(t),inputSeq:t+1,recognizerId:'fixture',action:'plank-hold',phase:active?'active':'ready',progress:active?1:0,calibrationProgress:null,cue:'test',completion:null};}
-test('flight consumes identity-bound input, holds time, coasts and crashes without inventing repetitions',()=>{
-  const s=createFlight(pose());assert.equal(consumeAction(s,{...action(0),sessionId:'other'}),false);
-  consumeAction(s,action(0));assert.equal(consumeAction(s,action(0)),false);
-  for(let t=20;t<=1000;t+=20){consumeAction(s,action(t));stepFlight(s,.02,t);}
-  assert.ok(Math.abs(s.holdSeconds-1)<.001);assert.equal(s.completedReps,0);
-  for(let t=1020;t<3900;t+=20){consumeAction(s,action(t,false));stepFlight(s,.02,t);}
-  assert.equal(s.status,'flying');
-  for(let t=3900;t<4200;t+=20){consumeAction(s,action(t,false));stepFlight(s,.02,t);}
-  assert.equal(s.status,'crashing');assert.equal(s.reason,'rest');
-  for(let t=4200;t<6000;t+=20)stepFlight(s,.02,t);
-  assert.equal(s.finished,true);assert.equal(s.health,0);
+test('stale, duplicate and foreign input cannot steer; model changes need a fresh session',()=>{
+  const r=new HeadFlightController();r.update(pose(100));
+  assert.equal(r.update(pose(100)),null);assert.equal(r.update(pose(90)),null);
+  assert.equal(r.update(pose(200,{sessionId:'other'})),null);
+  assert.equal(r.update(pose(200,{source:{kind:'camera',id:'other'}})),null);
+  assert.throws(()=>r.update(pose(200,{modelId:'other'})));
+  const s=createFlight(pose());consumeAction(s,active(0));
+  assert.equal(consumeAction(s,{...active(100),sessionId:'other'}),false);
+  assert.equal(consumeAction(s,{...active(100),headControl:{x:NaN,y:.3,image:{width:640,height:480}}}),false);
+  assert.equal(consumeAction(s,{...active(100),headControl:null}),false);
 });
-test('brief rest can recover; stale tracking accrues neither flight nor hold time',()=>{
-  const s=createFlight(pose());consumeAction(s,action(0));stepFlight(s,.02,400);assert.equal(s.holdSeconds,0);
-  for(let t=500;t<2000;t+=20){consumeAction(s,action(t,false));stepFlight(s,.02,t);}assert.ok(s.releasedSeconds>1);
-  consumeAction(s,action(2000));stepFlight(s,.02,2000);assert.equal(s.releasedSeconds,0);
+test('head down/up and left/right map directly to mirrored video; holding never adds lift or reps',()=>{
+  const s=createFlight(pose()),viewport={width:640,height:480};
+  for(const [t,x,y] of [[0,.4,.3],[100,.4,.7],[200,.2,.3]]){
+    consumeAction(s,active(t,x,y));stepFlight(s,.02,t,viewport);assert.equal(s.x,1-x);assert.equal(s.y,y);
+  }
+  for(let t=300;t<4500;t+=100){consumeAction(s,active(t,.2,.3));stepFlight(s,.05,t,viewport);}
+  assert.equal(s.status,'flying');assert.equal(s.y,.3);assert.equal(s.completedReps,0);
+  const elapsed=s.flightSeconds;stepFlight(s,.05,5000,viewport);assert.equal(s.flightSeconds,elapsed);
 });
-test('obstacle collisions and gate passage use flight geometry',()=>{
-  const s=createFlight(pose());consumeAction(s,action(0));s.y=.2;s.obstacles=[{x:.28,gap:.6}];stepFlight(s,.02,0);assert.equal(s.reason,'obstacle');
-  const safe=createFlight(pose());consumeAction(safe,action(0));safe.y=.5;safe.obstacles=[{x:.19,gap:.5,counted:false}];stepFlight(safe,.02,0);stepFlight(safe,.02,10);assert.equal(safe.passed,1);
+test('portrait and landscape projections preserve the same camera point after letterboxing',()=>{
+  const head={x:.2,y:.3,image:{width:640,height:480}};
+  const landscape=projectHead(head,1440,960);assert.ok(Math.abs(landscape.x-1104/1440)<1e-10);assert.equal(landscape.y,.3);
+  const portrait=projectHead(head,390,844);assert.equal(portrait.x,.8);assert.ok(Math.abs(portrait.y-(275.75+87.75)/844)<1e-10);
 });
-test('provider adds optional head hints; low confidence and missing head never invent a face',()=>{
-  const landmarks=[];landmarks[0]={x:.2,y:.3,visibility:.9};landmarks[11]={x:.3,y:.4,visibility:.9};landmarks[23]={x:.5,y:.4,visibility:.9};
-  const args={...pose(),width:640,height:480,landmarks};assert.ok(fromMediaPipe(args).head.sizePx>0);
+test('collision uses the current head position; finished flights crash and cannot be steered',()=>{
+  const s=createFlight(pose());consumeAction(s,active(0,.5,.2));s.obstacles=[{x:.5,gap:.7,counted:false}];
+  stepFlight(s,.02,0,{width:640,height:480});assert.equal(s.reason,'obstacle');assert.equal(s.status,'crashing');
+  assert.equal(consumeAction(s,active(100)),false);
+  for(let t=0;t<2000;t+=20)stepFlight(s,.02,t);assert.equal(s.finished,true);
+  const safe=createFlight(pose());consumeAction(safe,active(0,.5,.5));safe.obstacles=[{x:.15,gap:.5,counted:false}];
+  stepFlight(safe,.02,0,{width:640,height:480});stepFlight(safe,.02,20,{width:640,height:480});assert.equal(safe.passed,1);
+  crash(safe,'rest');assert.equal(safe.status,'crashing');
+});
+test('head provider works without hips/legs, preserves confidence and can use an ear',()=>{
+  const landmarks=[];landmarks[0]={x:.2,y:.3,visibility:.9};landmarks[11]={x:.3,y:.5,visibility:.9};
+  const args={...pose(),width:640,height:480,landmarks};const f=fromMediaPipe(args);
+  assert.ok(f.head.sizePx>=40);assert.equal(f.head.confidence,.9);assert.equal(f.joints.leftHip,undefined);
   landmarks[0].visibility=.2;assert.equal(fromMediaPipe(args).head,undefined);
+  landmarks[7]={x:.25,y:.3,visibility:.8};assert.equal(fromMediaPipe(args).head.x,.25);
 });

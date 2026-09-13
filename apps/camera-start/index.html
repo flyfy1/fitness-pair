@@ -10,7 +10,7 @@
 <body>
   <main id="setup" data-stage="off">
     <video id="camera" muted playsinline aria-label="Your live mirrored camera view"></video>
-    <canvas id="body-overlay" aria-label="Live body movement overlay" hidden></canvas>
+    <canvas id="body-overlay" aria-label="Live body movement overlay"></canvas>
     <div class="scrim" aria-hidden="true"></div>
     <header>
       <span class="brand">READY TO MOVE <small>CAMERA SETUP POC</small></span>
@@ -20,7 +20,7 @@
       <span id="step-standing">1 · Stand</span><span id="step-maximum">2 · Range</span><span id="step-confirm">3 · Confirm</span><span id="step-ready">4 · Ready</span>
     </nav>
     <section class="controls" aria-label="Movement settings">
-      <label class="body-toggle"><input type="checkbox" id="show-body"> Show body movement</label>
+      <label class="body-toggle"><input type="checkbox" id="show-body" checked> Skeleton debug view</label>
       <label for="jump-range">Movement for a full jump <output id="range-value" for="jump-range">25%</output></label>
       <input id="jump-range" type="range" min="10" max="80" step="5" value="25" aria-describedby="range-help">
       <p id="range-help">Smaller movement ← → Bigger movement · % of torso length</p>
