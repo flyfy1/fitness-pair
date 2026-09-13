@@ -129,9 +129,9 @@ The concurrent task **Design bold movement arcade landing** owns
 `apps/arcade/`, `scripts/build-arcade.mjs`, Sites configuration and game replay
 bridge updates. At this baseline the aggregate arcade build includes Motion Quest
 and Dino Run; source integration alone does not expose Dino AR, Push-up Flight or
-camera-start on the public arcade. That task is adding those mounts and adapters,
-then validating and publishing. This sweep neither merges its unfinished work nor
-deploys or calls Sites tools. GCP credentials are absent; no policy or identity
+camera-start on the public arcade. That task owned adding those mounts and adapters,
+validating and publishing. This sweep does not merge its unfinished work,
+deploy or call Sites tools. GCP credentials are absent; no policy or identity
 changes were attempted.
 
 During final refresh, main advanced to `e1cf383` through a concurrent merge of
@@ -143,3 +143,22 @@ from the inventory remains deliberately excluded or pending integration.
 No missing game branch remains for this sweep. Public release and new replay
 adapter validation belong to the publishing task. Human recognition accuracy,
 physical exercise quality and enjoyment remain unverified.
+
+## Concurrent release preserved during delivery
+
+After the audit checkpoint `54f09b3` was pushed to its task branch, the publishing
+task delivered `7edf523` through main commit `ffa6ad3`. The audit's main push was
+rejected as non-fast-forward. The integration owner fetched and merged that
+verified release without conflicts or force-pushing, coordinating with its owner.
+The runtime tree exactly matches that release; the only difference from main is
+this audit document. Main now includes all five game mounts and automatic local
+replay adapters. Further recording changes belong to their separate active task
+and are outside this finite sweep.
+
+Combined-result validation: all five games and the arcade build passed; 53 shared
+checks and six mocked gateway checks passed. Four focused production Chrome
+checks passed for all mounted model/worker routes, Dino AR branded replay/restart,
+Flight crash replay completion and guided camera Dino setup/finish/cleanup. They
+used this checkout on isolated port 5291 with existing-server reuse disabled.
+Synthetic camera and gameplay inputs were used; no participant footage was taken.
+No Sites deployment or GCP identity/policy change was performed by this sweep.
