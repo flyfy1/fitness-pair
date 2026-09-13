@@ -7,6 +7,7 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
  await page.goto('/play/'+config.id);const game=page.frameLocator('#game-frame');
  await expect(game.locator('#game-title')).toHaveText(config.title);
  await expect(page.locator('#record-panel')).not.toHaveAttribute('data-state','recording');
+ if(config.slug==='invaders')await game.locator('#tutorial-skip').click();
  await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#record-status')).toContainText('game + camera');
  await page.waitForTimeout(900);await game.locator('#pause').click();

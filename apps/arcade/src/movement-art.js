@@ -17,7 +17,7 @@ function scene(type){
  if(type==='flight')return '<path d="M171 16v58m0 77v40" stroke="#487c43" stroke-width="25"/><ellipse cx="85" cy="113" rx="35" ry="22" fill="#2347ee"/><path d="M85 92V77m-36 0h72M52 110H27l-9-17m45 49h55" fill="none" stroke="#182346" stroke-width="5"/>'+arrow(128,113,33,0);
  if(type==='pushup'||type==='head')return '<path d="M27 187H194" stroke="#b7b8ae" stroke-width="3"/><path d="M38 171L88 137 150 116" stroke="#2347ee" stroke-width="18" stroke-linecap="round"/><path d="M38 171L26 183M144 119L146 151 157 182" stroke="#182346" stroke-width="9" fill="none" stroke-linecap="round"/><circle cx="172" cy="104" r="18" fill="#f2b993"/>'+arrow(192,160,0,-65);
  if(type==='target')return '<circle cx="110" cy="106" r="64" fill="none" stroke="#2347ee" stroke-width="4"/><path d="M110 55l14 34 37 2-28 25 9 36-32-19-32 19 9-36-28-25 37-2z" fill="#d24d2c"/>';
- return person(type)+(type==='sway'?arrow(62,58,-36,0)+arrow(158,58,36,0):type==='raise'?arrow(40,99,0,-49):type==='lower'?arrow(44,59,0,49):type==='jump'||type==='stand-up'?arrow(164,158,0,-67):type==='squat'?arrow(174,76,0,57):type==='aim'?arrow(175,123,24,0):'');
+ return person(type)+(type==='sway-left'?arrow(62,58,-36,0):type==='sway-right'?arrow(158,58,36,0):type==='sway'?arrow(62,58,-36,0)+arrow(158,58,36,0):type==='raise'?arrow(40,99,0,-49):type==='lower'?arrow(44,59,0,49):type==='jump'||type==='stand-up'?arrow(164,158,0,-67):type==='squat'?arrow(174,76,0,57):type==='aim'?arrow(175,123,24,0):'');
 }
 export function movementArt(guide,compact=false){
  const tiles=compact?guide.tiles.slice(0,2):guide.tiles;

@@ -1,7 +1,7 @@
 import {test, expect} from '@playwright/test';
 
 const games = [
-  ...['ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit'].map(id=>({id,stage:'#arena',start:'#start',note:'#privacy-note'})),
+  ...['ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit'].map(id=>({id,stage:'#arena',start:id==='ar-invaders'?'#tutorial-start':'#start',note:'#privacy-note'})),
   {id: 'motion-quest', stage: '#app', start: '#start', note: '#privacy-note'},
   {id: 'dino-run', stage: '#play-area', start: '#start', note: '.camera-note'},
   {id: 'dino-ar', stage: '#arena', start: '#primary', note: '.privacy'},

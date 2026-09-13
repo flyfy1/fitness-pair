@@ -25,7 +25,7 @@ export class BodyArcadeRecognizer {
     const result = {version: 1, sessionId: frame.sessionId, source: {...frame.source}, inputSeq: frame.seq, tMs: frame.tMs,
       recognizerId: 'body-arcade-v1', action: 'body-arcade', phase: 'missing', progress: 0,
       calibrationProgress: null, completion: null, cue: 'Keep shoulders and hips in view.',
-      controls: {horizontal: 0, aim: null, leftRaised: false, rightRaised: false, missing: []}};
+      controls: {horizontal: 0, aim: null, leftRaised: false, leftLowered: false, rightRaised: false, missing: []}};
     const required = [...torsoNames, ...(this.primary ? ['leftWrist'] : []), ...(this.aiming ? ['rightWrist'] : [])];
     result.controls.missing = required.filter(name => !visible(frame.joints[name]));
     const missing = cue => { this.release(); this.steady = null; result.cue = cue; return result; };
@@ -42,6 +42,7 @@ export class BodyArcadeRecognizer {
     const raised = side => visible(j[side + 'Wrist']) && j[side + 'Wrist'].y < j[side + 'Shoulder'].y - .08;
     const lowered = side => visible(j[side + 'Wrist']) && j[side + 'Wrist'].y > j[side + 'Shoulder'].y + .06;
     const left = raised('left'), right = raised('right');
+    result.controls.leftLowered = lowered('left');
     result.controls.leftRaised = left; result.controls.rightRaised = right;
     if (!this.baseline) {
       result.phase = 'calibrating'; result.calibrationProgress = 0; result.cue = 'Stand still with your hands lowered.';

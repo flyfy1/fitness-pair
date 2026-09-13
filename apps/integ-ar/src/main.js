@@ -1,4 +1,6 @@
 import './style.css';
+import {InvadersTutorial} from './invaders-tutorial.js';
+import {mountTutorial} from './tutorial-view.js';
 import {arGames} from './catalog.js';
 import {modules} from './modules.ts';
 import {PoseCamera} from '../../dino-run/src/camera.js';
@@ -17,6 +19,9 @@ $('game-title').textContent = config.title;
 $('category').textContent = config.category.toUpperCase() + ' · CAMERA AR';
 $('detail').textContent = $('control-help').textContent = config.action;
 $('hand').hidden = !config.primary;
+const tutorial = config.slug === 'invaders' ? new InvadersTutorial() : null;
+let tutorialWanted = !!tutorial;
+const tutorialView = tutorial ? mountTutorial($('arena'), {onStart: () => camera.start(), onSkip: leaveTutorial, onPlay: startAfterPractice, onCancel: () => camera.stop('stopped')}) : null;
 let hosted = false;
 let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
@@ -39,12 +44,13 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
       session = {sessionId: status.sessionId, source: status.source};
       round = status.sessionId; recognizer.reset(session); gestures.reset(session);
       feed = createBodyInput(session, game); readySince = null; action = null; pose = null;
-      game.restart(); game.pause(); setPhase('setup');
+      game.restart(); game.pause(); tutorial?.reset(session); setPhase('setup');
       $('start').hidden = true; $('stop').hidden = false; $('camera-error').hidden = true;
       $('instruction').textContent = 'Allow your camera'; $('detail').textContent = 'Waiting for camera permission…';
     } else if (status.state === 'loading') {
       $('instruction').textContent = 'Preparing movement tracking'; $('detail').textContent = 'Loading the local pose model. You can cancel below.';
     } else if (status.state === 'ready') { $('instruction').textContent = 'Stand still'; $('detail').textContent = 'Keep your shoulders, hips and hands visible.'; }
+    if (tutorialWanted) tutorialView.update(status.state === 'ready' ? 'calibrating' : status.state, {camera: true});
     $('tracking').textContent = status.state === 'ready' ? 'Finding your torso' : status.state === 'loading' ? 'Preparing tracking' : 'Waiting for camera';
   },
   onPose(frame) {
@@ -57,13 +63,24 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     $('hand').textContent = action.controls.leftRaised ? 'Left hand raised · lower to rearm' : 'Left hand lowered';
     if (valid) lastValidAt = performance.now();
     if (phase === 'setup') {
-      $('instruction').textContent = valid ? 'Get ready' : action.phase === 'missing' ? 'Step into view' : 'Stand still';
-      $('detail').textContent = valid ? `${Math.max(1, 3 - Math.floor((frame.tMs - (readySince ?? frame.tMs)) / 1000))} · ${config.action}` : action.cue;
-      $('calibration').hidden = valid; $('calibration').value = action.calibrationProgress || 0;
-      if (valid && !action.controls.leftRaised && !action.controls.rightRaised) {
-        readySince ??= frame.tMs;
-        if (frame.tMs - readySince >= 3000) { recognizer.release(); game.resume(); setPhase('playing'); }
-      } else readySince = null;
+      if (tutorialWanted) {
+        if (valid) { recognizer.release(); setPhase('tutorial'); }
+        else tutorialView.update('calibrating', {feedback: friendlyCue(action.cue), progress: action.calibrationProgress || 0, camera: true});
+      } else {
+        $('instruction').textContent = valid ? 'Get ready' : action.phase === 'missing' ? 'Step into view' : 'Stand still';
+        $('detail').textContent = valid ? `${Math.max(1, 3 - Math.floor((frame.tMs - (readySince ?? frame.tMs)) / 1000))} · ${config.action}` : action.cue;
+        $('calibration').hidden = valid; $('calibration').value = action.calibrationProgress || 0;
+        if (valid && !action.controls.leftRaised && !action.controls.rightRaised) {
+          readySince ??= frame.tMs;
+          if (frame.tMs - readySince >= 3000) { recognizer.release(); game.resume(); setPhase('playing'); }
+        } else readySince = null;
+      }
+    }
+    if (phase === 'tutorial') {
+      const before = tutorial.step;
+      tutorial.update(action);
+      if (before === 'fire' && tutorial.step === 'lower') tutorialView.shoot(action.controls.horizontal);
+      updatePracticeView(valid ? '' : friendlyCue(action.cue));
     }
     if (phase === 'playing' && !valid) pause('tracking');
     if (hands?.event?.kind === 'both-hands' && ['playing', 'paused'].includes(phase)) togglePause();
@@ -78,6 +95,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     if (!['complete', 'dispose'].includes(reason)) {
       game.pause(); recognizer.release(); setPhase('idle');
       $('instruction').textContent = 'Camera stopped'; $('detail').textContent = 'Enable the camera to start a fresh round.';
+      tutorialView?.update('intro', {feedback: 'Camera stopped. Start practice again when you are ready.'});
       $('start').textContent = 'Enable camera & play'; $('start').hidden = false; $('stop').hidden = true;
     }
   },
@@ -85,11 +103,13 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     $('instruction').textContent = 'Camera unavailable';
     $('camera-error').textContent = error.name === 'NotAllowedError' ? 'Camera permission was denied. Allow access and try again.' : error.message;
     $('camera-error').hidden = false;
+    if (tutorialWanted) tutorialView.update('intro', {feedback: $('camera-error').textContent, error: true});
   },
 });
 
 function setPhase(next) {
   phase = next; $('arena').dataset.phase = next;
+  tutorialView?.show(tutorialWanted && ['idle','setup','tutorial'].includes(next));
   $('panel').hidden = ['playing', 'paused'].includes(next);
   $('setup-copy').hidden = next === 'complete';
   $('pause').disabled = !['playing', 'paused'].includes(next);
@@ -98,6 +118,20 @@ function setPhase(next) {
   $('finish').hidden = !['playing', 'paused'].includes(next);
   $('cue').textContent = config.action;
   changed();
+}
+function friendlyCue(cue) { return cue.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase(); }
+function updatePracticeView(feedback = '') {
+  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'All controls confirmed. Choose Play when you are ready.' : 'Practice is not scored or recorded.'), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
+}
+function leaveTutorial() {
+  tutorialWanted = false; recognizer.release(); readySince = null;
+  setPhase(camera.active ? 'setup' : 'idle');
+}
+function startAfterPractice() {
+  if (!tutorial.completed || !camera.running || performance.now() - lastValidAt > 250 || !action?.controls.leftLowered || action.controls.rightRaised) {
+    updatePracticeView('Return to view with your hands down before starting.'); return;
+  }
+  leaveTutorial();
 }
 function pause(reason = 'manual') {
   if (phase !== 'playing') return;
@@ -146,6 +180,7 @@ function render(now) {
   if (['playing', 'paused', 'complete'].includes(phase)) ctx.drawImage(sourceCanvas, (width - w) / 2, top + (available - h) / 2, w, h);
   // Clear old bodies when inference stops; never draw a frozen person as live tracking.
   drawBody($('skeleton'), camera.running && pose && now - pose.tMs < 250 ? pose : null);
+  if (phase === 'tutorial' && now - lastValidAt >= 250) updatePracticeView('Tracking needs attention. Keep your shoulders, hips and left hand in view.');
   if (phase === 'playing' && now - lastValidAt >= 250) pause('tracking');
   const state = game.getState(); $('score').textContent = String(state.score);
   if (phase === 'playing' && ['lost', 'won'].includes(state.phase)) finish();
@@ -153,15 +188,17 @@ function render(now) {
 }
 function dispose() {
   if (disposed) return;
-  disposed = true; camera.stop('dispose'); game.destroy(); cancelAnimationFrame(raf); listeners.clear();
+  disposed = true; camera.stop('dispose'); game.destroy(); tutorialView?.dispose(); cancelAnimationFrame(raf); listeners.clear();
 }
 window.addEventListener('pagehide', dispose, {once: true});
 window.gameplay = {
-  getFrame: () => ({round, phase: phase === 'setup' ? 'setup' : phase, canvas: $('world'), video: $('camera'), skeleton: $('skeleton'),
+  getFrame: () => ({round, phase: phase === 'tutorial' ? 'setup' : phase, canvas: $('world'), video: $('camera'), skeleton: $('skeleton'),
     isAR: true, score: `${game.getState().score} points`, source: session?.source}),
   subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
   configureHost({homeURL, recordingNote}) { hosted = true; $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
   dispose,
 };
-window.integAR = {getState: () => ({phase, round, pauseReason, game: game.getState(), action, camera: camera.running})};
+window.integAR = {getState: () => ({phase, round, pauseReason, game: game.getState(), action, tutorial: tutorial?.snapshot(), camera: camera.running})};
 raf = requestAnimationFrame(render);
+
+if (tutorialWanted) { tutorialView.show(true); tutorialView.update('intro'); }

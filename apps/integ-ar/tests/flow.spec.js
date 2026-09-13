@@ -7,6 +7,7 @@ for (const slug of ['breakout', 'invaders', 'stack', 'knife', 'bubble', 'fruit-m
   test(`${slug}: synthetic camera controls the original game in transparent AR and cleans up`, async ({page}, info) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await syntheticCamera(page); await page.goto('/?game=' + slug);
+    if(slug==='invaders')await page.locator('#tutorial-skip').click();
     await page.locator('#start').click();
     await expect.poll(async () => (await state(page)).phase).toBe('playing');
     await page.waitForTimeout(350);
@@ -61,7 +62,7 @@ for (const slug of ['breakout', 'invaders', 'stack', 'knife', 'bubble', 'fruit-m
   });
 }
 test('missing tracking pauses physics, clears old bones and needs deliberate recovery', async ({page}) => {
-  await syntheticCamera(page); await page.goto('/?game=invaders'); await page.locator('#start').click();
+  await syntheticCamera(page); await page.goto('/?game=invaders'); await page.locator('#tutorial-skip').click(); await page.locator('#start').click();
   await expect.poll(async () => (await state(page)).phase).toBe('playing');
   await pose(page, {missing: true}); await expect.poll(async () => (await state(page)).phase).toBe('paused');
   const frozen = (await state(page)).game;

@@ -17,3 +17,21 @@ commit `c2a3374daec9ea15342baa32e001581ade40dec8`, paths `src/games/` and
 open-source license. The source checkout has no LICENSE/COPYING/NOTICE file.
 Adaptations remove opaque backgrounds/mobile controls, expose semantic input
 and snapshots, suppress paused/finished actions, and retain original mechanics.
+
+## Pixel Defense tutorial prototype
+
+Pixel Defense AR alone opens a full-window practice screen on entry. After an
+explicit camera start and standing calibration, it asks for sustained left and
+right torso movement, one recognized left-hand shot, and observed hand lowering.
+A practice ship and labeled person diagram show each control; confirmed steps
+stay checked. Missing or stale tracking cannot finish a step.
+
+The original game stays paused with zero score and no shots during practice.
+Its presentation phase remains `setup`, so the shared recorder does not capture
+the tutorial. Choosing Play after confirmation begins the usual fresh countdown.
+Skip tutorial is available before permission and during practice; it still
+requires normal camera setup. Cancellation stops camera/model resources and a
+new camera attempt starts practice again. Completion/skip lasts for this page
+only, and other games keep their existing entry flow.
+
+See [the bounded prototype and evidence](../../docs/invaders-tutorial-prototype.md).
