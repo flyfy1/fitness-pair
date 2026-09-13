@@ -191,3 +191,28 @@ completed, validated Caddy, retained rollback state and passed public health.
 Integration remains on `main`. A separately active `codex/integ-ar-games` worktree
 contains uncommitted new-game implementation and was preserved, not removed or
 included in this release.
+
+
+## Push-up Flight recording audio repair
+
+Source `5b314af89f6fda3dba17ef0e3c749b04b0715004` was deployed from clean,
+pushed `main` as `20260913T112054Z-5b314af89f6f`.
+
+- Reproduced the reported silent replay: the old Flight adapter supplied no audio
+  stream, and decoding its synthetic recorded MP4 audio failed. Live game audio
+  was connected only to the speaker destination.
+- Flight now exposes its post-mix MediaStream to the shared recorder, which owns
+  cloned tracks. Music, effects and spoken encouragement are captured without
+  microphone input. The adapter waits for final speech before the branded ending.
+  The stream exists when a round starts muted, allowing later unmute to be recorded.
+- Full arcade build, 68 repository tests, 17 Flight tests, the existing real audio
+  output/mute/cancel browser test, and five local conversation/recording browser
+  tests passed. New regressions decode the actual saved MP4 and short copy,
+  measure nonzero music and ending speech, verify silence before unmute, and
+  confirm recorder cleanup leaves the game's original audio track live.
+- Both new regressions passed against the deployed GCP assets in 33.6 seconds.
+  All recordings are synthetic demo content in an isolated browser context;
+  no microphone/camera was accessed and no clip was published.
+- Public health matches the source above. GPT Sites still serves
+  `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; it was not changed or deployed.
+  Previously silent recordings cannot recover audio that was never captured.
