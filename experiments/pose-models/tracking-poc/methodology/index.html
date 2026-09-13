@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Compare Fitness Pair tracking methods, evidence, tradeoffs and implementation paths."><title>Tracking Methods · Fitness Pair</title></head>
+<body>
+<main>
+  <header><a class="brand" href="../">FITNESS PAIR <span>/ TRACKING LAB</span></a><nav aria-label="Page navigation"><a href="#catalog">Methods</a><a href="#comparison">Compare</a><a href="#directories">Directories</a><a class="launch" href="../">Open live lab ↗</a></nav></header>
+  <section class="hero">
+    <div><p class="eyebrow">METHOD EXPLORER / REPOSITORY SNAPSHOT</p><h1>Which movement.<br><em>Which method.</em></h1><p class="intro">Explore what we use, what it proves, and where it falls short.<br>Choose a use case, then put the approaches side by side.</p></div>
+    <div class="snapshot"><span class="eyebrow">THE CURRENT PICTURE</span><div class="numbers"><div><strong id="implemented-count">7</strong><span>implemented approaches</span></div><div><strong id="research-count">10</strong><span>research candidates</span></div></div><p>Two tracking models. Shared building blocks.<br>No measured human-accuracy ranking.</p><span class="snapshot-date">Source review · 13 Sep 2026 · <span id="revision"></span></span></div>
+  </section>
+  <section class="pipeline" aria-label="How the methods connect">
+    <div><span>01 / INPUT</span><strong>Camera frames</strong><p>Processed locally in the implemented camera paths.</p></div><b aria-hidden="true">→</b>
+    <div><span>02 / LANDMARKS</span><strong>Where are the joints?</strong><p>Hands, full body, or an upper-body view.</p></div><b aria-hidden="true">→</b>
+    <div><span>03 / ACTION RULES</span><strong>What movement happened?</strong><p>Pinch, raised wrist, a squat cycle, or relative jump height.</p></div><b aria-hidden="true">→</b>
+    <div><span>04 / CONSUMER</span><strong>Feedback & games</strong><p>Overlays, Motion Quest and Dino Run.</p></div>
+  </section>
+  <section id="catalog" class="catalog-section">
+    <div class="section-title"><div><p class="eyebrow">FIND AN APPROACH</p><h2>Method library</h2></div><p>Fit is a design judgment.<br>Evidence is labeled separately.</p></div>
+    <div class="controls">
+      <div class="tabs" role="group" aria-label="Implementation status"><button data-status="implemented" aria-pressed="true">Implemented <span>7</span></button><button data-status="research" aria-pressed="false">Research <span>10</span></button><button data-status="all" aria-pressed="false">All methods</button></div>
+      <div class="filters"><label>Use case<select id="scenario"><option value="all">Any movement</option><option value="desk">At a desk / hands & arms</option><option value="body">Body movement</option><option value="squat">Squat repetitions</option><option value="jump">Relative jump height</option><option value="multi">Simultaneous people</option></select></label><label>Pipeline layer<select id="layer"><option value="all">Both layers</option><option>Landmarks</option><option>Action rules</option></select></label><label class="search-label">Find a method<input id="search" type="search" placeholder="Name, technique or directory…"></label></div>
+    </div>
+    <p id="guidance" class="guidance"></p>
+    <div class="results-heading"><span id="result-count" role="status"></span><button id="reset" class="text-button">Reset filters</button></div>
+    <div id="cards" class="cards"></div>
+    <div id="empty" class="empty" hidden><h3>No methods in this view</h3><p>Try another use case or include research candidates.</p><button id="show-all">Show all methods</button></div>
+  </section>
+  <section id="comparison">
+    <div class="section-title"><div><p class="eyebrow">TRADEOFFS, SIDE BY SIDE</p><h2>Your comparison</h2></div><button id="clear" class="text-button">Clear selection</button></div>
+    <p class="comparison-help">Select up to three methods in the library. Your selections stay here when you change filters.</p>
+    <div id="selected" class="selected"></div><p id="selection-message" role="status" aria-live="polite"></p>
+    <p id="layer-note" class="guidance" hidden>These methods occupy different pipeline layers. They may work together; they are not direct replacements.</p>
+    <div id="comparison-table" class="table-wrap" tabindex="0" aria-label="Method comparison, scroll horizontally on small screens"></div>
+  </section>
+  <section class="evidence-section">
+    <div class="section-title"><div><p class="eyebrow">HOW TO DECIDE WHAT IS BETTER</p><h2>Compare the same job, on the same input.</h2></div></div>
+    <div class="evidence-grid"><article><span class="step">01</span><h3>Pick one outcome</h3><p>Joint stability for tracking. False and missed events for actions. Perceived delay for a game. Keep these questions separate.</p></article><article><span class="step">02</span><h3>Keep conditions fixed</h3><p>Use the same camera, framing, lighting and movements. Include slow/fast motion, occlusion and movements that should not trigger.</p></article><article><span class="step">03</span><h3>Record comparable evidence</h3><p>Report joint loss, false/missed completions, recovery time and latency p50/p95. Inference time alone is not camera-to-screen delay.</p></article></div>
+    <div class="evidence-note"><strong>What the evidence means</strong><p><b>Public fixture:</b> a real model processed a public image. <b>Synthetic:</b> known generated input exercised logic. <b>Research:</b> a source was reviewed. None establishes human tracking accuracy. No comparative human results are recorded in this catalog; participant recording requires consent.</p></div>
+  </section>
+  <section id="directories"><div class="section-title"><div><p class="eyebrow">IMPLEMENTATION MAP</p><h2>Where each part lives</h2></div><a id="research-link" class="text-link">Read the research notes ↗</a></div><div id="directory-table" class="table-wrap" tabindex="0" aria-label="Source directories"></div></section>
+  <footer><span>Fitness Pair / Tracking methodology explorer</span><span>Local camera inference applies to implemented paths. Candidate deployment is unverified.</span></footer>
+</main>
+<script type="module" src="./main.js"></script>
+</body></html>
