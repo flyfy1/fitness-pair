@@ -4,7 +4,15 @@
 fitness.integ.life {
     root * /opt/fitness-arcade/current/client
     encode zstd gzip
-    request_body {
+    # The gateway bounds video bodies at 200 MB and logs rejected attempts.
+    # Keep the earlier limit for the separate legacy studio and all other routes.
+    @boundedRequests {
+        not {
+            method PUT
+            path_regexp galleryVideo ^/api/clips/[0-9a-f-]{36}$
+        }
+    }
+    request_body @boundedRequests {
         max_size 20971520
     }
     # Keep existing unlisted clips, their management API and original studio.

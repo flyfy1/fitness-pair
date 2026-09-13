@@ -52,7 +52,7 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
 if(process.argv[1] && realpathSync(process.argv[1])===fileURLToPath(import.meta.url)) {
   const release=JSON.parse(readFileSync(new URL('../../../../release.json',import.meta.url),'utf8'));
   const server=createGateway({release,env:process.env});
-  server.requestTimeout=90000;
+  server.requestTimeout=300000;
   server.headersTimeout=15000;
   server.listen(8411,'127.0.0.1',()=>console.log('Fitness arcade gateway listening on 127.0.0.1:8411'));
   for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{

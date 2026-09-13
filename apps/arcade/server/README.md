@@ -19,7 +19,7 @@ Grant the service account object create/get/list/delete permissions only on this
 
 ## Flow
 
-1. Gameplay automatically creates an unbranded local replay of up to the latest 90 seconds in IndexedDB. Recordings stay at normal speed. This upload endpoint accepts up to 90 seconds / 20 MiB.
+1. Gameplay automatically creates an unbranded local replay of up to the latest 90 seconds in IndexedDB. Recordings stay at normal speed. This upload endpoint accepts up to 90 seconds / 200 MB.
 2. For an oversized replay, the player first makes a local share copy of up to 55 seconds of final gameplay. The original remains local. The player previews the chosen copy and explicitly consents to upload with the displayed visibility. Anonymous uploads are public and last seven days; logged-in users may choose Private and an expiry of 1, 7, 30, or 90 days, or Never.
 3. Worker verifies account authorization, Origin/CSRF, consent, metadata, bounded body and MP4/WebM magic bytes; reserves account bytes before uploading. Anonymous uploads stage private bytes first, remove the oldest anonymous publications if needed to fit the 10 GB pool, then reserve and publish. Finite expiry metadata and object bytes are uploaded atomically. New metadata binds the central account rather than a device management key.
 4. Gallery lists public records only. `/clips/:id` reads public records, or private records with an owner session or a separate random sharing token. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.

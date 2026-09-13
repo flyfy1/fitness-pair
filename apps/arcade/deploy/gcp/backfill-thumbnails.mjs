@@ -40,8 +40,8 @@ export async function backfillThumbnails({apply=false,env=process.env,fetcher=fe
     if(poster.status!==404)throw Error('Could not check the thumbnail.');
     stats.missing++;if(!apply)continue;
     const media=await request(origin+'/api/media/'+clip.id);
-    if(!media.ok||Number(media.headers.get('Content-Length'))>20*1024*1024)throw Error('Could not read the bounded video.');
-    const bytes=Buffer.from(await media.arrayBuffer());if(!bytes.length||bytes.length>20*1024*1024)throw Error('Video exceeds the size limit.');
+    if(!media.ok||Number(media.headers.get('Content-Length'))>200_000_000)throw Error('Could not read the bounded video.');
+    const bytes=Buffer.from(await media.arrayBuffer());if(!bytes.length||bytes.length>200_000_000)throw Error('Video exceeds the size limit.');
     const image=await encode(bytes,env.FITNESS_STATE_DIR);
     if(image.length>256*1024||image[0]!==255||image[1]!==216||image.at(-2)!==255||image.at(-1)!==217)throw Error('Invalid thumbnail output.');
     // Recheck visibility after decoding in case its owner removed the clip.

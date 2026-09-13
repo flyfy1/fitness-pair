@@ -7,7 +7,8 @@ export async function decodeUpload(raw,options){
  assert.equal(url.searchParams.get('ifGenerationMatch'),'0');
  const boundary=options.headers['Content-Type'].split('boundary=')[1];
  assert.ok(boundary);
- const bytes=Buffer.from(await options.body.arrayBuffer()),separator=Buffer.from('\r\n--'+boundary+'\r\n');
+ const bytes=Buffer.from(await new Response(options.body).arrayBuffer()),separator=Buffer.from('\r\n--'+boundary+'\r\n');
+ assert.equal(bytes.length,Number(options.headers['Content-Length']));
  const metadataStart=bytes.indexOf('\r\n\r\n')+4,metadataEnd=bytes.indexOf(separator,metadataStart);
  assert.ok(metadataEnd>metadataStart);
  const metadata=JSON.parse(bytes.subarray(metadataStart,metadataEnd).toString());

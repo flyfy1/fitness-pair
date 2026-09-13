@@ -13,7 +13,7 @@ import {createWorker} from '../server/worker.js';
 
 const origin='http://127.0.0.1:5193', issuer='http://127.0.0.1:5194';
 const root=path.resolve(fileURLToPath(new URL('../../../dist/client/',import.meta.url)));
-const objects=new Map(), codes=new Map();
+const objects=new Map(), codes=new Map(), auditEvents=[];
 let directory,gateway,identity,store,failMarker=false;
 const userId=name=>createHash('sha256').update(issuer+'\n'+name).digest('hex');
 
@@ -48,7 +48,7 @@ test.beforeAll(async()=>{
   if(options.headers.Range){const match=/bytes=(\d+)-(\d*)/.exec(options.headers.Range),start=Number(match[1]),end=match[2]?Number(match[2]):bytes.length-1;return new Response(bytes.slice(start,end+1),{status:206,headers:{'Content-Length':String(end-start+1),'Content-Range':`bytes ${start}-${end}/${bytes.length}`}});}
   return new Response(bytes,{headers:{'Content-Length':String(bytes.length)}});
  };
- const worker=createWorker({fetcher:cloud});
+ const worker=createWorker({fetcher:cloud,audit:event=>auditEvents.push(event)});
  const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf','.wasm':'application/wasm'};
  gateway=createGateway({origin,env:{FITNESS_STATE_DIR:directory,INTEG_AUTH_ISSUER:issuer,INTEG_AUTH_CLIENT_ID:'hopmodo',INTEG_AUTH_CLIENT_SECRET:'browser-test-secret-is-at-least-32-chars',GCP_BUCKET:'mock',GCP_ACCESS_TOKEN_PROVIDER:async()=>'mock-token'},galleryWorker:{fetch(request,env){return worker.fetch(request,{...env,ASSETS:{async fetch(request){let name=new URL(request.url).pathname; if(name==='/')name='/index.html';const filename=path.resolve(root,'.'+name);if(!filename.startsWith(root+'/'))return new Response('',{status:404});try{return new Response(await readFile(filename),{headers:{'Content-Type':types[path.extname(filename)]||'application/octet-stream'}});}catch{return new Response('',{status:404});}}}});}}});
  gateway.listen(5193,'127.0.0.1');await once(gateway,'listening');
@@ -210,4 +210,24 @@ test('account expiry choices require renewed consent and persist the chosen thir
  await page.goto('/shared');await expect(page.getByText('Expires ',{exact:false})).toBeVisible();
  await page.getByRole('button',{name:'Remove',exact:true}).click();await page.getByRole('button',{name:'Remove shared clip',exact:true}).click();
  await expect(page.locator('meter')).toHaveAttribute('value','0');
+});
+
+
+test('oversized local video shows the 200 MB limit and records the blocked attempt without uploading',async({page})=>{
+ await page.goto('/library');const original=await localClip(page);
+ const id=await page.evaluate(async originalId=>{
+  const db=await new Promise(resolve=>{const req=indexedDB.open('fitness-pair-clips',1);req.onsuccess=()=>resolve(req.result);});
+  return new Promise(resolve=>{
+   const tx=db.transaction('clips','readwrite'),store=tx.objectStore('clips'),req=store.get(originalId);
+   req.onsuccess=()=>{const clip=req.result,chunk=new Uint8Array(1_000_000);clip.blob=new Blob([...Array(200).fill(chunk),new Uint8Array(1)],{type:'video/webm'});store.put(clip);};
+   tx.oncomplete=()=>{db.close();resolve(originalId);};
+  });
+ },original.id);
+ let uploads=0;page.on('request',request=>{if(request.method()==='PUT'&&request.url().includes('/api/clips/'))uploads++;});
+ const before=auditEvents.length;await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
+ await expect(page.getByText('exceeding the 200 MB upload limit.',{exact:false})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Upload this clip'})).toHaveCount(0);
+ await expect.poll(()=>auditEvents.length).toBe(before+1);
+ expect(auditEvents.at(-1)).toMatchObject({event:'video_upload_rejected',source:'client-reported',bytes:200_000_001,limitBytes:200_000_000});
+ expect(uploads).toBe(0);expect(objects.has('videos/'+id)).toBe(false);
 });
