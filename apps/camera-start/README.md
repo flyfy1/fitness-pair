@@ -23,7 +23,7 @@ npm ci
 npm run dev --workspace camera-start
 ```
 
-Open <http://127.0.0.1:5190>. Enable the camera once, then follow the large text.
+Open <http://127.0.0.1:5274>. Enable the camera once, then follow the large text.
 The page fills its window immediately; the top fullscreen button optionally enters
 native fullscreen. Camera permission requires localhost or HTTPS.
 
@@ -84,3 +84,7 @@ and screenshots are ignored; no participant recordings are included.
 Synthetic input proves software transitions, not human recognition accuracy or
 readability from a measured physical distance. The user still needs to try this
 screen at their actual camera distance. This POC isolates that evaluation from gameplay.
+
+The preview uses its own origin on port 5274. Port 5190 was previously controlled
+by an unrelated cached games app in the desktop browser; its cache/storage were
+left untouched. This POC registers no Service Worker.
