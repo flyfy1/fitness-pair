@@ -103,7 +103,12 @@ test('real local model on a public image emits head control without external run
   await page.addInitScript(data=>{navigator.mediaDevices.getUserMedia=async()=>{
     const image=new Image();image.src=data;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const ctx=c.getContext('2d');ctx.drawImage(image,0,0);const stream=c.captureStream(30);window.testStream=stream;const timer=setInterval(()=>{if(stream.getTracks().every(t=>t.readyState==='ended'))clearInterval(timer);else ctx.drawImage(image,0,0);},33);return stream;
   };},`data:image/jpeg;base64,${bytes.toString('base64')}`);
-  const external=[];page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:5185')&&!r.url().startsWith('data:'))external.push(r.url());});
+  const external=[];page.on('request',r=>{
+    const url=new URL(r.url());
+    // The shared cache loader imports its verified local bytes through same-origin blobs.
+    const local=['http:','blob:'].includes(url.protocol)&&url.origin==='http://127.0.0.1:5185';
+    if(!local&&url.protocol!=='data:')external.push(r.url());
+  });
   await page.goto('/');await page.getByRole('button',{name:'Enable camera'}).click();await expect.poll(async()=>(await state(page)).headVisible,{timeout:30000}).toBe(true);
   await expect.poll(async()=>(await state(page)).status).toBe('flying');await page.getByRole('button',{name:'Finish & rest'}).click();
   await expect.poll(()=>page.workers().length).toBe(0);expect(external).toEqual([]);expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
@@ -118,7 +123,7 @@ test('full-window and head alignment survive portrait and landscape resizing',as
   await syntheticCamera(page);await page.goto('/');
   for(const viewport of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]){
     await page.setViewportSize(viewport);await fillsWindow(page);
-    for(const id of ['start','demo','fullscreen','opening','speed','acceleration']){
+    for(const id of ['start','demo','fullscreen','sound','opening','speed','acceleration']){
       const box=await page.locator(`#${id}`).boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.y).toBeGreaterThanOrEqual(0);
       expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);
     }
@@ -162,4 +167,57 @@ test('three difficulty sliders work during flight and do not steer the demo',asy
   await page.getByRole('button',{name:'Finish & rest'}).click();await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
   await page.getByRole('button',{name:'Try a demo'}).click();expect((await state(page)).difficulty).toEqual({opening:6,speed:6,acceleration:1.5});
   await page.screenshot({path:'test-results/difficulty-sliders.png'});
+});
+
+
+test('spoken countdown starts the beat; mute, unmute and cancel control actual audio output',async({page})=>{
+  await page.addInitScript(()=>{
+    const Native=window.AudioContext;
+    window.AudioContext=class extends Native {
+      createDynamicsCompressor(){
+        const node=super.createDynamicsCompressor(),connect=node.connect.bind(node);
+        node.connect=target=>{const analyser=this.createAnalyser();analyser.fftSize=1024;
+          connect(analyser);analyser.connect(target);window.testAudioAnalyser=analyser;return target;};
+        return node;
+      }
+    };
+  });
+  await page.goto('/');await page.getByRole('button',{name:'Try a demo'}).click();
+  for(const [label,cue] of [['3','three'],['2','two'],['1','one']]){
+    await expect(page.locator('#countdown')).toHaveText(label);
+    await expect.poll(async()=>(await state(page)).audio.lastCue).toBe(cue);
+    expect((await state(page)).flightSeconds).toBe(0);expect((await state(page)).obstacles).toHaveLength(0);
+  }
+  await expect(page.locator('#countdown')).toHaveText('START!');
+  await expect.poll(async()=>(await state(page)).audio.lastCue).toBe('start');
+  await expect.poll(async()=>(await state(page)).audio.voicesReady).toBe(7);
+  const level=()=>page.evaluate(()=>{
+    const a=window.testAudioAnalyser;if(!a)return 0;const data=new Float32Array(a.fftSize);a.getFloatTimeDomainData(data);
+    return Math.sqrt(data.reduce((sum,v)=>sum+v*v,0)/data.length);
+  });
+  await expect.poll(level).toBeGreaterThan(.002);
+  await page.getByRole('button',{name:'Mute sound',exact:true}).click();
+  await expect.poll(async()=>(await state(page)).audio.state).toBe('suspended');
+  const session=(await state(page)).sessionId;
+  await page.getByRole('button',{name:'Enable sound',exact:true}).click();
+  await expect.poll(async()=>(await state(page)).audio.state).toBe('running');
+  await expect.poll(level).toBeGreaterThan(.002);expect((await state(page)).sessionId).toBe(session);
+  await page.getByRole('button',{name:'Finish & rest'}).click();
+  await expect.poll(async()=>(await state(page)).audio.lastCue).toBe('finish');
+  await page.getByRole('button',{name:'Try a demo'}).click();await expect(page.locator('#countdown')).toHaveText('3');
+  await page.getByRole('button',{name:'Cancel countdown'}).click();
+  await page.waitForTimeout(3200);expect((await state(page)).status).toBe('paused');
+  expect((await state(page)).audio.state).toBe('suspended');await expect(page.locator('#countdown')).toBeHidden();
+});
+
+test('camera countdown preserves held controls and starts only once after tracking loss',async({page})=>{
+  await syntheticCamera(page);await page.goto('/');await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await expect(page.locator('#countdown')).toHaveText('3');const initial=await state(page);
+  await page.evaluate(()=>{window.testMissing=true;});
+  await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
+  await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  expect((await state(page)).sessionId).toBe(initial.sessionId);expect((await state(page)).x).toBe(initial.x);
+  await page.evaluate(()=>{window.testMissing=false;});await followsHead(page,.4,.3);
+  expect((await state(page)).status).toBe('flying');
+  await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
 });
