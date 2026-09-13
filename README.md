@@ -35,7 +35,9 @@ waving side to side says No. See [the gesture catalog and trial instructions](ap
 
 A full-camera Dino flow is available at <http://127.0.0.1:5274> with
 `npm run dev --workspace camera-start`. Large instructions guide standing, automatic movement setup,
-left-hand or button confirmation and a spoken countdown into Jump Game.
+a large left-hand confirmation prompt and a spoken countdown into Jump Game.
+Raise your left hand for one second with your right hand down; no confirmation
+button is needed, and tracking interruptions preserve the saved setup step.
 Skeleton debug view stays live; raise both hands to pause or resume. Detection-only
 mode remains at `/?mode=detect`. Local runtime logs explain blocked steps and round
 results. See [camera controls and gameplay](apps/camera-start/README.md).

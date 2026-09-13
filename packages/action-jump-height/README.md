@@ -165,8 +165,8 @@ recognition behavior. This opt-in policy:
   torso-scale and lateral drift remain rejected.
 
 The host holds the current large instruction for 350 ms during a brief dropout,
-freezes its countdown, and hides confirmation controls until current tracking is
-valid. Competing jump/confirm instructions must persist for 180 ms before display.
+freezes its countdown, and blocks confirmation until current tracking is valid.
+Instruction changes must persist for 180 ms before display.
 These are synthetic-tested thresholds, not measured guarantees of human accuracy.
 
 
@@ -195,3 +195,22 @@ observed grounded hold re-arms recognition before a new rise can count. Returnin
 to the original position is required. Explicit `reset` / `recalibrate`, changed
 image dimensions and a tracking-mode change still acquire a fresh reference.
 The default is false, preserving calibration behavior in other hosts.
+
+
+### Retained setup baseline
+
+`retainSetupBaseline: true` preserves a captured standing reference during tracking
+loss only for manual-confirmation hosts that have called `setJumpRange(...)`.
+It keeps stage `maximum` pending explicit confirmation; it never confirms for the
+player. Rejected frames and silent gaps clear motion and confirmation holds.
+Fresh upright tracking at the original baseline must satisfy the observed hold
+again before `canConfirmMaximum` becomes true. Explicit reset/recalibration,
+image-dimension changes and mode changes still discard the reference. Default
+maximum-jump calibration behavior is unchanged. Jump Game enables this option and
+enables `retainCalibration` from setup onward to retain confirmation through
+countdown interruptions as well as gameplay.
+
+While an automatic range is awaiting confirmation, stable hips can satisfy the
+standing hold when raising a hand lifts a shoulder slightly. Torso geometry,
+upright posture and the existing hip/height tolerances still apply. This exception
+does not alter measured-maximum calibration or live jump scoring.

@@ -26,7 +26,7 @@ $('mode-link').textContent = gameMode ? 'Jump detection only' : 'Play Jump Game'
 $('mode-link').href = gameMode ? '?mode=detect' : './';
 // Comfortable automatic scale relative to the standing torso; no maximum jump needed.
 const MOVEMENT_SCALE = .15;
-const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true, robustTracking: true });
+const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true, robustTracking: true, retainSetupBaseline: true });
 recognizer.setJumpRange(MOVEMENT_SCALE);
 let bodyFrame = null, gameTrackingSince = null;
 const GAME_TRACKING_GRACE_MS = 450;
@@ -70,7 +70,12 @@ const camera = new PoseCamera({
     bodyFrame = stale ? null : frame;
     const next = recognizer.update(frame);
     if (!next) return;
-    action = next; hands = gestures.update(frame);
+    action = next;
+    // A setup gesture must be held while the torso can actually confirm. Do not
+    // consume/latch a command during a crouch, tracking rejection or baseline hold.
+    if (!testing && !action.calibrated && !action.canConfirmMaximum) gestures.reset(frame);
+    hands = gestures.update(!testing && !action.calibrated && !action.canConfirmMaximum
+      ? { ...frame, joints: {} } : frame);
     if (gameMode && testing) {
       // A new camera/resolution can need a fresh baseline, without a new round,
       // confirmation gesture or countdown. Ordinary dropouts retain calibration.
@@ -124,7 +129,7 @@ function start() {
   }
   complete = false; error = ''; countdownAt = null;
   testing = resumeRound; gameTrackingSince = null;
-  recognizer.retainCalibration = resumeRound;
+  recognizer.retainCalibration = gameMode;
   if (resumeRound) pauseReason = 'tracking';
   jumpPeak = 0; returning = false; detectedAt = null;
   log('setup-start-requested', { resumeRound }); void camera.start();
@@ -268,19 +273,24 @@ function presentation(now) {
     if (countdownAt !== null) countdownAt += now - trackingHoldAt;
     log('tracking-hold-ended', { durationMs }); trackingHoldAt = null;
   }
-  if (!lastPoseAt || now - lastPoseAt >= 250) return { stage: 'missing', status: 'WAITING FOR LIVE TRACKING', title: 'Tracking paused.', detail: 'Stay in view. We’re waiting for a fresh frame.', feedback: 'Nothing will start until tracking returns.', reason: 'stale-tracking' };
-  if (!action || action.phase === 'missing') return { stage: 'missing', status: 'WE NEED TO SEE YOU', title: action?.quality === 'position-changed' ? 'Return to your spot.' : 'Step into view.', detail: 'Show both shoulders and hips. Face the camera.', feedback: 'Your legs can stay outside the picture.', reason: action?.quality ?? 'missing-body' };
+  const savedStep = action?.stage === 'maximum' ? 'confirm' : action?.calibrated ? 'jump' : 'standing';
+  if (!lastPoseAt || now - lastPoseAt >= 250) return { step: savedStep, stage: 'missing', status: 'WAITING FOR LIVE TRACKING', title: 'Tracking paused.', detail: 'Stay in view. We’re waiting for a fresh frame.', feedback: 'Nothing will start until tracking returns.', reason: 'stale-tracking' };
+  if (!action || action.phase === 'missing') return { step: savedStep, stage: 'missing', status: 'WE NEED TO SEE YOU', title: action?.quality === 'position-changed' ? 'Return to your spot.' : 'Step into view.', detail: 'Show both shoulders and hips. Face the camera.', feedback: 'Your legs can stay outside the picture.', reason: action?.quality ?? 'missing-body' };
   if (testing && action.calibrated) return gameMode ? gamePresentation(now) : jumpPresentation(now);
   if (action.stage === 'standing') return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand tall.\nHold still.', detail: 'Stay where you are for two seconds.', feedback: action.quality === 'unstable-stance' ? 'Keep your shoulders and hips steady.' : 'We can see you. Keep holding…', progress: (action.calibrationProgress ?? 0) * 2, step: 'standing', reason: action.quality };
-  if (action.cue === 'prepare-jump') return { stage: 'standing', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'Try a small movement, or stand up to confirm.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'jump' : 'standing', reason: 'prepare-jump' };
   if (action.stage === 'maximum') {
-    if (action.canConfirmMaximum) {
-      const holding = hands?.kind === 'one-hand' && !hands.latched;
-      return { stage: 'confirm', status: 'STEP 2 OF 3 · CONFIRM', title: 'Standing pose captured.', detail: holding ? 'Keep your LEFT hand up for one second.' : 'Raise your LEFT hand above your shoulder for one second.', feedback: !hands?.tracked ? 'Show both hands — or select Confirm & continue.' : 'Keep your right hand down. You can also select Confirm & continue.', progress: holding ? hands.progress : 0, button: 'Confirm & continue', step: 'confirm', reason: 'awaiting-confirmation' };
-    }
-    return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand steady.', detail: 'Return to your starting posture.', feedback: 'No jump required. Stand upright to confirm.', step: 'standing', reason: action.cue };
+    const holding = action.canConfirmMaximum && hands?.kind === 'one-hand' && !hands.latched;
+    return { stage: 'confirm', status: 'STEP 2 OF 3 · RAISE YOUR LEFT HAND',
+      title: holding ? 'Hold your LEFT hand up.' : 'Raise your LEFT hand.',
+      detail: 'Hold it above your shoulder for one second to continue.',
+      feedback: !action.canConfirmMaximum ? 'Your baseline is saved. Stand upright in your starting spot, then raise your left hand.'
+        : !hands?.tracked ? 'Keep both hands visible. Raise your left hand and keep your right hand down.'
+        : 'Keep your right hand down and your body steady.',
+      progress: holding ? hands.progress : 0, step: 'confirm',
+      reason: action.canConfirmMaximum ? 'awaiting-confirmation' : action.cue };
   }
-  const steady = action.calibrated && action.heightRatio < .03;
+  const steady = action.calibrated && ['ready', 'completed'].includes(action.phase)
+    && action.cue !== 'prepare-jump' && action.heightRatio < .03;
   if (!steady) return { stage: 'standing', status: 'MOVEMENT CONFIRMED', title: 'Stand steady.', detail: 'Return to your starting height to begin.', feedback: 'Your baseline is saved. Waiting for a steady pose.', step: 'jump', reason: 'not-grounded' };
   if (countdownAt === null) { countdownAt = now; countdownSerial++; log('countdown-started'); }
   const remaining = Math.max(1, Math.ceil((3000 - (now - countdownAt)) / 1000));
@@ -289,8 +299,7 @@ function presentation(now) {
 function paint() {
   const now = performance.now();
   let next = presentation(now);
-  // Debounce competing jump/confirmation instructions, independently of action
-  // recognition. An unready confirmation button is never kept actionable.
+  // Debounce instruction changes independently of action recognition.
   const requestedKey = [next.stage, next.title].join('|');
   if (requestedKey !== candidateKey) { candidateKey = requestedKey; candidateSince = now; }
   if (!next.paused && action?.stage === 'maximum'
@@ -342,7 +351,7 @@ function paintLog() {
   const target = $('log-entries');
   if (target && !$('diagnostics').hidden) target.textContent = diagnostics.entries().slice(-40).reverse().map(e => JSON.stringify(e)).join('\n');
 }
-$('primary').addEventListener('click', () => { if (camera.running && testing) { if (gameMode) toggleGame('button'); else finish(); } else if (camera.running && action?.canConfirmMaximum) confirm('button'); else if (!camera.active) start(); });
+$('primary').addEventListener('click', () => { if (camera.running && testing) { if (gameMode) toggleGame('button'); else finish(); } else if (!camera.active) start(); });
 $('end-run').addEventListener('click', () => finish());
 function setSettingsOpen(open) {
   if (!gameMode) return;

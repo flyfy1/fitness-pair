@@ -2,7 +2,7 @@ import {SITE_URL} from '../src/brand.js';
 import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
-import {syntheticCamera} from '../../camera-start/tests/browser/synthetic-camera.js';
+import {syntheticCamera,confirmWithHand} from '../../camera-start/tests/browser/synthetic-camera.js';
 test('landing has a direct arcade path and a factual build story',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  await expect(page).toHaveTitle('Hopmodo — Games that get you moving');
@@ -205,8 +205,8 @@ test('Push-up Flight demo records the crash sequence and saves automatically',as
 test('guided camera Dino calibrates and saves a replay on manual finish with synthetic camera input',async({page})=>{
  await syntheticCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');
  await expect(game.locator('#feedback')).toContainText('records on this device');
- await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Standing pose captured.',{timeout:12000});
- await game.locator('#primary').click();
+ await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.',{timeout:12000});
+ await confirmWithHand(game);
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
  await page.waitForTimeout(900);await game.locator('#show-settings').click();await game.locator('#end-run').click();
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});

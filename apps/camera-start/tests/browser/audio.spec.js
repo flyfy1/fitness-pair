@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { syntheticCamera } from './synthetic-camera.js';
+import { syntheticCamera, confirmWithHand } from './synthetic-camera.js';
 const state = page => page.evaluate(() => window.cameraSetup.getState());
 async function ready(page) {
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
+  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
 }
 async function analyser(page) {
   await page.addInitScript(() => {
@@ -32,7 +32,7 @@ test('real local countdown speech and rhythmic audio follow countdown, pause, mu
   expect((await state(page)).audio.state).toBe('idle');
   await ready(page);
   await expect.poll(async()=>(await state(page)).audio.voicesReady).toBe(7);
-  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  await confirmWithHand(page);
   for(const [label,cue] of [['3','three'],['2','two'],['1','one']]) {
     await expect(page.locator('#instruction')).toHaveText(label);
     await expect.poll(async()=>(await state(page)).audio.lastCue).toBe(cue);
@@ -74,7 +74,7 @@ test('cancelled countdown cannot play a late-loaded voice or start background mu
     await route.fulfill({response});
   });
   await page.goto('/');await ready(page);
-  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  await confirmWithHand(page);
   await expect(page.locator('#instruction')).toHaveText('3');
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
   await page.waitForTimeout(3200);
@@ -88,7 +88,7 @@ test('unavailable Web Audio does not block the camera game',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.AudioContext=undefined;window.webkitAudioContext=undefined;});
   await syntheticCamera(page);await page.goto('/');await ready(page);
-  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  await confirmWithHand(page);
   await expect.poll(async()=>(await state(page)).game.status,{timeout:6000}).toBe('running');
   expect((await state(page)).audio.unavailable).toBe(true);
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
@@ -97,7 +97,7 @@ test('unavailable Web Audio does not block the camera game',async({page})=>{
 
 test('hidden-page and page-exit lifecycle events release owned audio',async({page})=>{
   await syntheticCamera(page);await page.goto('/');await ready(page);
-  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  await confirmWithHand(page);
   await expect.poll(async()=>(await state(page)).audio.phase,{timeout:6000}).toBe('running');
   await expect.poll(async()=>(await state(page)).audio.activeNodes).toBeGreaterThan(0);
   // Synthetic lifecycle delivery checks cleanup, independently of camera accuracy.

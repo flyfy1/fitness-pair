@@ -1,6 +1,8 @@
+import { expect } from '@playwright/test';
+
 export async function syntheticCamera(page) {
   await page.addInitScript(() => {
-    window.poseTest = { rise: 0, hand: 'down', missing: false, wristsMissing: false, delay: 0, crouch: false, noiseFrames: 0 };
+    window.poseTest = { rise: 0, hand: 'down', missing: false, wristsMissing: false, delay: 0, crouch: false, noiseFrames: 0, shoulderLift: 0 };
     navigator.mediaDevices.getUserMedia = async () => {
       const c = document.createElement('canvas'); c.width = 640; c.height = 480;
       const ctx = c.getContext('2d'); const stream = c.captureStream(30); window.testStream = stream;
@@ -19,6 +21,7 @@ export async function syntheticCamera(page) {
         data.bitmap.close(); const points=[]; const s=window.poseTest;
         if (!s.missing) {
           for (const [indices,x] of [[[11,23],.44],[[12,24],.56]]) indices.forEach((id,i)=>{points[id]={x,y:[.28,.52][i]-s.rise,visibility:.99};});
+          points[11].y -= s.shoulderLift;
           if (s.crouch) {
             for (const i of [11,12]) { points[i].y += .19; points[i].x += .08; }
             for (const i of [23,24]) points[i].y += .10;
@@ -39,4 +42,12 @@ export async function syntheticCamera(page) {
       terminate() { this.terminated=true; }
     };
   });
+}
+
+
+export async function confirmWithHand(surface) {
+  await expect(surface.locator('#primary')).toBeHidden();
+  await surface.locator('body').evaluate(() => { window.poseTest.hand = 'up'; });
+  await expect.poll(() => surface.locator('body').evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(true);
+  await surface.locator('body').evaluate(() => { window.poseTest.hand = 'down'; });
 }

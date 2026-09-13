@@ -593,3 +593,47 @@ test('retained gameplay reference survives position rejection and flight timeout
   assert.deepEqual(h.recognizer.baseline,baseline);h.hold(10);
   assert.equal(h.recognizer.repIndex,0);
 });
+
+
+test('setup retention preserves the pending baseline but requires a fresh upright confirmation', () => {
+  for (const reject of [f => { f.joints = {}; }, f => { f.joints.leftShoulder.y -= .16; }]) {
+    const h = harness(() => {}, { ...robustOptions, retainSetupBaseline: true });
+    h.recognizer.setJumpRange(.15); h.hold(50);
+    const baseline = { ...h.recognizer.baseline };
+    const loss = h.hold(40, 0, reject);
+    assert.ok(loss.every(f => f.stage === 'maximum' && f.phase === 'missing' && !f.canConfirmMaximum && !f.completion));
+    assert.deepEqual(h.recognizer.baseline, baseline);
+    assert.equal(h.recognizer.confirmMaximum(), false);
+    assert.ok(h.hold(4).every(f => !f.canConfirmMaximum && !f.completion));
+    h.hold(8); assert.equal(h.recognizer.confirmMaximum(), true);
+  }
+});
+
+test('setup retention handles silent gaps but explicit calibration and camera changes reset the baseline', () => {
+  const h = harness(() => {}, { ...robustOptions, retainSetupBaseline: true });
+  h.recognizer.setJumpRange(.15); h.hold(50);
+  const baseline = { ...h.recognizer.baseline };
+  const recovered = h.update(0, undefined, 1200);
+  assert.equal(recovered.stage, 'maximum'); assert.equal(recovered.canConfirmMaximum, false);
+  assert.deepEqual(h.recognizer.baseline, baseline);
+  h.hold(10); assert.equal(h.recognizer.canConfirmMaximum, true);
+  h.update(0, f => { f.image.width = 800; });
+  assert.equal(h.recognizer.stage, 'standing'); assert.equal(h.recognizer.baseline, null);
+  h.hold(50); h.recognizer.recalibrate(); assert.equal(h.recognizer.baseline, null);
+  h.hold(50); h.recognizer.reset(session); assert.equal(h.recognizer.baseline, null);
+});
+
+test('automatic setup accepts a raised shoulder over stable hips without accepting a body rise', () => {
+  const h = harness(() => {}, { ...robustOptions, retainSetupBaseline: true });
+  h.recognizer.setJumpRange(.15); h.hold(50);
+  const shoulderLift = f => { f.joints.leftShoulder.y -= .04; };
+  const raised = h.hold(30, 0, shoulderLift);
+  assert.ok(raised.every(f => f.stage === 'maximum' && !f.completion));
+  assert.equal(raised.at(-1).canConfirmMaximum, true);
+  h.hold(30, 0, f => { f.joints = {}; });
+  assert.equal(h.hold(30, 0, shoulderLift).at(-1).canConfirmMaximum, true);
+  assert.equal(h.hold(12, .03).at(-1).canConfirmMaximum, false, 'rising hips still block confirmation');
+  assert.equal(h.hold(12, 0, crouch).at(-1).canConfirmMaximum, false);
+  h.hold(30, 0, shoulderLift); assert.equal(h.recognizer.confirmMaximum(), true);
+  assert.ok(h.hold(30, 0, shoulderLift).every(f => !f.completion && f.heightRatio === 0));
+});
