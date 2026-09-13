@@ -69,6 +69,11 @@ job!" over a closing chord. Music ducks under speech.
 
 Sound on/off mutes every layer immediately and preserves the round. Cancellation,
 pause and backgrounding stop all scheduled audio; retry cannot replay an old cue.
+The arcade recorder receives a stable post-mix audio stream through
+`window.plankFlight.getAudioStream()`. It includes music, effects and speech,
+respects the sound toggle, and preserves final encouragement before the replay
+ending. A round started muted can still record audio after unmuting. The host
+records cloned tracks; only this game stops the original stream on page exit.
 Page exit closes the owned audio context. Audio failures leave the visual game
 playable. The game never requests microphone access or sends audio/camera data.
 
