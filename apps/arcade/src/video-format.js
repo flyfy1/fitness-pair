@@ -7,6 +7,14 @@ export const RECORDING_FORMATS = [
   'video/webm;codecs=vp9',
   'video/webm',
 ];
+export const AUDIO_RECORDING_FORMATS = [
+  'video/mp4;codecs=avc1.424028,mp4a.40.2',
+  'video/mp4;codecs=avc1,mp4a.40.2',
+  'video/mp4',
+  'video/webm;codecs=vp8,opus',
+  'video/webm;codecs=vp9,opus',
+  'video/webm',
+];
 export const containerType = mime => String(mime || '').split(';')[0].trim().toLowerCase();
 export const videoExtension = blob => containerType(blob.type) === 'video/mp4' ? 'mp4' : 'webm';
 export const formatLabel = blob => videoExtension(blob) === 'mp4' ? 'MP4' : 'WebM';
@@ -14,7 +22,7 @@ export const formatLabel = blob => videoExtension(blob) === 'mp4' ? 'MP4' : 'Web
 // Wire handlers before start; retry synchronous encoder failures without losing
 // the stream. An asynchronous recording failure is reported by the owner.
 export function startVideoRecorder(stream, wire, {Recorder = globalThis.MediaRecorder, videoBitsPerSecond = 2200000} = {}) {
-  for (const mimeType of RECORDING_FORMATS) {
+  for (const mimeType of (stream.getAudioTracks?.().length ? AUDIO_RECORDING_FORMATS : RECORDING_FORMATS)) {
     if (!Recorder?.isTypeSupported(mimeType)) continue;
     let recorder;
     try {

@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 async function previewRound(page){
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#demo').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(1200);
- await game.locator('#rep-count').evaluate(node=>{node.textContent='5';});
+ await page.evaluate(()=>{const w=document.querySelector('#game-frame').contentWindow;w.motionQuest.getReplayState=()=>({roundId:w.document.documentElement.dataset.roundId,phase:'complete'});});
  await expect(page.locator('#local-result video')).toBeVisible({timeout:7000});
 }
 

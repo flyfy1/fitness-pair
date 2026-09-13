@@ -9,7 +9,7 @@ window.addEventListener('pagehide',()=>{urls.forEach(u=>URL.revokeObjectURL(u));
 async function api(path,options){const r=await fetch(path,options);const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');return data;}
 export function mountRecording(game,frame){
  const panel=document.querySelector('#record-panel');
- panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. It stays on this device.</p><p class="record-note">Game + enabled camera · no audio · nothing shared automatically</p></div><a href="/library">My clips →</a>';
+ panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. It stays on this device.</p><p class="record-note">Game + enabled camera · game sound when available · no microphone · nothing shared automatically</p></div><a href="/library">My clips →</a>';
  const status=panel.querySelector('#record-status');
  const cameraLive=video=>!!(video?.srcObject&&video.readyState>=2&&video.videoWidth>0&&video.srcObject.getVideoTracks().some(track=>track.readyState==='live'));
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';
@@ -34,9 +34,10 @@ export function mountRecording(game,frame){
   const canvas=doc?.querySelector('#game'),video=doc?.querySelector('#camera');
   if(!canvas?.width)return null;
   if(game.id==='motion-quest'){
-   const reps=Number(doc.querySelector('#rep-count')?.textContent||0),demo=doc.querySelector('#demo-action');
-   const preview=!!(demo&&!demo.hidden),cameraReady=!!(video?.srcObject&&doc.querySelector('#start')?.hidden);
-   return {canvas,video,skeleton:doc.querySelector('#skeleton'),isAR:!!doc.querySelector('.camera-stage'),round:doc.documentElement.dataset.roundId||'initial',done:reps>=5,ready:preview||cameraReady&&cameraLive(video),score:`${reps} / 5 squats`,hud:{health:doc.querySelector('#hp-label')?.textContent,cue:doc.querySelector('#arena-title')?.textContent,charge:doc.querySelector('#charge-value')?.textContent,elapsed:doc.querySelector('#elapsed')?.textContent}};
+   const state=frame.contentWindow.motionQuest?.getReplayState();
+   if(!state)return null;
+   const reps=Number(doc.querySelector('#rep-count')?.textContent||0);
+   return {canvas,video,skeleton:doc.querySelector('#skeleton'),isAR:!!doc.querySelector('.camera-stage'),round:state.roundId,done:state.phase==='complete',stopped:state.phase==='idle',ending:state.phase==='ending',ready:state.phase==='playing',audio:frame.contentWindow.motionQuest.getAudioStream?.(),score:`${reps} / 5 squats`,hud:{health:doc.querySelector('#hp-label')?.textContent,cue:doc.querySelector('#arena-title')?.textContent,charge:doc.querySelector('#charge-value')?.textContent,elapsed:doc.querySelector('#elapsed')?.textContent}};
   }
   const snapshot=frame.contentWindow.dinoGame?.getState();
   return {canvas,video,isAR:false,round:snapshot?.roundId,done:snapshot?.status==='over',ready:snapshot?.status==='running',score:`${snapshot?.score||0} points`};
@@ -68,7 +69,7 @@ export function mountRecording(game,frame){
   function finish(score,reason='Round complete'){
    if(session.phase!=='recording')return;
    session.stopReason=reason;session.hasEnding=true;session.finalScore=score;
-   session.phase='finishing';if(active===session)active=null;cancelAnimationFrame(session.raf);
+   session.phase='finishing';session.capture?.getAudioTracks().forEach(track=>{track.enabled=false;});if(active===session)active=null;cancelAnimationFrame(session.raf);
    if(!active)setState('finishing','Round complete. Saving your replay…');
    drawClipEnding(session.context,game.title,score,logo,session.hadCamera,reason);
    function hold(){if(session.phase!=='finishing')return;session.context.fillRect(0,0,1,1);session.capture?.getVideoTracks()[0]?.requestFrame?.();session.raf=requestAnimationFrame(hold);}
@@ -78,6 +79,9 @@ export function mountRecording(game,frame){
   try{
    session.lastCamera=document.createElement('canvas');
    const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
+   // Own only cloned game-audio tracks; never stop the game's audio bus.
+   for(const track of snapshot.audio?.getAudioTracks()||[])if(track.readyState==='live')session.capture.addTrack(track.clone());
+   session.includesAudio=session.capture.getAudioTracks().length>0;
    drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,logo});
    session.recorder=startVideoRecorder(session.capture,recorder=>{
    session.recorder=recorder;
@@ -98,7 +102,7 @@ export function mountRecording(game,frame){
     let blob;
     try{blob=await recordedBlob(session.chunks,session.recorder.mimeType);}
     catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
-    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:Date.now(),duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,brand:BRAND_NAME,website:SITE_URL,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
+    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:Date.now(),duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
     let message=session.limited?'File limit reached. The replay up to that point is saved below.':session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the camera replay captured so far below.':'Saved on this device. Your replay is ready below.';
     try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
     if(!active)setState(sessions.size?'finishing':'idle',message);
@@ -114,6 +118,7 @@ export function mountRecording(game,frame){
      if(now.round!==session.round){finish(snapshot.score);return;}
      // Completion can turn off the game's camera in the same frame.
      if(now.done){finish(now.score);return;}
+     if(now.stopped&&!session.hadCamera){finish(now.score,'Preview ended');return;}
      if(session.hadCamera&&!now.ending){
       if(now.video?.currentTime!==session.cameraTime){session.cameraTime=now.video?.currentTime;session.lastCameraAt=performance.now();}
       if(!cameraLive(now.video)||performance.now()-session.lastCameraAt>8000){finish(now.score,'Camera interrupted');return;}
@@ -146,7 +151,7 @@ export function mountRecording(game,frame){
  window.addEventListener('pagehide',()=>{unloading=true;clearInterval(watcher);for(const session of sessions)session.saveNow();});
  function connectGame(){
   if(active)active.finish('Game reloaded');handledRound=null;
-  try{const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note, .privacy');if(note)note.textContent='Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
+  try{frame.contentWindow.addEventListener('motionquest:replay-state',watchForStart);const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note, .privacy');if(note)note.textContent=game.id==='motion-quest'?'Your game and camera view record automatically after standing calibration, with game sound and no microphone. Nothing is uploaded unless you choose to share.':'Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
  }
  frame.addEventListener('load',connectGame);if(frame.contentDocument?.readyState==='complete')connectGame();
 }
@@ -212,9 +217,10 @@ export async function renderLibrary(container){
 }
 export async function renderGallery(container){
  container.innerHTML='<div class="utility-head"><div><p class="kicker">Player recordings</p><h1>THE GALLERY.</h1><p class="lead">Watch shared game clips, then try a game yourself.</p></div><a class="button outline" href="/library">My local clips ↗</a></div><div id="gallery-body" role="status">Loading the gallery…</div>';
- const body=container.querySelector('#gallery-body');try{const data=await api('/api/clips'+location.search);if(!data.enabled||!data.clips.length){body.innerHTML=`<div class="empty-state"><span class="empty-icon" aria-hidden="true">↗</span><h2>${data.enabled?'NO SHARED CLIPS YET.':'SHARING IS COMING SOON.'}</h2><p>${data.enabled?'Record a game, then choose whether to share your clip here.':'Gallery sharing isn’t available yet. In the meantime, play a game and keep your favorite moments on this device.'}</p><a class="button primary" href="/#arcade">Take me to the arcade ↗</a></div>`;return;}
+ const body=container.querySelector('#gallery-body');try{const data=await api('/api/clips'+location.search);
+ if(data.enabled&&data.nextPageToken){const next=document.createElement('a');next.className='text-link';next.href='/gallery?page='+encodeURIComponent(data.nextPageToken);next.textContent='More clips →';body.after(next);}
+ if(!data.enabled||!data.clips.length){body.innerHTML=`<div class="empty-state"><span class="empty-icon" aria-hidden="true">↗</span><h2>${data.enabled?(data.nextPageToken?'NO CLIPS ON THIS PAGE.':'NO SHARED CLIPS YET.'):'SHARING IS COMING SOON.'}</h2><p>${data.enabled?(data.nextPageToken?'Continue to the next page to find more shared clips.':'Record a game, then choose whether to share your clip here.'):'Gallery sharing isn’t available yet. In the meantime, play a game and keep your favorite moments on this device.'}</p><a class="button primary" href="/#arcade">Take me to the arcade ↗</a></div>`;return;}
  body.className='clip-grid';body.innerHTML=data.clips.map(c=>`<article class="clip-card"><video preload="none" controls playsinline src="/api/media/${c.id}" aria-label="${escape(c.title)}"></video><h3><a href="/clips/${c.id}">${escape(c.title)}</a></h3><p>${c.source==='synthetic'?'Synthetic gameplay':'Player recording'}</p><a class="text-link" href="/clips/${c.id}">Watch clip →</a></article>`).join('');
- if(data.nextPageToken){const next=document.createElement('a');next.className='text-link';next.href='/gallery?page='+encodeURIComponent(data.nextPageToken);next.textContent='More clips →';body.after(next);}
  }catch(error){body.innerHTML=`<div class="empty-state"><h2>COULDN’T LOAD THE GALLERY.</h2><p>${escape(error.message)}</p><a class="text-link" href="/gallery">Try again ↻</a></div>`;}
 }
 export async function renderClip(container,id){

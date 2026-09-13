@@ -14,8 +14,21 @@ const links = [['leftShoulder','rightShoulder'],['leftShoulder','leftElbow'],['l
 let mode = 'idle', stream = null, worker = null, generation = 0, inFlight = false;
 let frameSentAt = 0, lastVideoTime = -1, lastResultAt = 0, lastRenderAt = 0, raf = 0;
 let reps = 0, elapsedMs = 0, runningAt = null, demoHeldAt = null, demoCharge = 0;
-let statusUntil = 0, currentProgress = 0, sound = null;
+let statusUntil = 0, currentProgress = 0;
+let replayPhase = 'idle', actionPhase = 'missing';
 let initTimer = null, loadingHintTimer = null, gameState = null, inputSeq = 0;
+
+// A read-only presentation lifecycle for the same-origin arcade recorder.
+// Recognition completion IDs and scoring continue through the shared contracts.
+window.motionQuest = {
+  getReplayState: () => ({ roundId: gameState?.sessionId, phase: replayPhase, actionPhase, charge: game.charge }),
+  getAudioStream: () => game.getAudioStream(),
+};
+function setReplayPhase(phase) {
+  if (phase === replayPhase) return;
+  replayPhase = phase;
+  window.dispatchEvent(new Event('motionquest:replay-state'));
+}
 
 function status(title, detail, error = false, headline = title) {
   setText('status-title', title); setText('status-detail', detail);
@@ -41,34 +54,25 @@ function resetRound() {
   document.documentElement.dataset.roundId = sessionId;
   const source = { kind: mode === 'demo' ? 'synthetic' : 'camera', id: sessionId };
   gameState = createGameState({ sessionId, source }); inputSeq = 0;
+  actionPhase = 'calibrating'; setReplayPhase('setup');
   statusUntil = 0; detector.reset({ sessionId, source }); game.reset(); progress(0);
   $('rep-count').textContent = '0'; $('damage-count').textContent = '0'; $('elapsed').textContent = '00:00';
   $('hp-label').textContent = '100 / 100'; $('hp-bar').style.width = '100%'; $('victory').hidden = true;
 }
-function beep() {
-  if (!sound || sound.state !== 'running') return;
-  const oscillator = sound.createOscillator(), gain = sound.createGain();
-  oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(300, sound.currentTime);
-  oscillator.frequency.exponentialRampToValueAtTime(780, sound.currentTime + .15);
-  gain.gain.setValueAtTime(.035, sound.currentTime); gain.gain.exponentialRampToValueAtTime(.001, sound.currentTime + .23);
-  oscillator.connect(gain); gain.connect(sound.destination); oscillator.start(); oscillator.stop(sound.currentTime + .24);
-}
-function enableSound() {
-  try { sound ??= new AudioContext(); sound.resume().catch(() => {}); } catch { /* Sound is optional. */ }
-}
+function enableSound() { game.sound.enable(); }
 function attack(actionFrame) {
   if (reps >= 5) return;
   const result = consumeAction(gameState, actionFrame); gameState = result.state;
   if (!result.attack) return;
   startClock(); reps = gameState.completedReps;
-  const hp = gameState.health; game.attack(hp); beep();
+  const hp = gameState.health; game.attack(hp);
   $('rep-count').textContent = String(reps); $('damage-count').textContent = String(reps * 20);
   $('hp-label').textContent = `${hp} / 100`; $('hp-bar').style.width = `${hp}%`;
   progress(0);
   statusUntil = performance.now() + 1000;
   status(mode === 'demo' ? 'Simulated attack landed!' : 'Squat +1. Attack landed!', reps < 5 ? 'Stand steady, then continue at your own pace.' : 'Quest complete. Take a breather.', false, reps < 5 ? `Hit! ${reps} / 5` : 'Quest complete!');
   if (reps === 5) {
-    pauseClock(); game.charge = 0;
+    pauseClock(); game.charge = 0; setReplayPhase('ending');
     const wasDemo = mode === 'demo';
     $('victory-copy').textContent = wasDemo ? 'Preview complete! Enable your camera to play with real movement.' : 'Five squats. Five hits. Nicely done!';
     // Close camera + worker immediately after the last repetition.
@@ -78,8 +82,7 @@ function attack(actionFrame) {
     $('start').hidden = false; $('start').disabled = false;
     $('start').innerHTML = 'Enable camera & retry <span>↗</span>';
     $('stop').hidden = true; $('calibrate').hidden = true; $('demo-action').hidden = true;
-    const roundGeneration = generation;
-    setTimeout(() => { if (reps === 5 && generation === roundGeneration) $('victory').hidden = false; }, 850);
+    // Rendering continues until the last projectile, impact and victory settle.
   }
 }
 function releaseCamera() {
@@ -94,6 +97,7 @@ function releaseCamera() {
   game.charge = 0;
 }
 function stopCamera(message = 'Camera is off', detail = 'Enable your camera to start a new round.', headline = message) {
+  setReplayPhase('idle'); game.sound.quiet();
   releaseCamera(); mode = 'idle'; pauseClock(); demoHeldAt = null; demoCharge = 0; progress(0);
   $('start').hidden = false; $('start').disabled = false; $('start').innerHTML = 'Enable camera & play <span>↗</span>';
   $('stop').hidden = true; $('calibrate').hidden = true; $('demo-action').hidden = true;
@@ -191,6 +195,7 @@ function handlePose(result) {
     lowering: ['Keep lowering to charge', 'Stay within a comfortable range. Turn slightly sideways if charge stays low.', false, 'Keep lowering'],
     down: ['Charged! Stand to attack', 'Return to standing to release your magic.', false, 'Stand to attack'],
   };
+  actionPhase = result.phase;
   const inactive = ['missing', 'calibrating'].includes(result.phase);
   if (inactive) { pauseClock(); statusUntil = 0; }
   else startClock();
@@ -200,6 +205,8 @@ function handlePose(result) {
   gameState = consumeAction(gameState, result).state;
   if (performance.now() >= statusUntil && copy[result.cue]) status(...copy[result.cue]);
   $('tracking-badge').textContent = result.phase === 'missing' ? 'Waiting for full body' : result.phase === 'calibrating' ? 'Calibrating' : 'Body landmarks detected';
+  // Start capture after the ready cue is drawn into the HUD, before the first squat.
+  if (result.phase === 'ready' && replayPhase === 'setup') setReplayPhase('playing');
 }
 function drawSkeleton(points) {
   const w = video.videoWidth || 640, h = video.videoHeight || 480;
@@ -235,9 +242,11 @@ function beginDemo() {
   $('demo-action').hidden = false; $('demo').hidden = true;
   $('camera-placeholder').hidden = true;
   status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.', false, 'Hold to charge');
+  actionPhase = 'ready'; setReplayPhase('playing');
 }
 function holdDemo() {
   if (mode !== 'demo' || reps >= 5 || demoHeldAt !== null) return;
+  enableSound();
   statusUntil = 0; status('Charging a simulated attack', 'Release once fully charged. This is a simulation.', false, 'Keep holding');
   demoHeldAt = performance.now(); $('demo-action').classList.add('pressed'); startClock();
 }
@@ -263,6 +272,10 @@ function render(time) {
       status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.', false, 'Hold to charge');
     }
     game.draw(time);
+    if (replayPhase === 'ending' && game.effectsFinished(time)) {
+      $('victory').hidden = false;
+      setReplayPhase('complete');
+    }
     const seconds = Math.floor((elapsedMs + (runningAt === null ? 0 : time - runningAt)) / 1000);
     $('elapsed').textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
     if (mode === 'camera' && reps < 5) {
@@ -293,9 +306,9 @@ window.addEventListener('blur', () => releaseDemo(true));
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (mode === 'camera' || mode === 'loading') stopCamera('Paused · camera off', 'When you return, enable your camera to play again.');
-    releaseDemo(true); pauseClock(); sound?.suspend().catch(() => {});
+    releaseDemo(true); pauseClock(); game.sound.suspend();
     cancelAnimationFrame(raf); raf = 0;
   } else if (!raf) raf = requestAnimationFrame(render);
 });
-window.addEventListener('pagehide', () => { releaseCamera(); sound?.close().catch(() => {}); });
+window.addEventListener('pagehide', () => { releaseCamera(); game.sound.close(); });
 raf = requestAnimationFrame(render);

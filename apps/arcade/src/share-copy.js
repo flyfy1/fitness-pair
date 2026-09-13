@@ -34,9 +34,17 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{}}={}){
  signal?.addEventListener('abort',abort,{once:true});window.addEventListener('pagehide',abort);document.addEventListener('visibilitychange',visibility);
  const deadline=setTimeout(()=>controller.abort(new Error('Making the share copy took too long. Your original replay is safe.')),75000);
  const localSignal=controller.signal,video=document.createElement('video'),url=URL.createObjectURL(clip.blob);
- let stream,recorder,raf=0,endTimer=0;video.muted=true;video.playsInline=true;video.preload='auto';
+ let stream,recorder,audioContext,audioOutput,raf=0,endTimer=0;video.muted=true;video.playsInline=true;video.preload='auto';
  try{
   if(signal?.aborted)abort();visibility();localSignal.throwIfAborted();
+  if(clip.includesAudio){
+   // Resume within the player's click; route decoded game sound only to the copy.
+   audioContext=new AudioContext();
+   audioOutput=audioContext.createMediaStreamDestination();
+   audioContext.createMediaElementSource(video).connect(audioOutput);
+   video.muted=false;
+   await abortable(audioContext.resume(),localSignal);
+  }
   await waitMedia(video,'loadeddata',()=>{video.src=url;video.load();},localSignal);
   const duration=Number.isFinite(video.duration)?video.duration:clip.duration;
   const range=shareWindow(duration,clip.hasEnding);
@@ -44,6 +52,7 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{}}={}){
   const logo=await abortable(loadRecordingLogo(),localSignal);localSignal.throwIfAborted();
   const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;const ctx=canvas.getContext('2d');
   ctx.drawImage(video,0,0,CLIP_WIDTH,CLIP_HEIGHT);stream=canvas.captureStream(24);
+  for(const track of audioOutput?.stream.getAudioTracks()||[])stream.addTrack(track);
   let chunks=[],bytes=0,startedAt=0,stoppedAt=0,finishing=false,lastTime=video.currentTime,lastFrameAt=performance.now();
   const output=new Promise((resolve,reject)=>{
    const interrupted=()=>reject(localSignal.reason);localSignal.addEventListener('abort',interrupted,{once:true});
@@ -76,11 +85,11 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{}}={}){
   });
   const encoded=await output;localSignal.throwIfAborted();
   if(!fitsWebsiteShare(encoded))throw new Error('The share copy exceeded the website limits. Your full replay is still saved.');
-  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · share copy`,game:clip.game,createdAt:Date.now(),source:clip.source,includesCamera:clip.includesCamera,brand:clip.brand,website:clip.website,shareCopy:true,hasEnding:true,finalScore:clip.finalScore,...encoded};
+  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · share copy`,game:clip.game,createdAt:Date.now(),source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio,brand:clip.brand,website:clip.website,shareCopy:true,hasEnding:true,finalScore:clip.finalScore,...encoded};
  }finally{
   clearTimeout(deadline);clearTimeout(endTimer);cancelAnimationFrame(raf);
   if(recorder){recorder.ondataavailable=recorder.onstop=recorder.onerror=null;if(recorder.state!=='inactive')recorder.stop();}
-  stream?.getTracks().forEach(track=>track.stop());video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url);
+  stream?.getTracks().forEach(track=>track.stop());audioOutput?.stream.getTracks().forEach(track=>track.stop());audioContext?.close().catch(()=>{});video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url);
   signal?.removeEventListener('abort',abort);window.removeEventListener('pagehide',abort);document.removeEventListener('visibilitychange',visibility);
  }
 }
