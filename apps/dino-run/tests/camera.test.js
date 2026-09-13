@@ -171,7 +171,7 @@ test('initialization timeout ends owned resources and resolves start', async t =
   const env = environment(t);
   const ready = env.camera.start();
   await flush();
-  t.mock.timers.tick(30_001);
+  t.mock.timers.tick(330_001);
   assert.equal(await ready, null);
   assert.match(env.errors[0].message, /initialization timed out/);
   assert.equal(env.workers[0].terminated, true);

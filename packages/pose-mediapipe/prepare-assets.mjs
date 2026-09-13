@@ -20,6 +20,7 @@ export async function preparePoseAssets(destination) {
   // The upstream WASM loader requires a classic Worker and unmodified bundle.
   await cp(new URL('vision_bundle.cjs', library), new URL('vision_bundle.js', runtime));
   await cp(new URL('worker.js', import.meta.url), new URL('pose-worker.js', runtime));
+  await cp(new URL('asset-cache.js', import.meta.url), new URL('asset-cache.js', runtime));
   const model = new URL('pose_landmarker_lite.task', runtime);
   try {
     await access(model);
@@ -39,6 +40,14 @@ export async function preparePoseAssets(destination) {
   if (hash !== MODEL_SHA256) {
     throw new Error(`Model checksum mismatch. Remove ${fileURLToPath(model)} and retry.`);
   }
+  const paths = ['vision_bundle.js', 'pose_landmarker_lite.task',
+    'wasm/vision_wasm_internal.js', 'wasm/vision_wasm_internal.wasm',
+    'wasm/vision_wasm_nosimd_internal.js', 'wasm/vision_wasm_nosimd_internal.wasm'];
+  const assets = await Promise.all(paths.map(async path => {
+    const bytes = await readFile(new URL(path, runtime));
+    return { path, bytes: bytes.byteLength, sha256: createHash('sha256').update(bytes).digest('hex') };
+  }));
+  await writeFile(new URL('asset-manifest.json', runtime), JSON.stringify({ schema: 1, assets }));
   console.info(`Local model ready: ${fileURLToPath(model)} (sha256 ${hash})`);
 }
 
