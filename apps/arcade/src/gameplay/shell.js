@@ -4,7 +4,7 @@ import './shell.css';
 export function mountGame(container,game){
  document.body.classList.add('game-mode');
  container.innerHTML=`<main id="main" class="game-play" aria-label="${game.title}">
-  <iframe id="game-frame" src="${game.path}" title="${game.title} game" allow="camera; fullscreen" referrerpolicy="same-origin"></iframe>
+  <iframe id="game-frame" src="${game.path}" title="${game.title} game" allow="camera; microphone; fullscreen" referrerpolicy="same-origin"></iframe>
   <div class="game-replay-tools"><a class="back" href="/#arcade">← Back to the arcade</a><div class="record-bar" id="record-panel"></div></div>
   <section class="local-result" id="local-result" hidden></section></main>`;
  const frame=container.querySelector('#game-frame');
@@ -15,10 +15,10 @@ export function mountGame(container,game){
  function controls(){
   const doc=frame.contentDocument;if(!doc?.body)return;
   const element=doc.createElement('div');element.className='hopmodo-conversation';
-  element.innerHTML='<button type="button" aria-pressed="false">Record conversation</button><span role="status" hidden>Microphone off</span>';
+  element.innerHTML='<button type="button" aria-label="Record conversation" title="Record conversation" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/><path class="mic-off" d="m3 3 18 18"/></svg></button><span role="status" hidden>Microphone off</span>';
   const style=doc.createElement('style');
-  style.textContent='.hopmodo-conversation{position:fixed;right:12px;bottom:12px;z-index:100;max-width:min(280px,calc(100vw - 24px));padding:0;border:0;border-radius:22px;color:#182346;font:12px Arial,sans-serif}.hopmodo-conversation button{display:block;min-height:44px;box-shadow:0 2px 12px #0003;border:0;border-radius:20px;background:#2347ee;color:#fff;padding:6px 12px;font:600 12px Arial,sans-serif}.hopmodo-conversation button[aria-pressed=true]{background:#a92020}.hopmodo-conversation span{position:absolute;right:0;bottom:calc(100% + 6px);width:max-content;max-width:240px;padding:8px;border:1px solid #18234655;border-radius:8px;background:#fff;line-height:1.4}.hopmodo-conversation span[hidden]{display:none}.hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}';
-  Object.assign(element.style,game.recordingControlPosition||{});doc.head.append(style);doc.body.append(element);recorder.connectControls(element);
+  style.textContent='.hopmodo-conversation{position:fixed;right:12px;top:12px;z-index:100;color:#182346;font:12px Arial,sans-serif}.hopmodo-conversation button{display:grid;place-items:center;width:40px;height:40px;padding:0;box-shadow:0 2px 12px #0003;border:1px solid #18234633;border-radius:50%;background:#fff;color:#182346}.hopmodo-conversation[data-state=recording] button{background:#a92020;color:#fff}.hopmodo-conversation[data-state=ready] button,.hopmodo-conversation[data-state=pending] button{background:#2347ee;color:#fff}.hopmodo-conversation button[aria-pressed=true] .mic-off{display:none}.hopmodo-conversation span{position:absolute;right:0;top:calc(100% + 6px);width:max-content;max-width:min(260px,calc(100vw - 24px));padding:8px;border:1px solid #18234655;border-radius:8px;background:#fff;line-height:1.4}.hopmodo-conversation span[hidden]{display:none}.hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}';
+  doc.head.append(style);doc.body.append(element);recorder.connectControls(element);
  }
  frame.addEventListener('load',controls);if(frame.contentDocument?.readyState==='complete')controls();
  let disposed=false;
