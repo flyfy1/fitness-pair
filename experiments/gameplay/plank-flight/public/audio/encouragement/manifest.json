@@ -1,6 +1,6 @@
 {
   "clips": {
-    "spark-01": {
+    "en/spark-01": {
       "requestSHA256": "a0b182c92c8cec2409b96a3fed7a9fc88bed225783a6cac173c2feea3e5dd0c9",
       "sha256": "d9b1dbbe888b0f1d90f2b81fdcf0517cc809be4089f9fe52a813f34a170843af",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -8,7 +8,7 @@
       "duration": 2.952,
       "generatedAt": "2026-09-13T12:19:59.439998+00:00"
     },
-    "spark-02": {
+    "en/spark-02": {
       "requestSHA256": "31389149be1a796a39d34021095be481b960106c3f8c00bc567aef265a9732ae",
       "sha256": "0dc88642d13392a233ec128431215ccfdb8c5e75740c293155d7de7b2bd20eaa",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -16,7 +16,7 @@
       "duration": 3.648,
       "generatedAt": "2026-09-13T12:20:02.535950+00:00"
     },
-    "calm-01": {
+    "en/calm-01": {
       "requestSHA256": "004917355bd042534c38b60cd63576c80737ed6cab62d70b36abe6f5bd1fd1ac",
       "sha256": "cf7994dab63483baf94302cedc4ced030aee1a2fa0f74031b7d8a14c7f14c6f8",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -24,7 +24,7 @@
       "duration": 3.96,
       "generatedAt": "2026-09-13T12:20:04.603087+00:00"
     },
-    "calm-02": {
+    "en/calm-02": {
       "requestSHA256": "7d4c52038cb7fd19b40043f0dfce2194f657a29792134d7c0e3b18748a182586",
       "sha256": "78808296a17780f0df910f20c8f968f8d0923d4197de52ee847fb17644cdd6a7",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -32,7 +32,7 @@
       "duration": 3.6,
       "generatedAt": "2026-09-13T12:20:06.503937+00:00"
     },
-    "playful-01": {
+    "en/playful-01": {
       "requestSHA256": "eb30c399a91005e4cf41fbcb7b20b934926806d71be89bf899a20687c761c336",
       "sha256": "fd399b6050d4275f657878255acdda447db4309d096d499559df84f42da84952",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -40,7 +40,7 @@
       "duration": 3.264,
       "generatedAt": "2026-09-13T12:20:09.314591+00:00"
     },
-    "playful-02": {
+    "en/playful-02": {
       "requestSHA256": "20420c55ad463baf64cccc17f920d9bf9d91c866e3ae6b34fac4add0b778defe",
       "sha256": "bb223eab370a688e84eb16f570201dc35a5b723ed4241175a4f2c517ff85fb6a",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -48,7 +48,7 @@
       "duration": 4.608,
       "generatedAt": "2026-09-13T12:20:10.887575+00:00"
     },
-    "steady-01": {
+    "en/steady-01": {
       "requestSHA256": "db3d83a861910b0c2abc40fbab336707b89413c3251f9cd9cccb644b6fcdf0fb",
       "sha256": "62d576c19581e843b27e4cb08677c59baaa17e987f50bb3fb431ce1c07ca5e3c",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -56,7 +56,7 @@
       "duration": 2.904,
       "generatedAt": "2026-09-13T12:20:12.503394+00:00"
     },
-    "steady-02": {
+    "en/steady-02": {
       "requestSHA256": "bfcd8ca94e643286ddf4ef29d46011ccf68d2765cd4debe3654bf273919f07a1",
       "sha256": "244438dbd29532a90a5e5169396d754a2cc50e5511f0332b4baf4b8c66447737",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -64,7 +64,7 @@
       "duration": 4.008,
       "generatedAt": "2026-09-13T12:20:14.584958+00:00"
     },
-    "wonder-01": {
+    "en/wonder-01": {
       "requestSHA256": "64315ee3c6dbd2a38a348a09e1f29634afd19145339b69473bbcc23dfdb2a707",
       "sha256": "81c6a82955424c6550ad5e9b0f383601369ed2ef6d9be961e2604ec81fb70d44",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -72,7 +72,7 @@
       "duration": 3.504,
       "generatedAt": "2026-09-13T12:20:16.399298+00:00"
     },
-    "wonder-02": {
+    "en/wonder-02": {
       "requestSHA256": "8dab0b2fc0d6bfa5da4548f313e78a5ae3b24e96db9887862e366d5a65f65f8f",
       "sha256": "7bfb99ca12732d29fe925cc984902170e59bd51ca5bdc6cc412526e4a6733ab5",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -80,7 +80,7 @@
       "duration": 2.304,
       "generatedAt": "2026-09-13T12:20:17.849662+00:00"
     },
-    "celebrate-01": {
+    "en/celebrate-01": {
       "requestSHA256": "8a17178efe57cc849c71289346feb63b1ea4a6666c8ce76473a6cfa79d590d6d",
       "sha256": "eaad971004796451be7b2176b105130e26ace3d05c7d05266e35b9eb2b3924d0",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -88,7 +88,7 @@
       "duration": 3.504,
       "generatedAt": "2026-09-13T12:20:19.477094+00:00"
     },
-    "celebrate-02": {
+    "en/celebrate-02": {
       "requestSHA256": "a697752197883239dd66a46f26773f327b57f839dbe828b5f089de2319de66fa",
       "sha256": "bb4cbec716aaffea9c28b0bea48d5abfb9468423474453cba2c665bd401eabb8",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -96,7 +96,7 @@
       "duration": 3.72,
       "generatedAt": "2026-09-13T12:20:21.194282+00:00"
     },
-    "spark-end": {
+    "en/spark-end": {
       "requestSHA256": "7ae168a2a3b77a9861ef9727cc9f8acf83988a8533175206f2863f5f7067c25b",
       "sha256": "ff6bc79b3cce8fec256067b596f8ee41ade2fed11c5492d50863363e9ef2986c",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -104,7 +104,7 @@
       "duration": 5.208,
       "generatedAt": "2026-09-13T12:20:22.926692+00:00"
     },
-    "calm-end": {
+    "en/calm-end": {
       "requestSHA256": "39365c1ab270aec6ab02c14f430f480e192fe77a8c24aa8b315fdf314f9997d9",
       "sha256": "9026c603ca8c7ed0628f35f4667d1a1444be4c351c12989391a8f10013d3af12",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -112,7 +112,7 @@
       "duration": 4.656,
       "generatedAt": "2026-09-13T12:20:24.430442+00:00"
     },
-    "playful-end": {
+    "en/playful-end": {
       "requestSHA256": "439db542500f08dafdacd16d3224ef69f170239bf3338e256f18adfe79954432",
       "sha256": "2b7a62565a305f3ca5728a8aea1a38a37f6e2bc61eba0a1f36bd3725a428546a",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -120,7 +120,7 @@
       "duration": 4.608,
       "generatedAt": "2026-09-13T12:20:25.961207+00:00"
     },
-    "steady-end": {
+    "en/steady-end": {
       "requestSHA256": "5d7eeca8b418fbfd339ad3fefcbe7e83d4c70ab8d6bedad37ab7b6dda3587f9d",
       "sha256": "aa34dbd57affe9a68d39340a65565a368d1a2518aebe67c09fca0a2e1888f369",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -128,7 +128,7 @@
       "duration": 4.512,
       "generatedAt": "2026-09-13T12:20:28.087004+00:00"
     },
-    "wonder-end": {
+    "en/wonder-end": {
       "requestSHA256": "ffc7845ff67805e95a45fbcad65c56d7e8dfdb29dbbe6128fa9bf1a928776728",
       "sha256": "2a1d8492341b315f4f388285fa833e35dc9e68bf5b90b042986cf478d899c513",
       "model": "gpt-4o-mini-tts-2025-12-15",
@@ -136,13 +136,215 @@
       "duration": 3.504,
       "generatedAt": "2026-09-13T12:20:29.612127+00:00"
     },
-    "celebrate-end": {
+    "en/celebrate-end": {
       "requestSHA256": "a44a821f9ca53c3a2d260708c85a21761499922a7fd1ab4bc5d3f011a90ebde6",
       "sha256": "5762992c00108e3a1021ed9f89b47dafab6f2a125411f7f25156879de12646ed",
       "model": "gpt-4o-mini-tts-2025-12-15",
       "voice": "ballad",
       "duration": 4.248,
       "generatedAt": "2026-09-13T12:20:31.654537+00:00"
+    },
+    "zh/spark-01": {
+      "requestSHA256": "a54467b24b79cb9a0de57971c578ccb1f9b4f2adf3b37b093b87808750362aea",
+      "sha256": "8b3583de906204f8d8b676a01673f2781efb27daf21ca9d7ac16e9b7733e1212",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 4.512,
+      "generatedAt": "2026-09-13T12:32:22.399146+00:00"
+    },
+    "zh/spark-02": {
+      "requestSHA256": "5209dfaecb14c6d90282ebe1c8a1b53ed6a94811a83485a30b35529f3ad513f2",
+      "sha256": "46092bb13bbf873557f5d27cb0eda451c86ec2f8eed3f1f3b3793d68bc9c6993",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 4.656,
+      "generatedAt": "2026-09-13T12:32:24.010404+00:00"
+    },
+    "zh/calm-01": {
+      "requestSHA256": "3c3057c3955d8a8632acb6e076a46eeb9afdb83f589e97ec07dc4502bee35efd",
+      "sha256": "96a085a825b9cc8c06f4691ea522d5f06054b62e5d094ac8ebe02ac8462b1654",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "sage",
+      "duration": 4.608,
+      "generatedAt": "2026-09-13T12:32:25.427966+00:00"
+    },
+    "zh/calm-02": {
+      "requestSHA256": "b8ae3bc2d84d3c3cd11fc6558934e08420e35b251a16490e86bde24367506d0e",
+      "sha256": "b42854aebc49167de78906e5a47c28a566db79312858c449b708b54f0397b886",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "sage",
+      "duration": 4.8,
+      "generatedAt": "2026-09-13T12:32:27.210469+00:00"
+    },
+    "zh/playful-01": {
+      "requestSHA256": "22f31e44f02035541fdc03f443bb2145ddb34a025afc01a9ae8d5f1660061b8c",
+      "sha256": "9c431c84c6626984cc0b5dc1068ac9aa3cd87a8f1d0daba6ad6472cb761b1a80",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "verse",
+      "duration": 3.648,
+      "generatedAt": "2026-09-13T12:32:30.368830+00:00"
+    },
+    "zh/playful-02": {
+      "requestSHA256": "6f5582169b3cb4595397d8663aa9d754134ba0653b1f910554d6c96897194ed4",
+      "sha256": "2f88e9d0231eb83c252e2b3916c6f3e0583501fb873ebcdd771844dba3c622d6",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "verse",
+      "duration": 4.656,
+      "generatedAt": "2026-09-13T12:32:32.142234+00:00"
+    },
+    "zh/steady-01": {
+      "requestSHA256": "7ab5ac562f5b8a3a6f9de0fe61041f34fc5b3e68ba822cfb0444f032a0e7042e",
+      "sha256": "0d14db53b4e915ee6e0e4a54b46e14317d95438eb51d35a15ba59c38246eeb8e",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "cedar",
+      "duration": 3.816,
+      "generatedAt": "2026-09-13T12:32:33.628085+00:00"
+    },
+    "zh/steady-02": {
+      "requestSHA256": "de7a8fd63c1deb30d82fa17ebf5f677ff67daafdb751d8b802560ea9282c6bda",
+      "sha256": "fb41c6cec9c2eb0a497419d7bf4afd7a3fcd3c77636982f713ce5e0b58ef72ec",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "cedar",
+      "duration": 4.2,
+      "generatedAt": "2026-09-13T12:32:35.253131+00:00"
+    },
+    "zh/wonder-01": {
+      "requestSHA256": "728917196082200bead446cd9ff191cf5730e0acdc2734f03bca6a36b3fdd57d",
+      "sha256": "4fb6f20b84dc29e06c916144713b35aa365dc85a71b92e3e3cf4ee01d677f790",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "marin",
+      "duration": 4.368,
+      "generatedAt": "2026-09-13T12:32:36.812582+00:00"
+    },
+    "zh/wonder-02": {
+      "requestSHA256": "ddf810e60eaacd32dfa83dee29a16434c5ab07874ca53e5ddf67fc5de6c1b60e",
+      "sha256": "f02ceb54cfb43ebd813e5aa5da95233524ce7ee1c563f5b98b0ee2c0778ae5b6",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "marin",
+      "duration": 3.96,
+      "generatedAt": "2026-09-13T12:32:38.261669+00:00"
+    },
+    "zh/celebrate-01": {
+      "requestSHA256": "022861a41f53987cb97bf659234ab54301cc1e68139519dc439791d63b97b5f1",
+      "sha256": "7edef538be959778833f3baff349ca3f3881ca90e16fd0bf4cf362b06fcb9005",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "ballad",
+      "duration": 4.248,
+      "generatedAt": "2026-09-13T12:32:39.844525+00:00"
+    },
+    "zh/celebrate-02": {
+      "requestSHA256": "937954f169c99f6fe51f342b80da94a1731b25c405d4adbda18cfaa9faba77d8",
+      "sha256": "88048fabff31be56cb95a1e0f744d633687ddc00b7ee4e2dc849f5c6d7d44596",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "ballad",
+      "duration": 5.016,
+      "generatedAt": "2026-09-13T12:32:41.456155+00:00"
+    },
+    "zh/spark-end": {
+      "requestSHA256": "d3cccbf9fcaddfe99c04fbc731b3813e6703bedf5b5fe3d982e4ee6d27045165",
+      "sha256": "e0e22d3bab993b778d6f3b4d85ff08f5a794469a144d73cadef2cd5a4901688b",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 4.608,
+      "generatedAt": "2026-09-13T12:32:42.839233+00:00"
+    },
+    "zh/calm-end": {
+      "requestSHA256": "485a3f5e0258b5676866e2e3791254bcc66076b6d174b9c0784300379dbabae1",
+      "sha256": "83298dd3e8a241062c5fba72e90d2b8118d113998654f5e3e6e2863f1fbb62a6",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "sage",
+      "duration": 5.568,
+      "generatedAt": "2026-09-13T12:32:44.651387+00:00"
+    },
+    "zh/playful-end": {
+      "requestSHA256": "8005868b945008e59a492f8cd9603580e1e5b5423bb4c363a908b33cf64a28b4",
+      "sha256": "fd581578cecb6c3b544e31860c7e21e211779a40a859776fb502f86e70cf902f",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "verse",
+      "duration": 5.064,
+      "generatedAt": "2026-09-13T12:32:46.276094+00:00"
+    },
+    "zh/steady-end": {
+      "requestSHA256": "c1460149d8f945b9001b73f2af9bb71b4ca9e7861d6e9ed3bc87656374352994",
+      "sha256": "66ad8efe343f82780aa3e1b841f1e606567698cd686dfaebc9b419c64481a023",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "cedar",
+      "duration": 5.52,
+      "generatedAt": "2026-09-13T12:32:47.995433+00:00"
+    },
+    "zh/wonder-end": {
+      "requestSHA256": "4cb4bd8d4ed153d55b0139a9847f16340b1f64446b10207c455b4d818bbe556b",
+      "sha256": "2b066d07e3d4f1bea9120c92b2f68b4e54361f5fdeb04cddfc5facf94106003b",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "marin",
+      "duration": 4.848,
+      "generatedAt": "2026-09-13T12:32:49.413555+00:00"
+    },
+    "zh/celebrate-end": {
+      "requestSHA256": "c3c94ab5f51bd0e09f30fa04b8800e55e0711e94a5220dbd3e32bbdbbf4e02ac",
+      "sha256": "e1d9518b3af0687baf01f6fe89f65184e4e7fe8bc8ea5abb56f3dd074410e357",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "ballad",
+      "duration": 7.368,
+      "generatedAt": "2026-09-13T12:32:51.294989+00:00"
+    },
+    "zh/three": {
+      "requestSHA256": "061392477f93fec30d51cdc67c6c0d8bb2086622644bf9f07dc54df2e5a4d112",
+      "sha256": "19489613e4f5ab1a1cac5597baf611ef4044ae982aa275cf8262ccc73344ea86",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 0.794,
+      "generatedAt": "2026-09-13T12:32:52.373957+00:00",
+      "trimmedSilence": true
+    },
+    "zh/two": {
+      "requestSHA256": "63c78662d1034049187e28fd214d73e5d93cc868f537d47f9d06a4ea089e38b5",
+      "sha256": "b2a53d07978b9963a33de39a65a487b61d3444144e82268ff2fab99ba36364d4",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 0.408,
+      "generatedAt": "2026-09-13T12:32:53.499746+00:00",
+      "trimmedSilence": true
+    },
+    "zh/one": {
+      "requestSHA256": "2b0e5123967b4606901559145bd1bf491aa31f8be99d41a511e80a0541eb08f8",
+      "sha256": "c201ad6963f7d2e95b6a1f3be0fc3b979fa78316cbbedc1ce160a34292114b01",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 0.448,
+      "generatedAt": "2026-09-13T12:32:54.638376+00:00",
+      "trimmedSilence": true
+    },
+    "zh/start": {
+      "requestSHA256": "0122c51ba91c10bcb68222bbb769950c733d257a08f31a75f841a8b5e5b8abbc",
+      "sha256": "f2ae632890d2cf4c5992c041a9d31f74498f8ac095b3fb2097223ea0904e4d75",
+      "model": "gpt-4o-mini-tts-2025-12-15",
+      "language": "zh",
+      "voice": "coral",
+      "duration": 0.772,
+      "generatedAt": "2026-09-13T12:32:55.783551+00:00",
+      "trimmedSilence": true
     }
   },
   "music": {

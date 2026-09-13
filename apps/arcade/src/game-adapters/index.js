@@ -1,6 +1,6 @@
 import {createFrameRuntime} from '../gameplay/runtime.js';
 
-function legacy(frame,read,eventName){
+function legacy(frame,read,eventName,configure){
  return createFrameRuntime(frame,window=>({
   getFrame(){
    const value=read(window,window.document);if(!value)return null;
@@ -12,7 +12,7 @@ function legacy(frame,read,eventName){
    const doc=window.document,brand=doc.querySelector('.brand');
    if(brand&&homeURL){let home=brand;if(brand.tagName!=='A'){home=doc.createElement('a');brand.replaceWith(home);home.append(brand);}home.classList.add('arcade-home');home.href=homeURL;home.target='_top';home.title='Back to the Hopmodo arcade';home.setAttribute('aria-label','Back to the Hopmodo arcade');
     if(!doc.querySelector('[data-arcade-home-style]')){const style=doc.createElement('style');style.dataset.arcadeHomeStyle='';style.textContent='.arcade-home{color:inherit;text-decoration:none;pointer-events:auto}.arcade-home:focus-visible{outline:3px solid currentColor;outline-offset:5px}';doc.head.append(style);}}
-   const note=doc.querySelector('#privacy-note, .camera-note, .privacy');if(note&&recordingNote)note.textContent=recordingNote;
+   const note=doc.querySelector('#privacy-note, .camera-note, .privacy');if(note&&recordingNote)note.textContent=recordingNote;configure?.(window);
   },
  }));
 }
@@ -31,7 +31,7 @@ export const dinoARAdapter=frame=>legacy(frame,(window,doc)=>{
 export const plankFlightAdapter=frame=>legacy(frame,(window,doc)=>{
  const state=window.plankFlight?.getState(),canvas=doc.querySelector('#scene');if(!state||!canvas?.width)return null;
  return {canvas,video:doc.querySelector('#video'),skeleton:doc.querySelector('#body-overlay'),isAR:true,round:state.sessionId,ready:state.status==='flying',paused:state.status==='paused',ending:state.status==='crashing'||(state.finished&&state.audio?.playing),done:state.finished&&!state.audio?.playing,audio:window.plankFlight.getAudioStream?.(),score:`${Math.floor(state.flightSeconds)}s · ${state.passed} gates`};
-});
+},undefined,window=>window.plankFlight?.localizeHost?.());
 
 export const cameraStartAdapter=frame=>legacy(frame,(window,doc)=>{
  const state=window.cameraSetup?.getState(),canvas=doc.querySelector('#game-world');if(!state?.game||!canvas?.width)return null;

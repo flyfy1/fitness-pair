@@ -208,3 +208,13 @@ head indices are documented in the
 The AR stage also outlines confidently recognized body joints using the shared
 named-joint overlay. Close-up play shows only visible joints; missing hips or
 limbs are never inferred for display. Stale overlays clear after 250 ms.
+
+
+## English and Chinese resources
+
+The language selector changes Flight's interface, countdown and 18 varied spoken
+encouragement/endings together, and remembers the choice on this origin. Switching
+mid-flight preserves the current game and recording. English and Chinese variants
+share stable voice IDs, timing and musical motifs. Audio is served as committed
+resources without runtime speech API calls. See `resources/README.md` for translation,
+generation, provenance and scope; other arcade interfaces are not yet localized.

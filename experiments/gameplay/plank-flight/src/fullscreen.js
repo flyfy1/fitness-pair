@@ -1,3 +1,4 @@
+import {t} from './i18n.js';
 // Adapted from apps/dino-run/src/fullscreen.js.
 /** Prefer browser fullscreen, with an in-window fallback for embedded browsers. */
 export function setupFullscreen(area, button, announce) {
@@ -7,8 +8,8 @@ export function setupFullscreen(area, button, announce) {
     const enabled = active();
     if (!enabled) announce('');
     button.setAttribute('aria-pressed', String(enabled));
-    button.setAttribute('aria-label', enabled ? 'Exit fullscreen' : 'Enter fullscreen');
-    button.title = enabled ? 'Exit fullscreen' : 'Enter fullscreen';
+    button.setAttribute('aria-label', enabled ? t('Exit fullscreen') : t('Enter fullscreen'));
+    button.title = enabled ? t('Exit fullscreen') : t('Enter fullscreen');
     button.textContent = enabled ? '↙' : '⛶';
     document.body.classList.toggle('game-expanded', expanded);
     area.classList.toggle('is-expanded', expanded);
@@ -26,10 +27,10 @@ export function setupFullscreen(area, button, announce) {
           await area.requestFullscreen();
         } catch {
           expanded = true;
-          announce('Browser fullscreen is unavailable. The game still fills this window. Use the exit button or Escape to leave expanded view.');
+          announce(t('Browser fullscreen is unavailable. The game still fills this window. Use the exit button or Escape to leave expanded view.'));
         }
       }
-    } catch { announce('Use Escape to exit fullscreen.'); } finally { pending = false; button.blur(); refresh(); }
+    } catch { announce(t('Use Escape to exit fullscreen.')); } finally { pending = false; button.blur(); refresh(); }
   });
   document.addEventListener('fullscreenchange', () => {
     if (document.fullscreenElement !== area) exitedAt = performance.now();

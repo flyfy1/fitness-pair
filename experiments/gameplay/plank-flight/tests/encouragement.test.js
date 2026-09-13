@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {encouragementPack,createEncouragementSchedule} from '../src/encouragement.js';
+import {encouragementPack,createEncouragementSchedule,voiceResource,voiceResources} from '../src/encouragement.js';
 
 test('encouragement waits for completed gate groups and a cooldown, ignoring duplicate updates',()=>{
  const schedule=createEncouragementSchedule(()=>0);schedule.reset();
@@ -26,7 +26,7 @@ test('random intervals reach five gates; mute skips encouragement without replay
 
 test('eighteen distinct scripts shuffle without replacement or immediate bag-boundary repeats',()=>{
  assert.equal(encouragementPack.clips.length,18);
- assert.equal(new Set(encouragementPack.clips.map(x=>x.text)).size,18);
+ assert.equal(new Set(encouragementPack.clips.map(x=>x.variants.en.text)).size,18);
  const schedule=createEncouragementSchedule(()=>.4);schedule.reset();
  const milestone=[];for(let gate=1;milestone.length<13;gate++){
   const clip=schedule.milestone(gate,gate*15);if(clip)milestone.push(clip.id);
@@ -34,4 +34,18 @@ test('eighteen distinct scripts shuffle without replacement or immediate bag-bou
  assert.equal(new Set(milestone.slice(0,12)).size,12);assert.notEqual(milestone[11],milestone[12]);
  const endings=Array.from({length:7},()=>schedule.finish().id);
  assert.equal(new Set(endings.slice(0,6)).size,6);assert.notEqual(endings[5],endings[6]);
+});
+
+
+test('language variants share semantic IDs, including countdown, without cross-language text/audio mismatches',()=>{
+ for(const language of ['en','zh']){
+  const resources=voiceResources(language);assert.equal(resources.length,22);
+  for(const resource of resources){
+   assert.equal(resource.locale,language);assert.ok(resource.text);assert.ok(resource.file);
+   if(language==='zh'){assert.match(resource.text,/[\u4e00-\u9fff]/);assert.match(resource.file,/^zh\//);}
+  }
+ }
+ assert.equal(voiceResource('spark-01','unsupported').locale,'en');
+ assert.equal(voiceResource('unknown','zh'),null);
+ assert.equal(voiceResource('three','zh').text,'三');
 });

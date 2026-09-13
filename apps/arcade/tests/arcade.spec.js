@@ -177,11 +177,11 @@ test('storage failure preserves download fallbacks from consecutive rounds',asyn
  await expect(page.locator('#local-result a[download]')).toHaveCount(2);
 });
 
-test('new game cards and shared tracking assets are available',async({page,request})=>{
+test('only the original three games are listed and all tracking assets remain available',async({page,request})=>{
  await page.goto('/');
- await expect(page.locator('.game-card')).toHaveCount(9);
- for(const id of ['dino-run','dino-ar','orbit-pop'])await expect(page.locator(`a[href="/play/${id}"]`)).toHaveCount(0);
- for(const title of ['Motion Quest','Push-up Flight','Ready to Move','Brick Pulse AR','Pixel Defense AR','Perfect Stack AR','Orbit Knife AR','Bubble Pop AR','Fruit Orbit AR'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
+ await expect(page.locator('.game-card')).toHaveCount(3);
+ for(const id of ['dino-run','dino-ar','orbit-pop','ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit'])await expect(page.locator(`a[href="/play/${id}"]`)).toHaveCount(0);
+ for(const title of ['Motion Quest','Push-up Flight','Ready to Move'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
  for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start','ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit']){
   const script=await request.get(`/games/${game}/runtime/pose-worker.js`);expect(script.status()).toBe(200);expect(script.headers()['content-type']).toContain('javascript');expect(await script.text()).toContain('onmessage');
   const wasm=await request.get(`/games/${game}/runtime/wasm/vision_wasm_internal.wasm`);expect(wasm.status()).toBe(200);expect(wasm.headers()['content-type']).toBe('application/wasm');

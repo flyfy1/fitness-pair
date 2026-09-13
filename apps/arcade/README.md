@@ -18,6 +18,8 @@ Cloud sharing on `fitness.integ.life` uses Integ.Life login and the VM storage i
 
 ## Add a game
 
+The homepage lists only Motion Quest, Push-up Flight and Ready to Move. Keep additional demos registered with `listed: false` until they are ready to appear in the arcade. This hides their homepage cards and links while preserving direct `/play/:id` access, mounted builds, recording and sharing.
+
 Add one entry in `game-catalog.js` for the UI, build and publication allowlist, and select a presentation adapter. Prefer the native API described in [the shared gameplay host](src/gameplay/README.md); the recorder never needs a game-specific change. No generic event bus or new recognition semantics are introduced.
 
 ## Evidence
@@ -120,12 +122,16 @@ is not upload consent; publication still requires login and explicit confirmatio
 
 ## Illustrated game instructions
 
-Every listed game card displays code-native movement illustrations. Clicking its
-art, title or Play now opens a matching instruction dialog before navigation.
+Every listed game card uses its game preview or bold poster art to invite play.
+Clicking its art, title or Play now opens a matching instruction dialog before navigation.
 The guide covers the goal, camera setup, three specific control steps, pause and
 finish behavior, and a labeled movement sequence. Let’s play enters the existing
 AR game without changing its controls or recording lifecycle. Direct `/play/`
 links remain available for shared game links and returning players.
+
+Skip tutorial enters the game and remembers that choice in localStorage for that
+game on that browser. Later card clicks go straight to the skipped game while
+other games continue to show their own guides. Storage denial keeps guides visible.
 
 The dialog does not open a camera or mount a game. Escape, its close button, and
 the backdrop dismiss it and restore focus/scrolling. Long guides scroll inside
