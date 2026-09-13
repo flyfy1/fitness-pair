@@ -1,0 +1,29 @@
+{
+  "clips": {},
+  "music": {
+    "spark": {
+      "sha256": "63f211677b35cc894907185bc4edbe3c9b82f60d86bde129ca0b8059a98a4a68",
+      "generator": "original additive synthesis"
+    },
+    "calm": {
+      "sha256": "f882816e5768c69b1fc3bfbdd1148a64c31653fd4037f27ab6724add0970a1e3",
+      "generator": "original additive synthesis"
+    },
+    "playful": {
+      "sha256": "4e2c6710516e0bcf1475f3b12b6c71988e7b67df7f37125ae8c7b7d73b18f33b",
+      "generator": "original additive synthesis"
+    },
+    "steady": {
+      "sha256": "38c62d53323eccdd8bda29eb46cfe037b2006068cb5954e33e0b9093968fb764",
+      "generator": "original additive synthesis"
+    },
+    "wonder": {
+      "sha256": "f7a6c5349a9f0c1e9f698c5229c01f1a193d64d1ca748d4ac32071839814fd3f",
+      "generator": "original additive synthesis"
+    },
+    "celebrate": {
+      "sha256": "090f0768b8f2268048d5e01acd50598325306f0c58b4f89dc02f941fa0094aab",
+      "generator": "original additive synthesis"
+    }
+  }
+}
