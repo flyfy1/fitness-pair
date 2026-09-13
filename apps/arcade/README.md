@@ -18,7 +18,7 @@ Cloud sharing on `fitness.integ.life` uses Integ.Life login and the VM storage i
 
 ## Add a game
 
-Add a registry entry in `src/games.js`, add its static build to `scripts/build-arcade.mjs`, and implement an explicit adapter in `src/recording.js` if the game supports recording. No generic event bus or new recognition semantics are introduced.
+Add one entry in `game-catalog.js` for the UI, build and publication allowlist, and select a presentation adapter. Prefer the native API described in [the shared gameplay host](src/gameplay/README.md); the recorder never needs a game-specific change. No generic event bus or new recognition semantics are introduced.
 
 ## Evidence
 

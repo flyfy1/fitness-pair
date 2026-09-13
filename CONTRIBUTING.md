@@ -8,6 +8,9 @@ Before parallel work, state the directory, intended result, and stop condition i
 
 | Boundary | Directory | Responsibility |
 | --- | --- | --- |
+| Gameplay host | `apps/arcade/src/gameplay/` | Shared viewport, recording lifecycle, optional conversation |
+| Presentation adapters | `apps/arcade/src/game-adapters/` | Translate legacy game views; new games prefer the native presentation API |
+| Input integration | `packages/gameplay/` | Validate action frames and map to game controls without owning a model |
 | Integration | `apps/motion-quest/` | Camera lifecycle, permissions, and UI wiring |
 | Pose producer | `packages/pose-mediapipe/` | Model execution and named-joint adaptation |
 | Action producer | `packages/action-squat/` | Calibration, temporal recognition, completion events |

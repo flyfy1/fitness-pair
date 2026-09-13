@@ -153,3 +153,41 @@ Source `64ff577554a2290cbd38cd0c894cfeeb793aa147` was deployed as
 - Public health matches the release. The real anonymous session endpoint returns
   `user: null`; an anonymous publication attempt returns 401. GPT Sites still
   serves `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; it was not deployed or changed.
+
+
+## Shared gameplay and optional conversation recording
+
+Source `2403b380e40746e36b58377e792830c128566ced` was deployed from clean,
+pushed `main` as `20260913T105010Z-2403b380e407`. The standard IAP deployment
+completed, validated Caddy, retained rollback state and passed public health.
+
+- All five games use the shared gameplay shell and recording lifecycle. Dino Run
+  implements the native presentation API and separates ActionFrame validation
+  from game physics; four existing games retain explicit legacy adapters.
+  The shared catalog drives game mounts, builds and publication validation.
+- Microphone capture is off by default and requires an explicit click. Conversation
+  is an independent local audio track. The clip card can prepare a separate video
+  with conversation or keep the original without it; preview, download and native
+  sharing use the selected version. No microphone data is uploaded automatically.
+- Local validation passed: 68 repository tests, 19 Dino Run tests, 12 backend tests,
+  the full build, 14 focused shell/clip-entry/conversation/recording browser checks,
+  three account browser checks and two Dino Run input/obstacle browser checks.
+  After the mobile microphone placement adjustment, eight shell/conversation
+  checks passed; the final three conversation checks also verify delayed audio
+  alignment and the selected native-share filename.
+- Against the deployed GCP assets, eight Chrome checks passed in 25.9 seconds:
+  five guest clip-to-game entries plus independent audio persistence, with/without
+  export, microphone cancellation and permission denial. Audio decoding confirmed
+  sound in the selected mixed version and silence before the delayed microphone
+  start. The original stayed unchanged after deselection and reload.
+- These checks use synthetic audio and browser-local clip metadata. They do not
+  use a physical microphone or camera, publish a production clip, or establish
+  physical-device recognition/audio compatibility. Existing broader recorder
+  limitations remain documented in AUTH.md.
+- Public health reports the exact source above. Guest session remains anonymous
+  with a 2 GB account limit; an anonymous upload returns 401. GPT Sites still serves
+  `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; no GPT Sites publication occurred.
+
+Integration remains on `main`. A separately active `codex/integ-ar-games` worktree
+contains uncommitted new-game implementation and was preserved, not removed or
+included in this release.

@@ -1,5 +1,3 @@
-import { assertActionFrame, sameSource } from '@fitness-pair/contracts';
-
 export const GRAVITY = 1850;
 export const JUMP_VELOCITY = 660;
 export const MOTION_MAX_HEIGHT = 165;
@@ -20,31 +18,17 @@ export class Runner {
     this.elapsed = 0; this.distance = 0; this.score = 0; this.passed = 0;
     this.speed = this.controlMode === 'motion' ? 180 : 310;
     this.obstacles = []; this.spawnIn = this.controlMode === 'motion' ? 2.5 : 1.6; this.jumps = 0;
-    this.lastMotionSeq = -1; this.lastMotionTime = -1; this.completions = new Set();
   }
   setControlMode(mode) {
     if (!['keyboard', 'motion'].includes(mode)) throw new TypeError('Unknown control mode');
-    this.controlMode = mode; this.motionSession = null; this.reset(); this.status = 'ready';
+    this.controlMode = mode; this.reset(); this.status = 'ready';
   }
-  bindMotionSession(session) {
-    this.motionSession = { sessionId: session.sessionId, source: { ...session.source } };
-    this.lastMotionSeq = -1; this.lastMotionTime = -1; this.completions.clear(); this.y = 0;
-  }
-  applyMotion(frame) {
-    assertActionFrame(frame);
-    if (this.controlMode !== 'motion' || !this.motionSession || frame.action !== 'jump-height' ||
-      frame.sessionId !== this.motionSession.sessionId || !sameSource(frame.source, this.motionSession.source) ||
-      frame.inputSeq <= this.lastMotionSeq || frame.tMs <= this.lastMotionTime ||
-      !frame.calibrated || frame.stage !== 'ready' || frame.phase === 'missing' ||
-      !Number.isFinite(frame.heightRatio) || frame.heightRatio < 0 || frame.heightRatio > 1) return false;
-    this.lastMotionSeq = frame.inputSeq; this.lastMotionTime = frame.tMs;
-    if (!['ready', 'running'].includes(this.status)) return false;
-    this.y = frame.heightRatio * MOTION_MAX_HEIGHT; this.velocity = 0;
-    // Continuous pose height positions the sprite; only completed IDs count jumps.
-    if (frame.completion && !this.completions.has(frame.completion.id)) {
-      this.completions.add(frame.completion.id);
-      if (this.status === 'running') this.jumps++;
-    }
+  // Continuous controls can come from a recognizer, gamepad, replay, or another app.
+  setHeightRatio(ratio, {completed = false} = {}) {
+    if (this.controlMode !== 'motion' || !['ready', 'running'].includes(this.status) ||
+      !Number.isFinite(ratio) || ratio < 0 || ratio > 1) return false;
+    this.y = ratio * MOTION_MAX_HEIGHT; this.velocity = 0;
+    if (completed && this.status === 'running') this.jumps++;
     return true;
   }
   command(action) {
