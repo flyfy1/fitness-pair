@@ -44,8 +44,8 @@ export function createAccountStore(directory, {now = Date.now} = {}) {
     const value = await read('accounts', ledgerKey);
     if (value && (value.version !== 1 || !Array.isArray(value.clips) || value.clips.some(clip =>
       !/^[0-9a-f-]{36}$/.test(clip.id) || !Number.isSafeInteger(clip.bytes) || clip.bytes <= 0 ||
-      (clip.ownerId !== null && !/^[a-f0-9]{64}$/.test(clip.ownerId)) || !Number.isSafeInteger(clip.expiresAt)))) throw Error('Invalid account ledger');
-    return (value?.clips || []).filter(clip => clip.expiresAt > now());
+      (clip.ownerId !== null && !/^[a-f0-9]{64}$/.test(clip.ownerId)) || (clip.ownerId === null && clip.expiresAt === null) || (clip.expiresAt !== null && !Number.isSafeInteger(clip.expiresAt))))) throw Error('Invalid account ledger');
+    return (value?.clips || []).filter(clip => (clip.expiresAt === null || clip.expiresAt > now()));
   }
   return {
     read, write, remove,
@@ -65,12 +65,25 @@ export function createAccountStore(directory, {now = Date.now} = {}) {
         await write('accounts', ledgerKey, {version: 1, clips});
       });
     },
+    async anonymousEvictions(clip) {
+      return serialized(ledgerKey, async () => {
+        const clips = await entries();
+        if (clips.some(item => item.id === clip.id)) throw fail(409, 'This upload is still being processed. Remove the unfinished upload before retrying.');
+        if (!Number.isSafeInteger(clip.bytes) || clip.bytes <= 0 || clip.bytes > ANONYMOUS_LIMIT_BYTES) throw fail(413, 'This video exceeds anonymous storage.');
+        const anonymous = clips.filter(item => item.ownerId === null).sort((a, b) =>
+          (a.createdAt ?? a.expiresAt - 7 * 86400000) - (b.createdAt ?? b.expiresAt - 7 * 86400000) || a.id.localeCompare(b.id));
+        let needed = anonymous.reduce((sum, item) => sum + item.bytes, 0) + clip.bytes - ANONYMOUS_LIMIT_BYTES;
+        const victims = [];
+        for (const item of anonymous) { if (needed <= 0) break; victims.push(item.id); needed -= item.bytes; }
+        return victims;
+      });
+    },
     async reserve(userId, clip) {
       return serialized(ledgerKey, async () => {
         const clips = await entries();
         const existing = clips.find(item => item.id === clip.id);
         if (existing) throw fail(409, 'This upload is still being processed. Please try again later.');
-        if ((userId !== null && !/^[a-f0-9]{64}$/.test(userId)) || !/^[0-9a-f-]{36}$/.test(clip.id) || !Number.isSafeInteger(clip.bytes) || clip.bytes <= 0 || !Number.isSafeInteger(clip.expiresAt) || clip.expiresAt <= now()) throw Error('Invalid reservation');
+        if ((userId === null && clip.expiresAt === null) || (userId !== null && !/^[a-f0-9]{64}$/.test(userId)) || !/^[0-9a-f-]{36}$/.test(clip.id) || !Number.isSafeInteger(clip.bytes) || clip.bytes <= 0 || (clip.expiresAt !== null && !Number.isSafeInteger(clip.expiresAt)) || (clip.expiresAt !== null && clip.expiresAt <= now())) throw Error('Invalid reservation');
         if (clips.filter(item => item.ownerId === userId).reduce((sum, item) => sum + item.bytes, 0) + clip.bytes > limitFor(userId))
           throw fail(413, userId === null ? 'The shared 10 GB anonymous storage is full. Log in to use your own 2 GB, or try again later.' : 'Your 2 GB storage is full. Remove a shared clip to free space, then try again.');
         await write('accounts', ledgerKey, {version: 1, clips: [...clips, {...clip, ownerId: userId}]});
