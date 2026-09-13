@@ -12,7 +12,9 @@ test('share copy window keeps final gameplay and replaces an existing ending',()
 test('local website eligibility agrees with gateway duration and byte boundaries',()=>{
  const url=new URL('https://arcade.test/api/clips/550e8400-e29b-41d4-a716-446655440000?title=Replay&game=motion-quest&source=replay&duration=90');
  const headers={'Content-Type':'video/mp4','X-Sharing-Consent':'gallery-v1','X-Management-Key':'a'.repeat(40),'Content-Length':String(SHARE_MAX_BYTES)};
+ assert.equal(SHARE_MAX_BYTES,200_000_000);
  assert.equal(fitsWebsiteShare({blob:{size:SHARE_MAX_BYTES},duration:90}),true);
+ assert.throws(()=>validateUpload(new Request(url,{headers:{...headers,'Content-Length':String(SHARE_MAX_BYTES+1)}}),url),/200 MB/);
  assert.equal(validateUpload(new Request(url,{headers}),url).duration,90);
  for(const [duration,size] of [[90.1,100],[90,SHARE_MAX_BYTES+1],[0,100],[1,0],[NaN,10]])assert.equal(fitsWebsiteShare({blob:{size},duration}),false);
  url.searchParams.set('duration','90.1');assert.throws(()=>validateUpload(new Request(url,{headers}),url));

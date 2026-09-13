@@ -33,7 +33,7 @@ See the central `integ-auth/README.md` contract and
 ## Ownership and quota
 
 Each account has **2 GB = 2,000,000,000 bytes** of active published-video storage.
-The existing 90-second / 20 MiB per-clip limits remain. Account owners choose
+The existing 90-second / 200 MB per-clip limits remain. Account owners choose
 1, 7, 30, or 90 days, or Never (the new interface default). `expiresAt: null` means
 permanent and counts toward quota until removed. Existing shares retain their original expiry.
 Quota measures actual uploaded body bytes, never a client-declared size.
@@ -144,12 +144,12 @@ legacy inventory, failed writes/deletion retries, account isolation, private med
 and poster access, link forwarding, and owner revocation.
 
 
-Browser evidence for this slice: seven Chrome tests use a real local gateway,
+Browser evidence for this slice: eight Chrome tests use a real local gateway,
 durable quota files, mock identity/storage, and browser-encoded synthetic WebM.
 They cover anonymous upload/playback/device removal, account quota blocking and anonymous full-pool replacement,
 private upload/owner listing/copied-link playback/revocation, missing-token denial,
 interrupted anonymous cleanup, permanent and thirty-day choices, consent reset,
-and 320/390px layout. These are local integration
+oversize preflight reporting, and 320/390px layout. These are local integration
 checks; they do not establish a deployed release or participant recording evidence.
 
 Rollback boundary: after private publications exist, never restore a gateway that
@@ -177,3 +177,21 @@ See [migration and rollback](../deploy/gcp/README.md#sharing-expiry-migration).
 After permanent records exist, do not roll back to code that rejects null expiry,
 or restore an age-based seven-day bucket rule: that would remove permanent videos.
 Keep the compatible ledger and storage policy when rolling back UI changes.
+
+
+## Per-video size limit and rejection records
+
+The upload cap is **200 MB = 200,000,000 bytes**, inclusive, for both anonymous and
+account videos. The 90-second limit remains. The interface reports oversize attempts
+before sending video bytes, and the API independently checks declared length and
+actual streamed bytes. A larger body returns 413 with the 200 MB limit and advice
+to make a smaller copy. No quota is reserved and no cloud video is written.
+
+The gateway writes a structured `video_upload_rejected` event to its systemd journal:
+timestamp, reason, observed/reported bytes, limit bytes and source (`server-header`,
+`server-body`, or `client-reported`). Client checks use a bounded, same-origin
+`POST /api/upload-rejections`; account sessions also require CSRF. Client-reported
+sizes are telemetry, not verified uploads. Video contents, titles, account email,
+management keys and private sharing tokens are not logged. Telemetry failure never
+permits an oversized upload. Inspect with `journalctl -u fitness-arcade.service`
+and filter for `video_upload_rejected`.

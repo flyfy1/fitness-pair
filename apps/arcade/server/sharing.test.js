@@ -17,7 +17,8 @@ async function fixture(t,{now=Date.now}={}){
   async user(request){const id=request.headers.get('X-Test-User');return id?{userId:id}:null;},
   async requireUser(request,write){const user=await this.user(request);if(!user)throw Object.assign(Error('Log in'),{status:401});if(write&&request.headers.get('X-CSRF-Token')!=='csrf')throw Object.assign(Error('CSRF'),{status:403});return user;}
  }};
- const worker=createWorker({now,fetcher:async(raw,options)=>{
+ const events=[];
+ const worker=createWorker({now,audit:event=>events.push(event),fetcher:async(raw,options)=>{
   const url=new URL(raw),name=url.searchParams.get('name')||decodeURIComponent(url.pathname.split('/o/')[1]||'');
   if(options.method==='POST'){const decoded=await decodeUpload(raw,options);options={...options,body:decoded.body};metadata.set(name,decoded.metadata);
    if(failUpload&&name.startsWith('videos/')){failUpload=false;return new Response('',{status:503});}
@@ -33,7 +34,7 @@ async function fixture(t,{now=Date.now}={}){
  const request=(path,options={})=>worker.fetch(new Request('https://arcade.test'+path,options),env);
  const headers=user=>({'Content-Type':'video/webm','Origin':'https://arcade.test','X-Sharing-Consent':'gallery-v1','X-Management-Key':key,...(user?{'X-Test-User':user,'X-CSRF-Token':'csrf'}:{})});
  const upload=(id,user=null,visibility='public',retention='7')=>request('/api/clips/'+id+'?title=Test&game=motion-quest&source=synthetic&duration=1&visibility='+visibility+'&retention='+retention,{method:'PUT',headers:{...headers(user),'X-Sharing-Consent':visibility==='private'?'private-v1':'gallery-v1'},body:video});
- return {store,objects,metadata,request,headers,upload,restart:()=>createAccountStore(directory,{now}),failUpload:()=>{failUpload=true;},failMarker:()=>{failMarker=true;},failDelete:()=>{failDelete=true;}};
+ return {store,objects,metadata,events,request,headers,upload,restart:()=>createAccountStore(directory,{now}),failUpload:()=>{failUpload=true;},failMarker:()=>{failMarker=true;},failDelete:()=>{failDelete=true;}};
 }
 
 test('anonymous uploads are public, counted with legacy clips, idempotent and removable only with the device key',async t=>{
@@ -133,4 +134,23 @@ test('failed eviction keeps its storage reserved, does not publish the replaceme
  f.failDelete();assert.equal((await f.upload(incoming)).status,503);
  assert.equal((await f.store.list(null)).usedBytes,ANONYMOUS_LIMIT_BYTES);assert.equal(f.objects.has('gallery/'+incoming+'.json'),false);assert.equal(f.objects.has('videos/'+incoming),false);
  assert.equal((await f.upload(incoming)).status,201);assert.equal((await f.store.list(null)).usedBytes,video.length);
+});
+
+
+test('larger than 200 MB declared, streamed and client-reported attempts are logged without media',async t=>{
+ const f=await fixture(t),id=randomUUID(),limit=200_000_000;
+ const path='/api/clips/'+id+'?title=Test&game=motion-quest&source=synthetic&duration=1';
+ const declared=await f.request(path,{method:'PUT',headers:{...f.headers(owner),'Content-Length':String(limit+1)},body:video});
+ assert.equal(declared.status,413);assert.match((await declared.json()).error,/200 MB/);
+ assert.equal(f.events.at(-1).source,'server-header');assert.equal(f.events.at(-1).bytes,limit+1);
+ let remaining=limit+1;const chunk=new Uint8Array(4_000_000);
+ const body=new ReadableStream({pull(controller){const length=Math.min(remaining,chunk.length);remaining-=length;controller.enqueue(chunk.subarray(0,length));if(!remaining)controller.close();}});
+ const streamed=await f.request(path,{method:'PUT',headers:{...f.headers(owner),'Content-Length':'13'},body,duplex:'half'});
+ assert.equal(streamed.status,413);assert.equal(f.events.at(-1).source,'server-body');assert.equal(f.events.at(-1).bytes,limit+1);
+ const report=options=>f.request('/api/upload-rejections',{method:'POST',headers:{Origin:'https://arcade.test','Content-Type':'application/json',...options},body:JSON.stringify({reason:'file_too_large',bytes:limit+1,title:'Do not log this private title'})});
+ assert.equal((await report()).status,200);assert.equal(f.events.at(-1).source,'client-reported');
+ assert.equal((await report({Origin:'https://untrusted.test'})).status,403);
+ assert.equal(f.events.length,3);assert.equal(JSON.stringify(f.events).includes('private title'),false);
+ assert.equal(f.events.every(event=>event.event==='video_upload_rejected'&&event.limitBytes===limit),true);
+ assert.equal((await f.store.list(owner)).usedBytes,0);assert.equal(f.objects.has('videos/'+id),false);
 });

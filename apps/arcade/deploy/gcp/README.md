@@ -135,3 +135,12 @@ state. Bucket privacy, other object prefixes and soft-delete policy are unchange
 References: [GCS lifecycle](https://docs.cloud.google.com/storage/docs/lifecycle),
 [custom-time metadata](https://docs.cloud.google.com/storage/docs/metadata),
 and [atomic data and metadata upload](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert).
+
+
+The 200 MB upload path is bounded by the gateway, so rejections receive a useful
+413 response and an audit event. Other routes retain the earlier 20 MiB proxy
+bound, including the separate legacy studio. The gateway accepts one upload at a
+time, allows five minutes to receive it and two minutes for the cloud write. Its
+1 GiB service memory ceiling accommodates the bounded body and cloud-upload copy.
+Local clips allow 200 MB per file and a 400 MB aggregate library, still retaining
+at most the latest two clips. This does not increase either cloud quota.
