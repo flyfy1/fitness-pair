@@ -61,7 +61,7 @@ export function mountClipCard(container,clip){
   try{
    const copy=await createShareCopy(selectedClip,{signal:copyController.signal,onProgress:text=>{status.textContent=text+' · stays on this device';}});
    try{await saveClip(copy);}catch{copy.unsaved=true;}
-   const copyCard=mountClipCard(container,copy),heading=copyCard.querySelector('h3');heading.tabIndex=-1;heading.focus({preventScroll:true});copyCard.scrollIntoView({block:'start',behavior:'instant'});status.textContent='Share copy ready below. Preview it, then choose whether to publish it.';
+   const copyCard=mountClipCard(container,copy),heading=copyCard.querySelector('h3');heading.tabIndex=-1;heading.focus({preventScroll:true});copyCard.scrollIntoView({block:'start',behavior:'instant'});status.textContent='Share copy ready at the top. Preview it, then choose whether to publish it.';
   }catch(error){status.textContent=error.name==='AbortError'?'Share copy cancelled. Your original replay is safe.':error.message;}
   finally{copyController=null;copyButton.disabled=false;cancelCopy.hidden=true;}
  };
@@ -104,8 +104,11 @@ export function mountClipCard(container,clip){
    finally{copyController=null;choice.disabled=false;cancelCopy.hidden=true;actions.forEach(b=>b.disabled=false);download.removeAttribute('aria-disabled');}
   };
  }
- container.append(card);
- [...container.querySelectorAll('.clip-card')].sort((a,b)=>Number(b.dataset.createdAt)-Number(a.dataset.createdAt)).slice(MAX_CLIPS).forEach(old=>old.dispose?.());
+ // Match the stored library order even when older recordings finish processing later.
+ const newestFirst=(a,b)=>Number(b.dataset.createdAt)-Number(a.dataset.createdAt)||b.dataset.clipId.localeCompare(a.dataset.clipId);
+ const existing=[...container.querySelectorAll(':scope > .clip-card')];
+ container.insertBefore(card,existing.find(other=>newestFirst(card,other)<0)||null);
+ [...existing,card].sort(newestFirst).slice(MAX_CLIPS).forEach(old=>old.dispose?.());
  return card;
 }
 function mountFriendSharing(card,clip){

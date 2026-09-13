@@ -129,9 +129,15 @@ test('a second Dino round gets its own replay without rearming or duplicate clip
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle',{timeout:20000});
  await page.waitForTimeout(600);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle');
+ const firstId=await page.locator('#local-result .clip-card').getAttribute('data-clip-id');
  await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle',{timeout:20000});
+ const cards=page.locator('#local-result .clip-card');await expect(cards).toHaveCount(2);
+ await expect(cards.last()).toHaveAttribute('data-clip-id',firstId);
+ const newestId=await cards.first().getAttribute('data-clip-id');expect(newestId).not.toBe(firstId);
  await page.goto('/library');await expect(page.locator('video')).toHaveCount(2);
+ await expect(page.locator('.clip-card').first()).toHaveAttribute('data-clip-id',newestId);
+ await page.reload();await expect(page.locator('.clip-card').first()).toHaveAttribute('data-clip-id',newestId);
 });
 test('replays do not stop at the former 60-second cutoff',async({page})=>{
  await page.clock.install();await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
