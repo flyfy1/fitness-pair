@@ -14,7 +14,8 @@ and touch mode remains available separately. Camera mode is the default.
 - **Assumption:** a fixed camera can estimate full-body jump height or upper-body movement with
   enough responsiveness to control this game. Human trials must validate that assumption.
 - **Loop:** enable camera → stand still → one maximum comfortable jump and landing
-  → three-second countdown → proportional live Dino height → obstacles → retry.
+  → one-hand confirmation → three-second countdown → proportional live Dino height
+  → two-hand pause / resume → obstacles → retry.
 - **Proof:** synthetic named-pose tests, actual browser calibration and height mapping
   with synthetic camera input, plus separate real-model inference on a public image.
 - **Scope:** one player, one fixed camera, personal relative height, one runner.
@@ -36,23 +37,31 @@ an exact checksum check. Generated assets are ignored by Git. No runtime camera
 frames are recorded or uploaded. Use localhost or HTTPS for camera access.
 
 1. Choose **Camera mode**, then **Enable camera**.
-2. Keep the camera fixed, with both shoulders and hips in view. Full-body tracking
-   is preferred when knees and ankles are also visible; otherwise upper-body tracking
-   is selected automatically. Leave space above your head for the jump. Stand upright and still for about two seconds.
-3. Check the **FULL BODY** or **UPPER BODY** label. At **Jump once to set your maximum**, perform one maximum comfortable jump,
-   land in the same spot and stand steady. An unclear/too-small jump asks for a retry.
-4. After calibration, remain grounded for the three-second countdown. The run
-   starts automatically so you do not have to return to the keyboard.
-5. Jump at different heights. Half your calibrated image displacement maps to
-   half of Dino's maximum height; descent follows your descent and landing returns
-   Dino to the ground. Larger-than-calibrated jumps clamp at 100%.
+2. Keep both shoulders and hips visible. Dino uses **UPPER BODY · TORSO MOVEMENT**
+   even when your legs are visible, so ankle tracking cannot keep restarting calibration.
+   Stand upright and still for about two seconds.
+3. Make one comfortable maximum rise/jump, then return to your starting height.
+   The measured range is retained while you wait; it no longer expires after 15 seconds.
+   A too-small movement still needs another attempt. The screen explains whether it
+   needs visible joints, a stable starting position, more rise, or a return to baseline.
+4. At **Height captured — confirm it**, raise **one hand above the shoulder for one
+   second**, keeping the other hand below its shoulder. Or click **Use measured height**.
+   Hands alone cannot invent a jump range. Lower both hands for the three-second countdown.
+5. Jump at different heights. Half your calibrated torso displacement maps to half
+   of Dino's maximum height; returning to baseline brings Dino down.
+6. Raise **both hands above the shoulders for one second** to pause. Lower both hands
+   for at least 0.4 seconds, then raise both again for one second to continue. Lower
+   them for the countdown. A held gesture fires only once. Both wrists and shoulders
+   must be visible for gestures; jump-height tracking itself only needs shoulders/hips.
 
-**Recalibrate** pauses the game and repeats standing plus maximum-jump measurement.
-P / Escape pauses. Manual pause, leaving the window/tab, stop, error, and game over
-release camera tracks and the model worker. Starting the camera again recalibrates.
-Brief missing/delayed tracking pauses gameplay; return in view and choose **Resume
-run** for an explicit countdown. Long loss or position/scale drift invalidates the
-calibration. Camera calibration is session-only and is not saved across reloads.
+**Recalibrate** pauses and repeats measurement. P / Escape and the pause button
+also retain the camera so a gesture can resume without recalibration. **Turn camera
+off**, leaving the window/tab, errors and game over release camera tracks and the
+model worker. Gestures cannot enable a stopped camera; use the on-screen button once.
+Brief missing/delayed tracking pauses gameplay; resume explicitly after returning.
+Long torso loss or a changed position/scale still invalidates calibration. The range
+is session-only and is not saved across reloads. Wrist loss does not rearm a gesture
+or count as lowering the hands. Buttons remain available when hands cannot be seen.
 
 Keyboard mode uses Space / Arrow Up / game taps / the Jump button for fixed-height
 jumps, with P / Escape to pause. Its local best score is separate from camera mode.
@@ -71,10 +80,11 @@ the game using torso movement and records return-to-baseline cycles, not verifie
 physical jumps. Both shoulders and hips must remain visible; head-only framing is
 not sufficient. Shrugging alone and torso bending do not provide coherent rise.
 
-After a full-body baseline, short leg occlusions pause. If the legs remain unseen
-and the torso is stable for about 750 ms, the recognizer switches to upper-body
-tracking and requires a new standing and maximum calibration. Reappearing legs do
-not change a calibrated upper-body session. Choose Recalibrate to select again.
+The shared recognizer still supports automatic full-body selection for other hosts.
+Dino explicitly requests torso tracking and manual maximum confirmation. Calibration
+needs multiple elevated samples above a noise floor and a steady return before it
+can be accepted. It retains the largest captured displacement until confirmation;
+recalibration, long torso loss or a changed camera/body position clears it.
 
 This is **relative 2D image displacement, not physical height or a biomechanics
 measurement**. Perspective, tracking confidence, tiptoe movement, camera movement,
@@ -97,6 +107,7 @@ measured end-to-end human motion latency.
   continuous height and deduplicatable landing events.
 - `src/camera.js`: permission, media, latest-frame transport and resource lifetime.
 - `src/main.js`: calibration UI, countdown, loss/pause behavior and control selection.
+- `src/gestures.js`: named-wrist/shoulder UI commands with hold and release gates; no scoring.
 - `src/engine.js`: game state, continuous height consumption, keyboard physics,
   collision, scoring and per-session input validation.
 - `src/render.js`: canvas rendering only.
@@ -124,13 +135,23 @@ npm run test:browser --workspace dino-run
 
 Browser checks use the production build in installed Chrome on isolated port 5181,
 so the user's development preview can remain on 5180. Test screenshots and runtime
-assets are ignored. The 2026-09-13 fullscreen and upper-body update passed 38
-shared/recognizer checks, 15 Dino engine/camera checks and 13 production Chrome
-checks. Browser checks cover default game-left/camera-right geometry, desktop and
-mobile fullscreen, capture-time delay rejection, full- and upper-body calibration,
-proportional height, mode-switch recalibration, loss pause, permission errors and
+assets are ignored. The gesture-control update is checked with 40 shared/recognizer
+checks, 18 Dino engine/camera/gesture checks and 15 production Chrome checks. Browser checks cover default game-left/camera-right geometry, desktop and
+mobile fullscreen, capture-time delay rejection, explicit torso calibration,
+proportional height, torso-loss recalibration, held-hand confirmation/pause/resume, permission errors and
 resource cleanup. A synthetic camera round clears an obstacle, collides, then
 recalibrates and starts a new round.
 Synthetic integration and public-image inference are distinct
 from a real person's jump: **human camera-to-Dino responsiveness and calibration
 accuracy are not yet verified**. No public deployment is configured.
+
+## Gesture-control MVP follow-up
+
+The player needs to finish calibration and pause/resume without returning to the
+computer. The risk is that ordinary arm motion triggers a menu command, or strict
+landing detection discards a usable range. This slice reuses the pose stream, adds
+explicit confirmation and held/released body commands, and keeps button fallbacks.
+Success evidence is synthetic range retention, no calibration bypass, one-shot
+commands, delayed/missing-input rejection, and a complete browser confirmation →
+run → gesture pause → gesture resume loop. No new model, recording, hand classifier,
+backend or deployment is added. Human calibration reliability remains unverified.

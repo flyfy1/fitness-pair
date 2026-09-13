@@ -44,3 +44,8 @@ Its completed event denotes a return-to-baseline movement cycle, not proof that
 feet left the ground. Tracking mode is locked after baseline calibration; switching
 from full body after sustained leg loss invalidates both baseline and maximum.
 Consumers must retain the existing missing/calibration gates during that transition.
+
+The optional `measuredRise` and `canConfirmMaximum` fields support an explicit UI
+confirmation of a captured calibration range. `confirm-maximum` is a UI cue only;
+confirmation is not a completed jump. Dino's held-hand commands operate in the host
+UI, preserve source/input identity, and never award game score or jump completions.

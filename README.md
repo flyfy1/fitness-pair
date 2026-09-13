@@ -20,8 +20,10 @@ The first start downloads the official Lite model; later starts use local assets
 
 Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
 with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,
-stand still, then make one maximum comfortable jump and land. After a three-second
-countdown, Dino follows your relative rise and descent. Height is a percentage of
+stand still, then make one maximum comfortable jump and return. Raise one hand
+for one second to confirm the measured height, then lower both hands for a
+three-second countdown. Raise both hands for one second to pause or resume,
+lowering them between commands. Dino follows your relative torso rise and descent. Height is a percentage of
 your own calibration, not centimeters. Keyboard mode remains available separately.
 See [Dino setup and evidence](apps/dino-run/README.md).
 
