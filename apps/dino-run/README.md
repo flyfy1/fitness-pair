@@ -165,3 +165,14 @@ The shared `PoseCamera` accepts an optional `inferenceTimeoutMs` (1000–10000 m
 Dino Run keeps the one-second default; camera-start game mode uses eight seconds
 to tolerate temporary slow inference while its round waits. The watchdog still
 releases owned tracks and the worker on a sustained stall.
+
+
+## Integration boundaries
+
+`engine.js` owns rules and physics, with `command()` for discrete input and
+`setHeightRatio()` for continuous controls. It imports no pose or action schema.
+`motion-input.js` optionally maps validated recognizer output onto this control
+surface; timestamp/session/source guards and completion deduplication live in
+`packages/gameplay/input.js`. `main.js` composes camera, recognizer, controller and
+native UI. Its `window.gameplay` presentation API supplies the shared arcade host
+with canvas, camera, round, phase and score, independently of the active input.

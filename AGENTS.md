@@ -26,6 +26,10 @@ Do not imply multiplayer exists because of the project name.
 
 ## Ownership and parallel work
 
+- `apps/arcade/src/gameplay/`: shared game shell, recording lifecycle and optional conversation capture.
+- `apps/arcade/src/game-adapters/`: legacy game presentation adapters; keep selectors out of the shared recorder.
+- `apps/arcade/game-catalog.js`: shared UI/build/publication registration.
+- `packages/gameplay/`: optional ActionFrame-to-game-control mapping; no camera ownership or game rules.
 - `apps/motion-quest/`: integration host, camera permission/lifecycle, UI wiring.
 - `contracts/`: shared data semantics, type definitions, validators, fixtures.
 - `packages/pose-mediapipe/`: baseline local model and named-joint adapter.

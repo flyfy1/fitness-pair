@@ -1,5 +1,6 @@
 import './style.css';
 import { Runner } from './engine.js';
+import {createRunnerMotionInput} from './motion-input.js';
 import { Renderer } from './render.js';
 import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { PoseCamera } from './camera.js';
@@ -8,6 +9,7 @@ import { setupFullscreen } from './fullscreen.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner();
+const motionInput = createRunnerMotionInput(runner);
 runner.setControlMode('motion');
 const renderer = new Renderer($('game'), runner);
 const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true });
@@ -30,7 +32,7 @@ const camera = new PoseCamera({
     cameraState = status.state;
     if (status.state === 'requesting') {
       const session = { sessionId: status.sessionId, source: status.source };
-      recognizer.reset(session); gestures.reset(session); gestureState = null; gestureMessage = ''; gestureStartRequested = false; runner.bindMotionSession(session); latestAction = null;
+      recognizer.reset(session); gestures.reset(session); gestureState = null; gestureMessage = ''; gestureStartRequested = false; motionInput.reset(session); latestAction = null;
       lastPoseAt = 0; countdownAt = null; cameraError = '';
     }
     paint();
@@ -55,7 +57,7 @@ const camera = new PoseCamera({
     if (action.phase === 'missing' || !action.calibrated) {
       countdownAt = null;
       if (runner.status === 'running') pauseRun('Tracking changed. Stand in view, then resume.', false);
-    } else runner.applyMotion(action);
+    } else motionInput.consume(action);
     renderer.draw(); paint();
   },
   onStop({ reason }) {
@@ -279,3 +281,15 @@ function frame(now) {
   lastFrame = now; requestAnimationFrame(frame);
 }
 paint(); requestAnimationFrame(frame);
+
+
+// Presentation is independent from game physics and the selected input source.
+window.gameplay = Object.freeze({
+  getFrame: () => ({round:runner.roundId, phase:runner.status==='running'?'playing':runner.status==='over'?'complete':runner.status==='paused'?'paused':'setup',
+    canvas:$('game'), video:$('camera'), isAR:false, score:`${runner.score} points`}),
+  configureHost({homeURL,recordingNote}) {
+    const home=document.querySelector('.brand');home.href=homeURL;home.target='_top';home.setAttribute('aria-label','Back to the Hopmodo arcade');
+    document.querySelector('.camera-note').textContent=recordingNote;
+  },
+});
+window.addEventListener('pagehide',()=>motionInput.dispose());

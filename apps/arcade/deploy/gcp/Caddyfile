@@ -36,7 +36,7 @@ fitness.integ.life {
         reverse_proxy 127.0.0.1:8411
     }
     handle {
-        @runtime path_regexp runtime ^/games/(motion-quest|dino-run|dino-ar|plank-flight|camera-start)/runtime/(.+)$
+        @runtime path_regexp runtime ^/games/([^/]+)/runtime/(.+)$
         rewrite @runtime /runtime/{re.runtime.2}
         @pages path_regexp pages ^/(play/[^/]+|gallery|library|shared|clips/[^/]+)/?$
         rewrite @pages /index.html

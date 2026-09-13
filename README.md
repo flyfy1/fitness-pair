@@ -140,3 +140,15 @@ Migrated on 2026-09-13 from `flyfy1/second-brain`, commit `814143e`, path
 `projects/260913-motion-quest`. The original remains a historical snapshot;
 this repository is the collaborative home. Private notes and unrelated history
 were not imported.
+
+
+## Shared gameplay and optional inputs
+
+The [gameplay host](apps/arcade/src/gameplay/README.md) separates game views and
+rules from recording, local replay and sharing. New games register once in
+`apps/arcade/game-catalog.js` and implement the presentation API; existing games
+use explicit adapters. The [action controller](packages/gameplay/README.md) maps
+recognizer output onto game controls independently of the host and recorder.
+Dino Run demonstrates direct keyboard/height controls plus an optional motion
+adapter. Conversation recording is opt-in and stored as a separate local track;
+players can export the original video or a version including conversation.
