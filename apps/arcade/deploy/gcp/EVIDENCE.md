@@ -34,7 +34,7 @@
 ## Independent publications and limits
 
 The GPT Sites publication still serves `/assets/index-D8n_qfSb.js` and
-`/assets/index-BuqiS9ra.css`, unchanged from before the GCP deployment. GCP serves
+`/assets/index-BuqiS9ra.css`, unchanged from before the GCP deployment. The initial GCP release served
 `/assets/index-BmrDT9rM.js` with its own canonical website address. Full Sites HTML
 contains changing edge challenge data, so raw HTML equality is not a deployment
 identity check. No Sites configuration, access, source push, version save or
@@ -77,3 +77,9 @@ Backend source `b0f40a4a6d2989f25568c6879b006c1e9ace790a` was deployed as
 - The isolated live runner `.local/gcp-browser/gallery.spec.js` passed in 23.9s.
   It uses synthetic content and no camera or microphone. It does not establish
   human movement recognition accuracy or physical-device video compatibility.
+
+
+The final availability-copy update was deployed from `d9072d2` as
+`20260913T081618Z-d9072d28cd4e`, with `/assets/index-D7o6fCFC.js`.
+Its full build and desktop/mobile landing browser checks passed. Public health
+matches this source, the new home copy is served, and Gallery remains enabled.
