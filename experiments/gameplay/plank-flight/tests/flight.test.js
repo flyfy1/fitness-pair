@@ -141,3 +141,16 @@ test('fast gates still collide at 10x, while centered flight passes the 2x openi
     }
   }
 });
+
+test('the first gate enters at three seconds and the next gate follows three seconds later',()=>{
+  const s=createFlight(pose(),{speed:1,acceleration:0}),view={width:1280,height:720};
+  consumeAction(s,active(0));s.trackingHeld=true;s.x=.1;s.y=.3;
+  for(let i=0;i<59;i++)stepFlight(s,.05,i*50,view);
+  assert.equal(s.spawned,0);assert.equal(s.obstacles.length,0);
+  for(let i=0;i<2;i++)stepFlight(s,.05,2950+i*50,view);
+  assert.equal(s.spawned,1);assert.ok(s.obstacles[0].x*view.width-17<view.width);
+  for(let i=0;i<60;i++)stepFlight(s,.05,3050+i*50,view);
+  assert.equal(s.spawned,2);assert.equal(s.obstacles.length,2);
+  const distance=s.obstacles[1].x-s.obstacles[0].x;
+  assert.ok(Math.abs(distance-.105*3)<.002);
+});

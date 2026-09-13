@@ -41,6 +41,10 @@ Staying still leaves the helicopter in place instead of adding lift. The video
 fills the screen with a centered, aspect-preserving crop; viewport rotation/resizing
 and fullscreen use the same projection for the overlay and collisions.
 
+The first gate enters from the right at 3 seconds of flight, with another gate
+every 3 seconds. At the same speed, gates are half as far apart as the earlier
+6-second schedule.
+
 The timer shows **flight time**, not detected exercise time. Gates are game obstacles,
 not repetition events. Head tracking can also respond to seated or standing motion;
 this is intentional game control, not verification that a push-up happened.
@@ -146,7 +150,7 @@ preview stays on 5184. Generated screenshots, runtime files and model weights ar
 
 2026-09-13 updated evidence:
 
-- Fifteen synthetic unit checks: close-up automatic takeoff, missing/low-confidence
+- Sixteen synthetic unit checks: close-up automatic takeoff, missing/low-confidence
   input, stale and foreign frames, down/up/sideways following, no hold-based lift,
   aspect/mirror projection, collision/finalization and head extraction without hips;
   tracking debounce, continued world motion through loss, sustained-contact collision,

@@ -2,6 +2,7 @@ import { assertActionFrame, sameSource } from '../../../../contracts/index.js';
 import { projectHead, helicopterScale, validHeadControl } from './projection.js';
 import { normalizeDifficulty, flightSpeed, gateOpening, MAX_FLIGHT_SPEED } from './difficulty.js';
 import { FRAME_FRESH_MS } from './tracking-gate.js';
+export const GATE_INTERVAL_SECONDS = 3;
 export const COLLISION_GRACE_SECONDS = .18;
 export function createFlight(session, difficulty) {
   return { version: 1, sessionId: session.sessionId, source: { ...session.source }, action: 'head-flight',
@@ -51,10 +52,10 @@ function advanceWorld(state,dt,viewport) {
   // Lost tracking freezes only the helicopter position: time, speed and gates keep advancing.
   state.flightSeconds+=dt;
   state.speedGain=Math.min(MAX_FLIGHT_SPEED-state.difficulty.speed,state.speedGain+state.difficulty.acceleration*dt/60);
-  const obstacleIndex = Math.floor(state.flightSeconds / 6);
+  const obstacleIndex = Math.floor(state.flightSeconds / GATE_INTERVAL_SECONDS);
   if (obstacleIndex > state.spawned) {
     state.spawned = obstacleIndex;
-    state.obstacles.push({ x: 1.12, gap: [.3,.7,.2,.8][(obstacleIndex-1)%4], counted: false });
+    state.obstacles.push({ x: 1+17/viewport.width, gap: [.3,.7,.2,.8][(obstacleIndex-1)%4], counted: false });
   }
   const size = helicopterScale(viewport.width);
   const left = state.x*viewport.width-105*size, right = state.x*viewport.width+36*size;
