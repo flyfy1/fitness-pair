@@ -2,6 +2,7 @@ import { assertActionFrame, sameSource } from '../../../../contracts/index.js';
 import { projectHead, helicopterScale, validHeadControl } from './projection.js';
 import { normalizeDifficulty, flightSpeed, gateOpening, MAX_FLIGHT_SPEED } from './difficulty.js';
 import { FRAME_FRESH_MS } from './tracking-gate.js';
+export const COUNTDOWN_SECONDS = 3;
 export const GATE_INTERVAL_SECONDS = 3;
 export const COLLISION_GRACE_SECONDS = .18;
 export function createFlight(session, difficulty) {
@@ -9,7 +10,7 @@ export function createFlight(session, difficulty) {
     health: 1, maxHealth: 1, completedReps: 0, targetReps: 1, damagePerRep: 0,
     lastInputSeq: -1, lastTMs: -1, consumedCompletionIds: [], finished: false,
     difficulty: normalizeDifficulty(difficulty), trackingHeld: false, collisionSeconds: 0, speedGain: 0,
-    status: 'waiting', x: .35, y: .52, headControl: null, velocity: 0, flightSeconds: 0,
+    status: 'waiting', countdownSeconds: 0, x: .35, y: .52, headControl: null, velocity: 0, flightSeconds: 0,
     crashSeconds: 0, passed: 0, spawned: 0, obstacles: [], reason: null, active: false };
 }
 export function consumeAction(state, action) {
@@ -23,7 +24,7 @@ export function consumeAction(state, action) {
   state.trackingHeld = false;
   state.headControl = action.headControl ? { ...action.headControl, image: { ...action.headControl.image } } : null;
   state.active = action.phase === 'active';
-  if (state.status === 'waiting' && state.active) state.status = 'flying';
+  if (state.status === 'waiting' && state.active) state.status = 'countdown';
   return true;
 }
 export function crash(state, reason) {
@@ -38,10 +39,15 @@ export function stepFlight(state, dt, nowMs, viewport = { width: 1280, height: 7
     if (state.crashSeconds >= 1.6) { state.status = 'finished'; state.finished = true; state.health = 0; }
     return;
   }
-  if (!['waiting','flying'].includes(state.status)) return;
+  if (!['waiting','countdown','flying'].includes(state.status)) return;
   if (!state.trackingHeld && nowMs-state.lastTMs<=FRAME_FRESH_MS && state.headControl) {
     const position=projectHead(state.headControl,viewport.width,viewport.height);
     state.x=position.x;state.y=position.y;
+  }
+  if(state.status==='countdown') {
+    state.countdownSeconds=Math.min(COUNTDOWN_SECONDS,state.countdownSeconds+dt);
+    if(state.countdownSeconds>=COUNTDOWN_SECONDS-1e-9)state.status='flying';
+    return;
   }
   if(state.status!=='flying')return;
   // Small world steps keep fast gates from crossing the collision envelope between frames.

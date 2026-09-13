@@ -1,4 +1,5 @@
 import './style.css';
+import { FlightAudio } from './audio.js';
 import { PoseCamera } from './camera.js';
 import { HeadFlightController } from './recognizer.js';
 import { createFlight, consumeAction, stepFlight, crash } from './engine.js';
@@ -11,18 +12,20 @@ import { projectHead, validHeadControl } from './projection.js';
 document.querySelector('#app').innerHTML = `
 <main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas>
 <div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">Push-up play · head tracking</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates<div class="current-speed">Speed <span id="current-speed">1.0×</span></div></div></div>
-<div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view for a moment to take off automatically. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
+<div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view to begin the 3-second countdown. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
+<div id="countdown" class="countdown" role="status" aria-live="assertive" hidden></div>
 <div class="cue"><span id="cue" role="status">Head and one shoulder are enough. Lower down, then push up.</span><progress id="calibration" max="1" value="0" hidden aria-label="Automatic takeoff"></progress></div>
 <div class="difficulty" role="group" aria-label="Difficulty">
 <label for="opening"><span>Gate opening <output id="opening-value">4.0× plane</output></span><input id="opening" type="range" min="2" max="6" step="0.1" value="4"></label>
 <label for="speed"><span>Speed <output id="speed-value">1.0×</output></span><input id="speed" type="range" min="0.4" max="6" step="0.1" value="1"></label>
 <label for="acceleration"><span>Acceleration <output id="acceleration-value">+0.4×/min</output></span><input id="acceleration" type="range" min="0" max="1.5" step="0.1" value="0.4"></label>
-</div><div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
+</div><div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><button id="sound" aria-pressed="true" aria-label="Mute sound">Sound on</button><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
 <span class="privacy">Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
 
 const $ = id => document.getElementById(id);
 const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d'),stage=document.querySelector('.stage');
 const controller=new HeadFlightController();
+const sound=new FlightAudio();
 const tracking=new TrackingGate();tracking.reset(performance.now());
 let difficulty={...DEFAULT_DIFFICULTY};
 let mode='camera',pose=null,pilot=null,state=createFlight({sessionId:'idle',source:{kind:'synthetic',id:'idle'}});
@@ -38,7 +41,7 @@ function clearHead() { pose=null;pilot=null;headCanvas.getContext('2d').clearRec
 function interrupt(message) {
   if (halted || state.finished) return;
   halted=true;state.status='paused';starting=false;
-  camera.stop('interrupted');clearHead();$('stop').hidden=true;$('calibration').hidden=true;
+  sound.stop();camera.stop('interrupted');clearHead();$('stop').hidden=true;$('calibration').hidden=true;
   $('cue').textContent='Flight paused. Start again when you are ready.';
   panel('Let’s find you again.',message,'Start a fresh flight');
 }
@@ -56,7 +59,7 @@ const camera=new PoseCamera({video,
     if(halted || state.status==='crashing' || state.finished)return;
     const now=performance.now();
     if(now-frame.tMs>FRAME_FRESH_MS) {
-      if(state.status==='flying'){tracking.observe(false,now);state.trackingHeld=true;}
+      if(['countdown','flying'].includes(state.status)){tracking.observe(false,now);state.trackingHeld=true;}
       else $('cue').textContent='Camera is catching up. Keep your head in view.';
       return;
     }
@@ -68,7 +71,7 @@ const camera=new PoseCamera({video,
     }
     const action=controller.update(input);if(!action)return;
     lastAction=action;
-    if(state.status==='flying') {
+    if(['countdown','flying'].includes(state.status)) {
       state.trackingHeld=tracking.observe(action.phase!=='missing',now).held;
       if(state.trackingHeld)return;
     } else {tracking.reset(now);state.trackingHeld=false;}
@@ -84,7 +87,7 @@ const camera=new PoseCamera({video,
   },
   onError(error){
     if(state.status==='crashing'||state.finished)return;
-    if(state.status==='flying'&&!halted){tracking.observe(false,performance.now());state.trackingHeld=true;return;}
+    if(['countdown','flying'].includes(state.status)&&!halted){tracking.observe(false,performance.now());state.trackingHeld=true;return;}
     const message=error.name==='NotAllowedError'?'Camera permission was denied. Allow camera access and try again, or explore the demo.':error.message;
     if(halted)panel('Let’s try that again.',message,'Start a fresh flight');else interrupt(message);
   },
@@ -94,17 +97,19 @@ const camera=new PoseCamera({video,
   }
 });
 async function startCamera(){
+  sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='camera';lastAction=null;halted=false;starting=true;
   $('mode').textContent='HEAD & SHOULDERS';$('demo-note').textContent='Push-up play · head tracking';
   $('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='Stop camera';
   await camera.start();
 }
 function startDemo(){
+  sound.stop();sound.unlock();
   halted=true;camera.stop('restart');clearHead();mode='synthetic';halted=false;starting=false;lastAction=null;demoSeq=0;
   state=createFlight({sessionId:crypto.randomUUID(),source:{kind:'synthetic',id:'pointer-demo'}},difficulty);
   const rect=stage.getBoundingClientRect();demoHead={x:.65,y:.52,image:{width:Math.round(rect.width),height:Math.round(rect.height)}};
   $('mode').textContent='SYNTHETIC DEMO';$('demo-note').textContent='Pointer / touch / arrows · no camera';
-  $('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='Finish & rest';$('calibration').hidden=true;
+  $('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='Cancel countdown';$('calibration').hidden=true;
 }
 function finishOrStop(){
   if(state.status==='flying') {
@@ -118,6 +123,14 @@ function updateDifficulty(){
   $('speed-value').textContent=`${difficulty.speed.toFixed(1)}×`;
   $('acceleration-value').textContent=`+${difficulty.acceleration.toFixed(1)}×/min`;
 }
+$('sound').onclick=()=>{
+  sound.setMuted(!sound.muted);
+  $('sound').textContent=sound.muted?'Sound off':'Sound on';
+  $('sound').setAttribute('aria-label',sound.muted?'Enable sound':'Mute sound');
+  $('sound').setAttribute('aria-pressed',String(!sound.muted));
+};
+window.addEventListener('pagehide',()=>sound.dispose());
+if(import.meta.hot)import.meta.hot.dispose(()=>sound.dispose());
 for(const id of ['opening','speed','acceleration'])$(id).addEventListener('input',updateDifficulty);
 setupFullscreen(stage,$('fullscreen'),message=>{$('view-status').textContent=message;});
 $('start').onclick=startCamera;$('demo').onclick=startDemo;$('stop').onclick=finishOrStop;
@@ -140,10 +153,12 @@ window.addEventListener('keydown',event=>{
   if(event.code==='Escape')interrupt('You paused the flight. Take your time.');
 });
 window.addEventListener('blur',()=>{
-  if(camera.active||state.status==='flying')interrupt('The window lost focus. Your camera has been stopped.');
+  sound.stop();
+  if(camera.active||['countdown','flying'].includes(state.status))interrupt('The window lost focus. Your camera has been stopped.');
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden&&(camera.active||state.status==='flying'))interrupt('The tab was hidden. Your camera has been stopped.');
+  if(document.hidden)sound.stop();
+  if(document.hidden&&(camera.active||['countdown','flying'].includes(state.status)))interrupt('The tab was hidden. Your camera has been stopped.');
 });
 function tick(now){
   const dt=(now-lastFrame)/1000;lastFrame=now;
@@ -153,11 +168,20 @@ function tick(now){
       recognizerId:'synthetic-pointer',action:'head-flight',phase:'active',progress:1,
       calibrationProgress:null,cue:'Synthetic head position',completion:null,headControl:demoHead});
   }
-  if(!halted&&mode==='camera'&&state.status==='flying')state.trackingHeld=tracking.status(now).held;
+  if(!halted&&mode==='camera'&&['countdown','flying'].includes(state.status))state.trackingHeld=tracking.status(now).held;
   if(!halted)stepFlight(state,dt,now,rect);
+  sound.update(state,flightSpeed(state));
+  const counting=!halted&&state.status==='countdown';
+  const showStart=!halted&&state.status==='flying'&&state.flightSeconds<.6;
+  $('countdown').hidden=!(counting||showStart);
+  const countText=counting?String(Math.max(1,Math.ceil(3-state.countdownSeconds))):'START!';
+  if($('countdown').textContent!==countText)$('countdown').textContent=countText;
   if(!halted&&state.status==='flying'){
     $('stop').textContent='Finish & rest';
     $('cue').textContent=state.trackingHeld?'Tracking lost — holding your position. Obstacles keep moving.':mode==='camera'?'Your helicopter follows your head. Down, then up — at your own pace.':'Move your pointer, drag on the video, or use the arrow keys.';
+  } else if(counting){
+    $('stop').textContent='Cancel countdown';$('calibration').hidden=true;
+    $('cue').textContent=state.trackingHeld?'Holding your position. Get ready!':'Get ready — your flight is about to begin!';
   } else if(!halted&&state.status==='waiting'&&lastAction)$('cue').textContent=lastAction.cue;
   else if(!halted&&state.status==='crashing'){$('cue').textContent='It’s okay. We’ve got you.';$('calibration').hidden=true;}
   if(state.finished&&!halted){
@@ -176,5 +200,5 @@ requestAnimationFrame(tick);
 // Retain the existing read-only debug handle; never expose camera pixels or raw landmarks.
 window.plankFlight={getState:()=>{
   const {headControl,...snapshot}=structuredClone(state);
-  return {...snapshot,mode,cameraActive:camera.active,starting,headVisible:!!pilot,phase:lastAction?.phase??null};
+  return {...snapshot,mode,cameraActive:camera.active,starting,audio:sound.snapshot(),headVisible:!!pilot,phase:lastAction?.phase??null};
 }};
