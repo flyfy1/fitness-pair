@@ -34,8 +34,8 @@ built-in hand poses and an experimental sideways wave: thumbs up confirms;
 waving side to side says No. See [the gesture catalog and trial instructions](apps/gesture-lab/README.md).
 
 A full-camera Dino flow is available at <http://127.0.0.1:5274> with
-`npm run dev --workspace camera-start`. Large instructions guide standing, a
-comfortable movement slider, hand confirmation and countdown into the game.
+`npm run dev --workspace camera-start`. Large instructions guide standing, automatic movement setup,
+hand confirmation and a spoken countdown into the game.
 Skeleton debug view stays live; raise both hands to pause or resume. Detection-only
 mode remains at `/?mode=detect`. Local runtime logs explain blocked steps and round
 results. See [camera controls and gameplay](apps/camera-start/README.md).

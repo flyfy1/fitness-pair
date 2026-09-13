@@ -13,7 +13,7 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
 - **Risk:** a short body jump must trigger a complete, smooth Dino arc; longer
   observed rise-to-return time should produce a higher arc without noise or pause
   time increasing height.
-- **Loop:** enable camera → stand still → choose a range with the slider → raise
+- **Loop:** enable camera → stand still → automatic movement setup → raise
   one hand to confirm → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
 - **Proof:** production-browser synthetic setup, duration-based animation, obstacle
@@ -86,8 +86,8 @@ npm run test:browser --workspace camera-start
 ```
 
 Production Chrome checks on isolated port 5192 cover viewport camera coverage and
-large text at 1440×960, 390×844 and 844×390; slider-based setup without a jump;
-hand/button confirmation; changing live response with the slider; optional body
+large text at 1440×960, 390×844 and 844×390; automatic setup without a jump;
+hand/button confirmation; live response to small movement; optional body
 overlay visibility and cleanup; noisy takeoff; interrupted countdowns; persisted
 logs; permission recovery and fullscreen. Shared tests verify selected ranges,
 input validation and the unchanged default maximum-calibration mode.
@@ -100,7 +100,10 @@ jumps, clearing a cactus, collision, replay, button/gesture pause and resume,
 tracking-loss freezing, camera restart without resetting the round, and visible
 controls at the three viewport sizes above. Animation unit tests compare short
 and long cycles with identical movement amplitude, reject single-frame spikes,
-verify no stacked jumps, freeze on pause, and check 30/120 FPS consistency.
+verify no stacked jumps, freeze on pause, check 30/120 FPS consistency and
+ensure the longest arc lands within one second. Browser audio checks measure
+real Web Audio output and cover countdown, pause, mute, cancellation, missing
+audio support, tab hiding and page exit.
 
 The preview uses its own origin on port 5274. Port 5190 was previously controlled
 by an unrelated cached games app in the desktop browser; its cache/storage were
@@ -110,7 +113,7 @@ left untouched. This POC registers no Service Worker.
 
 The setup POC now opts into debounced recognition. A brief missing-joint or
 geometry rejection keeps the existing step visible for 350 ms, retains the
-baseline and selected range, and pauses countdown time. Sustained loss shows
+baseline and movement scale, and pauses countdown time. Sustained loss shows
 tracking guidance; after 750 ms of rejected observations calibration resets.
 Rejected frames never contribute height, landing evidence or confirmation.
 Three-sample median filtering rejects isolated height spikes, while a 180 ms
@@ -137,43 +140,41 @@ missing/stale joints are cleared rather than displayed as a frozen body. Turning
 the switch off, stopping the camera or completing a round clears the overlay.
 Nothing is recorded.
 
-**Movement for a jump trigger** (game) / **Movement for a full jump** (detection
-mode) chooses the response scale as 10–80% of the
-standing torso length, initially 25%. Lower means less real movement for the same
-response. In game mode a coherent rise reaching 12% of this response scale
-can trigger the animation; its final height depends on observed movement duration.
-This is a relative screen-space setting, not centimeters or a measured
-personal maximum. The **Live jump response** meter previews that mapping after
-the standing baseline is captured. Trying a movement is optional: standing still
-is sufficient to unlock confirmation. The chosen range becomes fixed when
-confirmed; **Play again** (or **Try again** in detection mode) allows another
-setup. The chosen value stays for this page session. No camera-derived baseline is reused across sessions.
+Movement setup is automatic after standing still. There is no range slider or
+maximum-jump requirement. The response scale uses 15% of standing torso length;
+this is a relative screen-space scale, not centimeters or a personal maximum.
+The **Live jump response** meter previews movement after baseline capture.
+A coherent rise reaching 12% of this response scale can trigger the animation;
+its final height depends on observed movement duration. Stand upright and raise
+one hand (or click **Confirm & continue**) to start the countdown.
 
-The log marks `rangeSource: slider` on confirmation, and records range changes
-and overlay toggles. These settings are configuration, never evidence of a jump.
+Each camera session captures a new baseline. The log marks `rangeSource: automatic`
+and the fixed response scale on confirmation, and records overlay toggles.
+These settings are configuration, never evidence of a jump.
 
 
 ## Play Dino
 
 The default `/` route finishes the countdown into a running game. The player's
-rise triggers a dinosaur jump after a 100 ms animation buffer. Two or more
+rise triggers a dinosaur jump after a 30 ms animation buffer. Two or more
 coherent rising samples over at least 60 ms are required before triggering.
 The dinosaur follows its own continuous trajectory, so the player's return does
 not snap it to the ground. Longer observed rise-to-return time sustains lift
-for longer, creating a higher arc; lift is capped at 360 ms. A short movement
-still produces a complete arc (about 0.8 seconds, versus about 1.2 seconds at
+for longer, creating a higher arc; lift is capped at 250 ms. A short movement
+still produces a complete arc (about 0.72 seconds, versus about 0.95 seconds at
 full lift). New movements during an arc do not queue or stack extra jumps.
-The slider sets the movement threshold for triggering; the response meter
+The automatic movement scale sets the trigger threshold; the response meter
 continues to show the raw movement mapping, not the dinosaur's animated height.
 There is no mandatory maximum jump. Half-body tracking still requires both
 shoulders and hips. The scene comes from `experiments/gameplay/dino-ar/src/scene.js`
 and the motion-mode rules from `apps/dino-run/src/engine.js`.
 
-The left playfield shows the dinosaur, ground and incoming cacti. Large cues
+The left playfield shows the dinosaur, ground and incoming cacti. The jump prompt
+moves closer to each cactus to match the shorter arc. Large cues
 announce **Jump!**, **Cleared!** and confirmed jumps; the controls show score,
 cacti cleared, confirmed jumps and the live movement meter. Score and cleared
 count stay in a compact top-right HUD. The larger settings panel is hidden by
-default in game mode; click **Settings** to show the slider, skeleton toggle,
+default in game mode; click **Settings** to show the sound and skeleton toggles,
 movement meter and **Finish run**. Click Settings again, outside the panel, or
 press Escape to close it. Hiding settings does not hide the skeleton or resize
 the game world. Score advances with
@@ -202,26 +203,26 @@ jump detection events. No camera images or skeleton coordinates are recorded.
 
 ## Jump detection test
 
-Select **Jump detection only** or open `/?mode=detect`. Once range confirmation
+Select **Jump detection only** or open `/?mode=detect`. Once standing confirmation
 and countdown succeed, **Try a small jump** starts the test. Skeleton and response meter stay live. **Moving up** and
 **Coming back down** indicate the recognizer's current motion. **Jump detected!**
 is shown for 1.8 seconds after an explicit completed action; the confirmed count
 stays visible, and a new rise can immediately start another cycle. A stable
 completion ID prevents duplicate counts. Setup motions are not counted.
 
-The slider controls the full-response amplitude, not a required maximum jump.
+No maximum jump or range adjustment is required.
 Detection still requires coherent upward movement above the standing reference,
 multiple observed samples and a stable return. A preparatory crouch alone,
 standing still, or an isolated noise spike does not count. No count is inferred
 from a missing frame. Sustained loss invalidates calibration, pauses testing and
-requires the standing/range/countdown steps again; previously confirmed counts
+requires the standing/confirmation/countdown steps again; previously confirmed counts
 remain until the user starts a fresh camera session.
 
 The test uses the existing upper-body recognizer, so **detected jump** means a
 tracked torso rise-and-return cycle, not independently verified feet leaving the
 floor. Feet can stay outside the picture. It is a movement-control POC, not a
-physical jump-height measurement. Peak response is a percentage of the selected
-slider range and is not centimeters.
+physical jump-height measurement. Peak response is a percentage of the automatic
+response scale and is not centimeters.
 
 **Finish test** shows the count and stops the camera and worker. The local log
 includes `jump-test-started`, `jump-started`, `jump-returning`, `jump-detected`,
@@ -230,3 +231,28 @@ or camera images are recorded. Production-browser synthetic regressions cover tw
 successive cycles, persistent confirmation, default skeleton rendering, responsive
 controls, noise rejection, loss recovery, setup-only movements and cleanup.
 Human detection accuracy still requires a trial at the user's camera distance.
+
+
+## Sound
+
+Game mode reuses the neighboring Plank Flight experiment's bundled English
+**Three, two, one, start** speech and Web Audio synthesis helpers. The spoken
+numbers follow the visible countdown; interrupted or cancelled countdowns cancel
+queued speech. A new attempt can announce the numbers again.
+
+Dino adds a playful 128–156 BPM chip melody, bass and drums, a rising jump sound
+aligned to the dinosaur's takeoff animation, a soft landing thump, a four-note reward
+for clearing a cactus, encouragement every third clear and a descending crash
+sound. Finishing manually plays a closing chord and local encouragement. Music
+stays quieter than speech. No external music service or microphone is used.
+
+Audio is unlocked by **Enable camera**. **Settings → Game sound** mutes all layers
+without changing the round. Pause, tracking loss, cancellation and a hidden tab
+stop scheduled sounds; finishing lets only its brief ending cue play before
+suspending audio. Page exit closes the owned audio context. Missing sound support
+or unavailable voice files leave the visual game usable. The local log includes
+`audio-cue` and `sound-changed`; diagnostics expose audio state and active nodes.
+
+`prepare:assets` copies the existing local voice WAVs into ignored `public/audio/`
+for standalone and arcade builds. Their source and synthesis provenance remain in
+`experiments/gameplay/plank-flight/README.md`; no private recording is introduced.

@@ -35,8 +35,8 @@ test('short and long body cycles produce complete arcs, with continuous landing 
     return g.snapshot().jumpAnimation;
   };
   const short=run(8),long=run(18);
-  assert.ok(short.peakHeight>=80);assert.ok(long.peakHeight>short.peakHeight+25);
-  assert.ok(long.peakHeight<=165);assert.ok(long.observedAirMs>short.observedAirMs+250);
+  assert.ok(short.peakHeight>=64);assert.ok(long.peakHeight>short.peakHeight+10);
+  assert.ok(long.peakHeight<=105);assert.ok(long.observedAirMs>short.observedAirMs+250);
 });
 
 test('single-frame noise cannot trigger; a held rise cannot auto-repeat; only completed IDs count jumps',()=>{
@@ -51,13 +51,16 @@ test('single-frame noise cannot trigger; a held rise cannot auto-repeat; only co
 });
 
 test('a brief confirmed rise returning during the delay still plays a complete minimum arc',()=>{
-  const {g,tick}=fixture();
-  for(let i=0;i<3;i++)tick(.5);
-  assert.equal(g.triggerCount,1);assert.equal(g.y,0);assert.ok(g.arc.pending>0);
+  const {g,tick,send}=fixture();
+  for(let i=0;i<3;i++)send(.5);
+  assert.equal(g.triggerCount,1);assert.equal(g.y,0);assert.equal(g.arc.pending,.03);
+  send(0);
+  g.step(.029);assert.equal(g.y,0);
+  g.step(.01);assert.ok(g.y>0,'takeoff follows the 30 ms buffer');
   for(let i=0;i<10;i++)tick();
   assert.ok(g.y>0);
   for(let i=0;i<40;i++)tick();
-  assert.equal(g.y,0);assert.ok(g.arc.peak>=79);assert.equal(g.triggerCount,1);
+  assert.equal(g.y,0);assert.ok(g.arc.peak>=64);assert.equal(g.triggerCount,1);
 });
 
 test('pause freezes the trajectory; interrupted movement does not add airtime or snap on resume',()=>{
@@ -110,4 +113,13 @@ test('simulation substeps keep animation consistent at 30 and 120 FPS',()=>{
   assert.ok(Math.abs(a.arc.peak-b.arc.peak)<.01);
   assert.ok(Math.abs(a.distance-b.distance)<.01);
   assert.equal(a.y,0);assert.equal(b.y,0);
+});
+
+
+test('even a sustained body rise lands within one second of the trigger',()=>{
+  const {g,send}=fixture();
+  for(let i=0;i<3;i++)send(.5);
+  for(let i=0;i<29;i++) { send(.5);g.step(1/30); }
+  assert.equal(g.arc.pending,null);assert.equal(g.y,0);
+  assert.ok(g.arc.peak>90 && g.arc.peak<105);assert.equal(g.triggerCount,1);
 });

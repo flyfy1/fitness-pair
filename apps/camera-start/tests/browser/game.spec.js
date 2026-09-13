@@ -9,22 +9,28 @@ async function startGame(page, button='Enable camera') {
 }
 
 test('camera setup controls the existing Dino game: animated jump, cactus clear, collision and replay',async({page})=>{
-  await syntheticCamera(page); const errors=[]; page.on('pageerror',e=>errors.push(e.message)); await page.goto('/');
+  await syntheticCamera(page);
+  // Use the taller cactus so clearance is not dependent on random obstacle height.
+  await page.addInitScript(()=>{Math.random=()=>.9;});
+  const errors=[]; page.on('pageerror',e=>errors.push(e.message)); await page.goto('/');
   expect((await state(page)).mode).toBe('game');
+  await expect(page.getByRole('slider')).toHaveCount(0);
   await expect(page.getByLabel('Skeleton debug view',{exact:true})).toBeChecked();
   await startGame(page);
   expect((await state(page)).game.score).toBeGreaterThanOrEqual(0);
   expect((await state(page)).jumpCount).toBe(0);
   expect(await page.evaluate(()=>window.testStream.getTracks().some(t=>t.readyState==='live'))).toBe(true);
   await page.evaluate(()=>{window.poseTest.rise=.03;});
-  await expect.poll(async()=>(await state(page)).game.height,{intervals:[25]}).toBeGreaterThan(30);
+  await expect.poll(async()=>(await state(page)).game.height,{intervals:[25]}).toBeGreaterThan(0);
   await page.evaluate(()=>{window.poseTest.rise=0;});
   await expect.poll(async()=>(await state(page)).jumpCount).toBe(1);
   expect((await state(page)).game.height).toBeGreaterThan(0);
   await expect.poll(async()=>(await state(page)).game.jumpAnimation.phase).toBe('grounded');
-  await expect.poll(async()=>{const d=(await state(page)).game.nextObstacleDistance;return d!==null&&d<150&&d>90;},{timeout:12000,intervals:[25]}).toBe(true);
+  await expect(page.locator('#instruction')).toHaveText('Jump!',{timeout:12000});
+  // A short reaction to the visible cue before the synthetic body rises.
+  await page.waitForTimeout(150);
   await page.evaluate(()=>{window.poseTest.rise=.08;});
-  await expect.poll(async()=>(await state(page)).game.height,{intervals:[25]}).toBeGreaterThan(140); await page.evaluate(()=>{window.poseTest.rise=0;});
+  await expect.poll(async()=>(await state(page)).game.height,{intervals:[25]}).toBeGreaterThan(85); await page.evaluate(()=>{window.poseTest.rise=0;});
   await expect.poll(async()=>(await state(page)).game.passed).toBeGreaterThan(0);
   await page.screenshot({path:'test-results/game-cleared.png'});
   await expect(page.locator('#status')).toHaveText('ROUND COMPLETE',{timeout:12000});
@@ -41,9 +47,11 @@ test('camera setup controls the existing Dino game: animated jump, cactus clear,
   expect(logs.some(e=>e.event==='dino-jump-landed'&&e.peakHeight>0)).toBe(true);
   const arcs=logs.filter(e=>e.event==='dino-jump-landed');
   expect(arcs.length).toBeGreaterThanOrEqual(2);
-  expect(arcs[1].peakHeight).toBeGreaterThan(arcs[0].peakHeight+20);
+  expect(arcs[1].peakHeight).toBeGreaterThan(arcs[0].peakHeight+5);
+  expect(arcs[1].peakHeight).toBeLessThanOrEqual(105);
   expect(arcs[1].observedAirMs).toBeGreaterThan(arcs[0].observedAirMs);
   expect(logs.some(e=>e.event==='round-finished'&&e.reason==='collision')).toBe(true);
+  for(const cue of ['jump','land','clear','crash']) expect(logs.some(e=>e.event==='audio-cue'&&e.cue===cue)).toBe(true);
   expect(errors).toEqual([]);
 });
 
