@@ -1,9 +1,9 @@
 # Hopmodo logo exploration
 
-Working recommendation: **Hopmodo**. Proposed only; the live platform keeps its existing name until the owner chooses. Alternative: **Boproom**. Naming research by the integration owner is preliminary, not trademark clearance.
+**Hopmodo** is now the working public-facing platform name. The user requested applying a welcoming name and logo for kids and adults. Repository and Sites app identity remain unchanged. Naming research is preliminary, not trademark clearance.
 
 - `hopmodo-concept.png`: generated visual concept sheet; preview artwork, not a production sprite sheet.
-- `hopmodo-mark.svg`: code-native production proposal, a simple jumping figure with an H-like torso; scales to favicon size and remains independent of the final name.
+- `hopmodo-mark.svg`: original code-native proposal; the production copy at `../public/assets/hopmodo-mark.svg` adds padding around the silhouette. It is, a simple jumping figure with an H-like torso; scales to favicon size and remains independent of the final name.
 
 The generated concept uses a chunky lowercase wordmark, a jumping-person silhouette, cobalt `#2347ee`, acid yellow `#eeff41`, and white. Keep the mark static in the navigation. Use a minimum 24px rendered size and clear space of at least one quarter of its width. The SVG has no embedded text or external dependencies. Add accessible naming at the consumer; hide the symbol from assistive technology when it repeats an adjacent brand name.
 
