@@ -168,3 +168,20 @@ The host holds the current large instruction for 350 ms during a brief dropout,
 freezes its countdown, and hides confirmation controls until current tracking is
 valid. Competing jump/confirm instructions must persist for 180 ms before display.
 These are synthetic-tested thresholds, not measured guarantees of human accuracy.
+
+
+## Selected range instead of maximum measurement
+
+Manual-confirmation hosts can call `setJumpRange(torsoRatio)` with a finite number
+from 0.1 to 0.8. It stores a user setting, not a measured movement. After fresh
+standing calibration and the usual upright return hold, `confirmMaximum()` can
+accept that selected range without a jump. The resulting peak is baseline torso
+length times the chosen ratio. Missing tracking and pre-baseline confirmation
+remain blocked. Invalid values throw; non-manual hosts and already confirmed
+ranges reject changes. The setting survives recalibration, but the baseline does
+not. Callers that never set a range retain maximum-jump calibration unchanged.
+
+Configured outputs add `rangeSource: slider` and `previewHeightRatio` (0–1) for a
+host's live response meter. Preview is zero on missing tracking; during calibration
+it never changes contract `progress` or emits a completion. Camera Start opts into
+this path; the standalone Dino host keeps its own start policy.
