@@ -83,3 +83,50 @@ The final availability-copy update was deployed from `d9072d2` as
 `20260913T081618Z-d9072d28cd4e`, with `/assets/index-D7o6fCFC.js`.
 Its full build and desktop/mobile landing browser checks passed. Public health
 matches this source, the new home copy is served, and Gallery remains enabled.
+
+## Integ.Life login and 2 GB account storage
+
+Deployed application source `335d9688a09e816ff4e29760cebf27588418b0d1` as
+`20260913T090539Z-335d9688a09e` from clean, pushed `main`. Central Auth runs
+`c280f9f49a75ece6b2de564c2a46039d7464f29b` on Pi with `dirty:false` and the
+new `hopmodo` client; the preceding 14 client configurations were preserved.
+
+- IAP disconnected while transferring the archive, before installation. The owned
+  transfer was stopped. The existing Tailscale `integ-prod` SSH target was verified
+  by hostname and the prior local health/release; the same 14 MB archive was copied
+  there and its SHA-256 matched locally and remotely. The standard installer then
+  validated Caddy, retained rollback files, and restarted only the arcade and its
+  dedicated proxy. Public health reports the exact source above.
+- Public `/api/auth/session` reports login enabled and `limitBytes: 2000000000`.
+  Anonymous account listing and deletion return 401. `/api/config` reports sharing
+  enabled. No central tokens or client credentials appear in these public responses.
+- In the real browser, Hopmodo's login button navigated through the branded central
+  Auth page and the existing Google sign-in flow, then returned to `/shared` as the
+  actual Integ.Life account. Its initial storage display was 0 B of 2 GB used.
+- A Dino Run keyboard round generated a six-second, camera-free synthetic MP4.
+  The publication form identified the logged-in account, required explicit consent,
+  displayed remaining quota, and contained no early-access code field.
+- The resulting clip `365da628-d2d0-4f07-9b96-925324682916` contained **578,548 bytes**.
+  Independent GCS reads confirmed that exact object size, synthetic provenance,
+  seven-day expiry, and a bound owner identity without a legacy management-key hash.
+  Public metadata did not expose the owner identity. Browser playback decoded
+  1280×800 MP4 frames and advanced in time; a 100-byte request returned 206 with
+  `Content-Range: bytes 0-99/578548`.
+- Restarting the sole gateway process preserved the browser session, the publication
+  in My shared clips, and the exact 578,548-byte quota meter value.
+- Owner removal through My shared clips returned its meter to 0. Public metadata
+  and media returned 404, and GCS reported the video object unavailable. The local
+  video remained in My clips; that task-generated test copy was then removed.
+  The temporary publication is intentionally unavailable. No camera or microphone
+  was used and no private recording was uploaded.
+- Automated account evidence: 65 repository tests, 12 backend tests, and three
+  Chrome account-flow tests passed on the integrated code. Account tests include
+  a second device, another account, exact/concurrent quota boundaries, cancellation,
+  partial uploads and mobile layouts. Broader regression evidence and the two
+  separately reproduced pre-existing recorder failures are in [AUTH.md](../../server/AUTH.md).
+
+The application runtime owns `/var/lib/fitness-arcade`; release archives exclude
+its sessions and quota ledger. Configuration backups are root-only:
+`/etc/fitness-arcade.env.hopmodo-20260913T090425Z.bak` on GCP and
+`/etc/integ-auth.env.hopmodo-20260913T085815Z.bak` on Pi. This release does not change
+the standalone `/highlights` service or publish a GPT Sites build.
