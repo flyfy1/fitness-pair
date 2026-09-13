@@ -1,3 +1,4 @@
+import {startWithHands} from '../../integ-ar/tests/start-hands.js';
 import {test,expect} from '@playwright/test';
 import {syntheticCamera} from '../../integ-ar/tests/synthetic-camera.js';
 const move=(frame,value)=>frame.locator('#arena').evaluate((el,value)=>Object.assign(window.poseTest,value),value);
@@ -12,7 +13,7 @@ test('tutorial stays out of local recording and completed practice enters the or
  expect(await game.locator('#skeleton').evaluate(c=>c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0))).toBe(true);
  await move(game,{x:0,hand:'up'});await step(game,'lower');await move(game,{hand:'down'});await step(game,'ready');
  await expect(page.locator('#local-result video')).toHaveCount(0);expect(await game.locator('#arena').evaluate(()=>window.integAR.getState().game)).toEqual(initial);
- await game.locator('#tutorial-play').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await expect(game.locator('#tutorial')).toBeHidden();
+ await startWithHands(game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await expect(game.locator('#tutorial')).toBeHidden();
  await page.waitForTimeout(400);await move(game,{hand:'up'});await expect.poll(()=>game.locator('#arena').evaluate(()=>window.integAR.getState().game.shotsFired)).toBe(1);
  await game.locator('#finish').click();await expect(page.locator('#local-result video')).toBeVisible({timeout:12000});expect(uploads).toEqual([]);expect(errors).toEqual([]);
 });

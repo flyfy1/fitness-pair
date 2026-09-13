@@ -14,7 +14,7 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
   observed rise-to-return time should produce a higher arc without noise or pause
   time increasing height.
 - **Loop:** enable camera → stand still → automatic movement setup → raise
-  one hand to confirm → three-second countdown → rise and return to control Dino
+  both hands for one second, then lower them → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
 - **Proof:** production-browser synthetic setup, duration-based animation, obstacle
   clearance, collision, replay, pause/resume, tracking recovery and camera cleanup.

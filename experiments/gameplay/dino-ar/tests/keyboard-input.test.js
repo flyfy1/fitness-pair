@@ -1,3 +1,4 @@
+import {createRunnerMotionInput} from '../../../../apps/dino-run/src/motion-input.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { KeyboardInput } from '../src/keyboard-input.js';
@@ -39,12 +40,12 @@ test('held or repeated keys cannot retrigger in flight; pausing preserves height
 });
 test('the same motion-mode Runner consumes synthetic output and rejects camera or stale frames',()=>{
   const {input,step}=harness(), runner=new Runner(); runner.setControlMode('motion');
-  runner.bindMotionSession(input.session); runner.command('start'); input.jump(.6);
+  const motionInput=createRunnerMotionInput(runner); motionInput.reset(input.session); runner.command('start'); input.jump(.6);
   for(let i=0;i<50;i++) {
-    const f=step(); assert.equal(runner.applyMotion(f),true);
+    const f=step(); assert.equal(motionInput.consume(f),true);
     assert.equal(runner.y,f.heightRatio*165);
-    assert.equal(runner.applyMotion(f),false);
-    assert.equal(runner.applyMotion({...f,inputSeq:f.inputSeq+1000,tMs:f.tMs+1000,source:{kind:'camera',id:'other'}}),false);
+    assert.equal(motionInput.consume(f),false);
+    assert.equal(motionInput.consume({...f,inputSeq:f.inputSeq+1000,tMs:f.tMs+1000,source:{kind:'camera',id:'other'}}),false);
   }
   assert.equal(runner.jumps,1); assert.equal(runner.y,0);
 });
