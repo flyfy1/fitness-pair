@@ -1,0 +1,12 @@
+{
+  "name": "dino-ar-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:assets": "node ../../../packages/pose-mediapipe/prepare-assets.mjs public/runtime",
+    "dev": "npm run prepare:assets && vite --host 127.0.0.1 --port 5196 --strictPort",
+    "build": "npm run prepare:assets && vite build",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test"
+  }
+}

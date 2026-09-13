@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#10241e"><title>Dino AR — Step into the game</title></head>
+<body>
+  <main id="arena">
+    <video id="camera" autoplay muted playsinline aria-label="Mirrored local camera"></video>
+    <div class="shade"></div>
+    <canvas id="world" aria-label="Augmented runner: clear the cacti with your player marker"></canvas>
+    <canvas id="skeleton" aria-hidden="true" hidden></canvas>
+    <header>
+      <div class="brand"><span class="brand-icon">↗</span><div>DINO <b>AR</b><small>STEP INTO THE GAME</small></div></div>
+      <div class="scores"><div><small>SCORE</small><strong id="score">00000</strong></div><div><small>CLEARED</small><strong id="cleared">0</strong></div></div>
+      <button id="fullscreen" class="icon" aria-label="Enter fullscreen">⛶</button>
+    </header>
+    <aside id="settings">
+      <span class="eyebrow">GAMEPLAY 02 / AR POC</span>
+      <label><input id="debug" type="checkbox"> Debug · show body skeleton</label>
+      <span id="tracking">Camera off · local processing</span>
+    </aside>
+    <section id="welcome">
+      <span class="eyebrow">YOU ARE THE PLAYER</span>
+      <h1>Your room.<br>Your next adventure.</h1>
+      <p>Step into the video. Jump over the cacti.<br>Your movement brings the game to life.</p>
+      <div class="steps"><span>01 · Stand still</span><span>02 · Set your jump</span><span>03 · Play in your world</span></div>
+    </section>
+    <footer>
+      <div class="status"><span class="eyebrow" id="phase">READY WHEN YOU ARE</span><h2 id="cue">Step back. Leave room to jump.</h2><p id="detail">Keep shoulders and hips visible. Full body is best.</p></div>
+      <div class="actions"><button id="primary">Enable camera</button><button id="recalibrate" class="secondary" hidden>Recalibrate</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>
+      <div class="meter"><span id="height-label">YOUR JUMP RANGE</span><div><i id="height-bar"></i></div><strong id="height">—</strong></div>
+      <small class="privacy">Video stays on this device · No recording · Relative movement, not physical height</small>
+    </footer>
+    <p id="announcement" class="sr-only" role="status" aria-live="polite"></p>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
