@@ -14,7 +14,21 @@ export function mountRecording(game,frame){
  const sessions=new Set();
  function setState(next,message){panel.dataset.state=next;if(message&&status.textContent!==message)status.textContent=message;}
  function readGame(){
-  const doc=frame.contentDocument,canvas=doc?.querySelector('#game'),video=doc?.querySelector('#camera');
+  const doc=frame.contentDocument;
+  if(game.id==='dino-ar'){
+   const state=frame.contentWindow.dinoAR?.getState(),canvas=doc?.querySelector('#world');if(!state||!canvas?.width)return null;
+   return {canvas,video:doc.querySelector('#camera'),skeleton:doc.querySelector('#debug')?.checked?doc.querySelector('#skeleton'):null,skeletonMirrored:true,isAR:true,round:state.roundId,ready:state.status==='running',done:state.status==='over',score:`${state.score} points`};
+  }
+  if(game.id==='plank-flight'){
+   const state=frame.contentWindow.plankFlight?.getState(),canvas=doc?.querySelector('#scene');if(!state||!canvas?.width)return null;
+   return {canvas,video:doc.querySelector('#video'),isAR:true,round:state.sessionId,ready:state.status==='flying',ending:state.status==='crashing',done:state.finished,score:`${Math.floor(state.flightSeconds)}s · ${state.passed} gates`};
+  }
+  if(game.id==='camera-start'){
+   const state=frame.contentWindow.cameraSetup?.getState(),canvas=doc?.querySelector('#game-world');if(!state?.game||!canvas?.width)return null;
+   const stage=doc.querySelector('#setup').getBoundingClientRect(),rect=canvas.getBoundingClientRect();
+   return {canvas,video:doc.querySelector('#camera'),skeleton:doc.querySelector('#show-body')?.checked?doc.querySelector('#body-overlay'):null,isAR:true,layout:{width:stage.width,height:stage.height,x:rect.x-stage.x,y:rect.y-stage.y,canvasWidth:rect.width,canvasHeight:rect.height},round:state.game.roundId,ready:state.game.status==='running'&&state.testing,done:state.stage==='complete'||state.game.status==='over',score:`${state.game.score} points`};
+  }
+  const canvas=doc?.querySelector('#game'),video=doc?.querySelector('#camera');
   if(!canvas?.width)return null;
   if(game.id==='motion-quest'){
    const reps=Number(doc.querySelector('#rep-count')?.textContent||0),demo=doc.querySelector('#demo-action');
@@ -59,6 +73,7 @@ export function mountRecording(game,frame){
   try{
    const mime=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
    if(!mime)throw new Error('This browser cannot record a supported video. You can still play.');
+   session.lastCamera=document.createElement('canvas');
    const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
    session.recorder=new MediaRecorder(session.capture,{mimeType:mime,videoBitsPerSecond:2200000});
    session.recorder.ondataavailable=e=>{
@@ -92,7 +107,9 @@ export function mountRecording(game,frame){
      if(now.round!==session.round){finish(snapshot.score);return;}
      // Completion can turn off the game's camera in the same frame.
      if(now.done){finish(now.score);return;}
-     if(!!now.video?.srcObject!==session.hadCamera){handledRound=null;finish(now.score);return;}
+     if(!!now.video?.srcObject!==session.hadCamera&&!now.ending){handledRound=null;finish(now.score);return;}
+     if(session.hadCamera&&now.video?.srcObject&&now.video.readyState>=2){const cache=session.lastCamera;cache.width=640;cache.height=Math.round(640*now.video.videoHeight/now.video.videoWidth);cache.getContext('2d').drawImage(now.video,0,0,cache.width,cache.height);}
+     if(now.ending&&!now.video?.srcObject&&session.lastCamera.height)now.video=session.lastCamera;
      drawClipFrame(session.context,{...now,includesCamera:session.hadCamera,title:game.title,logo});snapshot=now;
      setState('recording',`Recording ${Math.floor((performance.now()-session.startAt)/1000)} seconds · ${session.hadCamera?'game + camera':'synthetic game preview'} · stays on this device`);
      session.raf=requestAnimationFrame(paint);
@@ -118,7 +135,7 @@ export function mountRecording(game,frame){
  window.addEventListener('pagehide',()=>{unloading=true;clearInterval(watcher);for(const session of sessions)session.saveNow();});
  function connectGame(){
   if(active)active.finish('Game reloaded');handledRound=null;
-  try{const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note');if(note)note.textContent='Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
+  try{const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note, .privacy');if(note)note.textContent='Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
  }
  frame.addEventListener('load',connectGame);if(frame.contentDocument?.readyState==='complete')connectGame();
 }

@@ -14,7 +14,7 @@ Grant the service account object create/get/list/delete permissions only on this
 
 ## Flow
 
-1. Opt-in recording creates a maximum 60-second / 20-MiB video on the device in IndexedDB.
+1. Gameplay automatically creates a branded local replay in IndexedDB. Local recordings are bounded at 100 MiB; this pilot upload endpoint currently accepts up to 60 seconds / 20 MiB.
 2. Player previews it and explicitly consents to gallery publication. A management key is saved locally **before** upload so retry and deletion remain possible.
 3. Worker verifies upload authorization, origin, consent, metadata, bounded body and MP4/WebM magic bytes; it uploads private bytes and then a publication record. The metadata contains a hash of the management key.
 4. Gallery and `/clips/:id` read publication records. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.

@@ -5,21 +5,28 @@ export async function loadRecordingLogo(){
  await img.decode();return img;
 }
 function coverVideo(c,video,x,y,w,h){
- const scale=Math.max(w/video.videoWidth,h/video.videoHeight);
+ const vw=video.videoWidth||video.width,vh=video.videoHeight||video.height;
+ const scale=Math.max(w/vw,h/vh);
  const sw=w/scale,sh=h/scale;
  c.save();c.translate(x+w,y);c.scale(-1,1);
- c.drawImage(video,(video.videoWidth-sw)/2,(video.videoHeight-sh)/2,sw,sh,0,0,w,h);c.restore();
+ c.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h);c.restore();
 }
-export function drawClipFrame(c,{canvas,video,skeleton,isAR,includesCamera,title,score,logo}){
+export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,isAR,layout,includesCamera,title,score,logo}){
  c.fillStyle='#182346';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
- const scale=Math.min(CLIP_WIDTH/canvas.width,PLAY_HEIGHT/canvas.height);
- const w=canvas.width*scale,h=canvas.height*scale,x=(CLIP_WIDTH-w)/2,y=(PLAY_HEIGHT-h)/2;
- if(isAR&&includesCamera&&video.readyState>=2)coverVideo(c,video,x,y,w,h);
- if(isAR&&skeleton?.width){c.save();c.translate(x+w,y);c.scale(-1,1);c.drawImage(skeleton,0,0,w,h);c.restore();}
- c.drawImage(canvas,x,y,w,h);
- if(!isAR&&includesCamera&&video.readyState>=2){
-  c.fillStyle='#fff';c.fillRect(990,486,266,200);coverVideo(c,video,994,490,258,192);
+ const sourceWidth=layout?.width||canvas.width,sourceHeight=layout?.height||canvas.height;
+ const scale=Math.min(CLIP_WIDTH/sourceWidth,PLAY_HEIGHT/sourceHeight);
+ const w=sourceWidth*scale,h=sourceHeight*scale,x=(CLIP_WIDTH-w)/2,y=(PLAY_HEIGHT-h)/2;
+ const videoReady=video&&(video.readyState>=2||video instanceof HTMLCanvasElement&&video.width>0);
+ if(isAR&&includesCamera&&videoReady)coverVideo(c,video,x,y,w,h);
+ if(isAR&&skeleton?.width){
+  c.save();
+  if(skeletonMirrored)c.drawImage(skeleton,x,y,w,h);
+  else{c.translate(x+w,y);c.scale(-1,1);c.drawImage(skeleton,0,0,w,h);}
+  c.restore();
  }
+ if(layout)c.drawImage(canvas,x+layout.x*scale,y+layout.y*scale,layout.canvasWidth*scale,layout.canvasHeight*scale);
+ else c.drawImage(canvas,x,y,w,h);
+ if(!isAR&&includesCamera&&videoReady){c.fillStyle='#fff';c.fillRect(990,486,266,200);coverVideo(c,video,994,490,258,192);}
  drawWatermark(c,{title,score,includesCamera,logo});
 }
 function drawWatermark(c,{title,score,includesCamera,logo}){

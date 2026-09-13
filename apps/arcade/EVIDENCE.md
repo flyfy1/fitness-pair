@@ -48,3 +48,10 @@ Hopmodo's logo and website appear throughout the exported video. A three-second 
 Browser evidence uses synthetic game input and generated red/green camera fixtures only. It covers automatic start/end, immediate and delayed repeat rounds, no idle capture, pause, background/resume, storage failure fallback retention, the former 60-second cutoff (virtual clock), local playback and persistence, decoded watermark/end-card pixels, native share mocks, download, and no automatic upload. A read-only review identified restart, backgrounding and fallback-retention gaps; each has a regression case. Real mobile share-sheet delivery and human movement accuracy remain unverified.
 
 Validation: production build, 53 root tests, 18 Dino tests, 5 gateway tests and all 14 Chrome arcade checks passed. The final encoded synthetic end frame was decoded and visually inspected at 1280×800.
+
+
+## Five-game release
+
+The release now mounts the latest main implementations of Dino AR, Push-up Flight and guided camera Dino alongside Motion Quest and Dino Run. A shared runtime route avoids packaging the same model/WASM files five times. The gateway accepts metadata for the three additional game IDs, but live GCP upload remains disabled without a server credential.
+
+Validation: five game production builds, 53 shared tests, six gateway tests, 17 arcade browser tests plus the guided-camera recording check passed. New browser coverage verifies game cards, same-origin worker/WASM responses, Dino AR keyboard completion/restart, Flight crash recording/completion, and camera Dino's standing/range/countdown/manual-finish flow. Camera tests use only generated frames and simulated named poses. Existing automatic recording, sharing fallback and no-upload checks also pass.

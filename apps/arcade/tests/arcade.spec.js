@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {syntheticCamera} from '../../camera-start/tests/browser/synthetic-camera.js';
 test('landing has a direct arcade path and a factual build story',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  await expect(page).toHaveTitle('Hopmodo — Games that get you moving');
@@ -171,4 +172,42 @@ test('storage failure preserves download fallbacks from consecutive rounds',asyn
  await expect(page.getByText(/Not saved — download before leaving/)).toHaveCount(2);
  expect(await page.evaluate(async url=>(await fetch(url)).status,firstURL)).toBe(200);
  await expect(page.locator('#local-result a[download]')).toHaveCount(2);
+});
+
+test('new game cards and shared tracking assets are available',async({page,request})=>{
+ await page.goto('/');for(const title of ['Dino AR','Push-up Flight','Ready to Move'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
+ for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start']){
+  const script=await request.get(`/games/${game}/runtime/pose-worker.js`);expect(script.status()).toBe(200);expect(script.headers()['content-type']).toContain('javascript');expect(await script.text()).toContain('onmessage');
+  const wasm=await request.get(`/games/${game}/runtime/wasm/vision_wasm_internal.wasm`);expect(wasm.status()).toBe(200);expect(wasm.headers()['content-type']).toBe('application/wasm');
+ }
+});
+test('Dino AR keyboard rounds produce branded local replays',async({page})=>{
+ await page.goto('/play/dino-ar');const game=page.frameLocator('#game-frame');
+ await expect(game.locator('.privacy')).toContainText('record automatically');
+ await game.locator('#primary').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#local-result video')).toBeVisible({timeout:20000});
+ await expect(page.getByRole('heading',{name:'Dino AR · my replay'})).toBeVisible();
+ await game.locator('#primary').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+});
+test('Push-up Flight demo records the crash sequence and saves automatically',async({page})=>{
+ const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
+ await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
+ await game.locator('#demo').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.waitForTimeout(900);await game.locator('#stop').click();
+ await expect.poll(()=>page.evaluate(()=>document.querySelector('#game-frame').contentWindow.plankFlight.getState().status)).toBe('crashing');
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});expect(uploads).toEqual([]);
+ await expect(page.getByRole('heading',{name:'Push-up Flight · my replay'})).toBeVisible();
+});
+
+test('guided camera Dino calibrates and saves a replay on manual finish with synthetic camera input',async({page})=>{
+ await syntheticCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');
+ await expect(game.locator('#feedback')).toContainText('records on this device');
+ await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise ONE hand.',{timeout:12000});
+ await game.locator('#primary').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
+ await page.waitForTimeout(900);await game.locator('#end-run').click();
+ await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
+ await expect(page.getByRole('heading',{name:'Ready to Move · my replay'})).toBeVisible();
+ expect(await page.evaluate(()=>document.querySelector('#game-frame').contentWindow.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
