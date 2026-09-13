@@ -1,3 +1,4 @@
+import {createShareCopy,fitsWebsiteShare} from './share-copy.js';
 import {startVideoRecorder,recordedBlob,videoExtension,formatLabel} from './video-format.js';
 import {BRAND_NAME,SITE_URL} from './brand.js';
 import {CLIP_WIDTH,CLIP_HEIGHT,loadRecordingLogo,drawClipFrame,drawClipEnding} from './clip-compositor.js';
@@ -97,7 +98,7 @@ export function mountRecording(game,frame){
     let blob;
     try{blob=await recordedBlob(session.chunks,session.recorder.mimeType);}
     catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
-    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,createdAt:Date.now(),duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,brand:BRAND_NAME,website:SITE_URL,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
+    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:Date.now(),duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,brand:BRAND_NAME,website:SITE_URL,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
     let message=session.limited?'File limit reached. The replay up to that point is saved below.':session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the camera replay captured so far below.':'Saved on this device. Your replay is ready below.';
     try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
     if(!active)setState(sessions.size?'finishing':'idle',message);
@@ -150,12 +151,25 @@ export function mountRecording(game,frame){
  frame.addEventListener('load',connectGame);if(frame.contentDocument?.readyState==='complete')connectGame();
 }
 function mountClipCard(container,clip){
+ let copyController=null;
  const card=document.createElement('article');card.className='clip-card';const url=objectURL(clip.blob);
- card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
- card.querySelector('[data-delete]').onclick=async()=>{try{if(!clip.unsaved)await deleteClip(clip.id);releaseURL(url);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
+ card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
+ card.querySelector('[data-delete]').onclick=async()=>{copyController?.abort();try{if(!clip.unsaved)await deleteClip(clip.id);releaseURL(url);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
+ const copyButton=card.querySelector('[data-copy]'),cancelCopy=card.querySelector('[data-cancel-copy]');
+ if(copyButton)copyButton.onclick=async()=>{
+  if(copyController)return;copyController=new AbortController();copyButton.disabled=true;cancelCopy.hidden=false;
+  const status=card.querySelector('[data-share-status]');status.textContent='Preparing the final 55 seconds of gameplay plus an invitation. Keep this tab open; nothing is uploaded.';
+  try{
+   const copy=await createShareCopy(clip,{signal:copyController.signal,onProgress:text=>{status.textContent=text+' · stays on this device';}});
+   try{await saveClip(copy);}catch{copy.unsaved=true;}
+   const copyCard=mountClipCard(container,copy),heading=copyCard.querySelector('h3');heading.tabIndex=-1;heading.focus({preventScroll:true});copyCard.scrollIntoView({block:'start',behavior:'instant'});status.textContent='Share copy ready below. Preview it, then choose whether to publish it.';
+  }catch(error){status.textContent=error.name==='AbortError'?'Share copy cancelled. Your original replay is safe.':error.message;}
+  finally{copyController=null;copyButton.disabled=false;cancelCopy.hidden=true;}
+ };
+ cancelCopy.onclick=()=>copyController?.abort();
  mountFriendSharing(card,clip);
  card.querySelector('[data-share]').onclick=()=>publishForm(card.querySelector('[data-publish]'),clip);
- container.append(card);
+ container.append(card);return card;
 }
 function mountFriendSharing(card,clip){
  const status=card.querySelector('[data-share-status]'),button=card.querySelector('[data-friend]');
@@ -182,7 +196,7 @@ function mountFriendSharing(card,clip){
 async function publishForm(container,clip){
  container.innerHTML='<p role="status">Checking gallery availability…</p>';
  try{const config=await api('/api/config');if(!config.sharingEnabled){container.innerHTML='<p class="notice">Gallery sharing isn’t available yet. Your clip stays on this device. You can download it now.</p>';return;}
- if(clip.blob.size>20*1024*1024||clip.duration>60){container.innerHTML='<p class="notice">This replay is longer than the gallery’s current 60-second / 20 MB limit. Use Share with a friend or Download to keep the full replay.</p>';return;}
+ if(!fitsWebsiteShare(clip)){container.innerHTML='<p class="notice">Website sharing accepts up to 60 seconds / 20 MiB. Make a short share copy, preview it, then publish that copy. Your full replay stays here.</p><button data-prepare-copy>Make short share copy</button>';container.querySelector('[data-prepare-copy]').onclick=()=>container.closest('.clip-card').querySelector('[data-copy]')?.click();return;}
  if(clip.shared){container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
  container.innerHTML=`<form class="publish-form"><h3>Share this clip in the gallery?</h3><label>Clip title<input name="title" maxlength="90" required value="${escape(clip.title)}"></label><label>Early-access upload code<input name="code" type="password" autocomplete="off" required minlength="12"></label><label><input type="checkbox" name="consent" required>I agree to publish this clip in the gallery and have permission from everyone shown.</label><p>People who can access this site can view and copy shared clips. You can remove yours using this device’s management key. Clips expire after 7 days.</p><button class="button primary" type="submit">Publish this clip ↗</button><p data-status role="status"></p></form>`;
  const form=container.querySelector('form');form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Publishing your clip…';
