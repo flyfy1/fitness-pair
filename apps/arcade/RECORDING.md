@@ -42,3 +42,24 @@ saves a clearly labeled WebM; universal MP4 export is not claimed.
 - [Mozilla MP4 recording issue](https://bugzilla.mozilla.org/show_bug.cgi?id=1631143)
 - [MediaRecorder capability checks can still fail for lack of resources](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/isTypeSupported_static)
 - [Actual recorder MIME](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/mimeType)
+
+## Camera composition checkpoint
+
+Motion Quest recording waits for a ready live camera track and decoded camera
+frames after model readiness. It does not record a canvas-only fallback while
+camera initialization is pending. Preview and camera rounds retain separate IDs
+and source labels. Camera disappearance or an eight-second frame stall ends a
+partial camera replay labeled “Camera interrupted”; it cannot silently continue
+as synthetic gameplay. A successful round still saves after the game stops its
+owned camera and model worker.
+
+The exported image combines the centered, mirrored camera crop, skeleton layer,
+guardian/magic canvas, live health/action/charge/time HUD, score, logo and website.
+HUD values are read from the game; no game rules or native page styles are changed.
+
+The moving-camera browser fixture generates a labeled animated person silhouette,
+uses the real camera-start path with a mocked pose worker and the real squat
+recognizer, and completes five repetitions. Decoded MP4 frames at multiple times
+check movement, camera pixels, guardian, HUD and branding. This is synthetic
+software evidence, not real participant footage or recognition accuracy evidence.
+The separate first-load model timeout is owned by the game-loading task.

@@ -11,7 +11,7 @@ function coverVideo(c,video,x,y,w,h){
  c.save();c.translate(x+w,y);c.scale(-1,1);
  c.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h);c.restore();
 }
-export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,isAR,layout,includesCamera,title,score,logo}){
+export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,isAR,layout,includesCamera,title,score,logo,hud}){
  c.fillStyle='#182346';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
  const sourceWidth=layout?.width||canvas.width,sourceHeight=layout?.height||canvas.height;
  const scale=Math.min(CLIP_WIDTH/sourceWidth,PLAY_HEIGHT/sourceHeight);
@@ -27,7 +27,16 @@ export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,is
  if(layout)c.drawImage(canvas,x+layout.x*scale,y+layout.y*scale,layout.canvasWidth*scale,layout.canvasHeight*scale);
  else c.drawImage(canvas,x,y,w,h);
  if(!isAR&&includesCamera&&videoReady){c.fillStyle='#fff';c.fillRect(990,486,266,200);coverVideo(c,video,994,490,258,192);}
+ if(hud)drawGameHUD(c,hud,x,y,w,h);
  drawWatermark(c,{title,score,includesCamera,logo});
+}
+// These values come from Motion Quest's live DOM; the native game UI is unchanged.
+function drawGameHUD(c,hud,x,y,w,h){
+ c.save();c.fillStyle='#182346e8';c.fillRect(x+12,y+12,w-24,58);
+ c.fillStyle='#fff';c.font='bold 20px Arial';c.textAlign='left';c.fillText(`Forest guardian · ${hud.health||'100 / 100'}`,x+26,y+48,w-52);
+ c.fillStyle='#182346e8';c.fillRect(x+12,y+h-82,w-24,70);
+ c.fillStyle='#fff';c.font='bold 22px Arial';c.fillText(hud.cue||'Move to play',x+26,y+h-51,w-52);
+ c.font='16px Arial';c.fillText(`Charge ${hud.charge||'0%'} · Active time ${hud.elapsed||'00:00'}`,x+26,y+h-27,w-52);c.restore();
 }
 function drawWatermark(c,{title,score,includesCamera,logo}){
  c.fillStyle='#eeff41';c.fillRect(0,PLAY_HEIGHT,CLIP_WIDTH,80);
@@ -38,7 +47,7 @@ function drawWatermark(c,{title,score,includesCamera,logo}){
  c.textAlign='right';c.font='bold 15px Arial';c.fillText('Play at',1254,749);
  c.font='16px Arial';c.fillText(SITE_HOST,1254,776,470);c.textAlign='left';
 }
-export function drawClipEnding(c,title,score,logo,includesCamera){
+export function drawClipEnding(c,title,score,logo,includesCamera,reason='Round complete'){
  c.save();c.setTransform(1,0,0,1,0,0);c.textBaseline='alphabetic';
  c.fillStyle='#eeff41';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
  c.fillStyle='#2347ee';c.font='900 48px Arial';c.textAlign='left';
@@ -51,6 +60,6 @@ export function drawClipEnding(c,title,score,logo,includesCamera){
  c.fillStyle='#fff';c.font='bold 24px Arial';c.fillText('Play your next game at',640,553);
  c.font='bold 30px Arial';c.fillText(SITE_URL,640,605,1064);
  c.fillStyle='#182346';c.font='bold 26px Arial';c.fillText(`${title} · ${score}`,640,721,1136);
- c.font='18px Arial';c.fillText(includesCamera?'Player recording · round complete':'Synthetic gameplay preview · round complete',640,759,1136);
+ c.font='18px Arial';c.fillText(`${includesCamera?'Player recording':'Synthetic gameplay preview'} · ${reason.toLowerCase()}`,640,759,1136);
  c.restore();
 }
