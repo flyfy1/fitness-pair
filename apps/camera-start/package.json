@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "prepare:assets": "node scripts/prepare-assets.mjs",
-    "dev": "npm run prepare:assets && vite --host 127.0.0.1 --port 5190 --strictPort",
+    "dev": "npm run prepare:assets && vite --host 127.0.0.1 --port 5274 --strictPort",
     "build": "npm run prepare:assets && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 5190 --strictPort",
+    "preview": "vite preview --host 127.0.0.1 --port 5274 --strictPort",
     "test:browser": "playwright test"
   },
   "dependencies": { "@fitness-pair/contracts": "*", "@fitness-pair/pose-mediapipe": "*", "@fitness-pair/action-jump-height": "*" },
