@@ -30,7 +30,7 @@ const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBo
 recognizer.setJumpRange(MOVEMENT_SCALE);
 let bodyFrame = null, gameTrackingSince = null;
 const GAME_TRACKING_GRACE_MS = 450;
-const gestures = new BodyGestures();
+const gestures = new BodyGestures({ oneHandSide: 'left' });
 const diagnostics = createDiagnostics();
 let countdownSerial = 0;
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
@@ -96,6 +96,7 @@ const camera = new PoseCamera({
     if (hands?.event) {
       log('gesture', { kind: hands.event.kind, inputSeq: input.seq });
       if (gameMode && testing && pauseReason !== 'tracking' && hands.event.kind === 'both-hands') toggleGame('gesture');
+      if (!testing && !action.calibrated && hands.event.kind === 'one-hand') confirm('gesture');
     }
     paint();
   },
@@ -274,7 +275,8 @@ function presentation(now) {
   if (action.cue === 'prepare-jump') return { stage: 'standing', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'Try a small movement, or stand up to confirm.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'jump' : 'standing', reason: 'prepare-jump' };
   if (action.stage === 'maximum') {
     if (action.canConfirmMaximum) {
-      return { stage: 'confirm', status: 'STEP 2 OF 3 · CONFIRM', title: 'Standing pose captured.', detail: 'Select Confirm & continue to start the countdown.', feedback: 'Your movement range is set automatically. No jump required.', button: 'Confirm & continue', step: 'confirm', reason: 'awaiting-confirmation' };
+      const holding = hands?.kind === 'one-hand' && !hands.latched;
+      return { stage: 'confirm', status: 'STEP 2 OF 3 · CONFIRM', title: 'Standing pose captured.', detail: holding ? 'Keep your LEFT hand up for one second.' : 'Raise your LEFT hand above your shoulder for one second.', feedback: !hands?.tracked ? 'Show both hands — or select Confirm & continue.' : 'Keep your right hand down. You can also select Confirm & continue.', progress: holding ? hands.progress : 0, button: 'Confirm & continue', step: 'confirm', reason: 'awaiting-confirmation' };
     }
     return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand steady.', detail: 'Return to your starting posture.', feedback: 'No jump required. Stand upright to confirm.', step: 'standing', reason: action.cue };
   }
@@ -282,7 +284,7 @@ function presentation(now) {
   if (!steady) return { stage: 'standing', status: 'MOVEMENT CONFIRMED', title: 'Stand steady.', detail: 'Return to your starting height to begin.', feedback: 'Your baseline is saved. Waiting for a steady pose.', step: 'jump', reason: 'not-grounded' };
   if (countdownAt === null) { countdownAt = now; countdownSerial++; log('countdown-started'); }
   const remaining = Math.max(1, Math.ceil((3000 - (now - countdownAt)) / 1000));
-  return { stage: 'countdown', status: 'MOVEMENT CONFIRMED · GET READY', title: String(remaining), detail: 'Stand steady. You’re ready to go.', feedback: 'No extra hand gesture needed.', progress: (now - countdownAt) / 3000, step: 'jump' };
+  return { stage: 'countdown', status: 'MOVEMENT CONFIRMED · GET READY', title: String(remaining), detail: 'Stand steady. You’re ready to go.', feedback: 'Get ready to jump.', progress: (now - countdownAt) / 3000, step: 'jump' };
 }
 function paint() {
   const now = performance.now();
