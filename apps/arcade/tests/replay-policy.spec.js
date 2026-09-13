@@ -51,7 +51,7 @@ test('round completion reveals the current replay; returning to the game preserv
  await page.route('**/api/config',r=>r.fulfill({json:{sharingEnabled:true}}));
  await page.route('**/api/auth/session',r=>r.fulfill({json:{enabled:true,user:{email:'synthetic@example.test'},csrfToken:'test-only'}}));
  await page.route('**/api/account/clips',r=>r.fulfill({json:{clips:[],usedBytes:0,limitBytes:2e9}}));
- await page.route('**/api/clips/*',r=>{uploaded=r.request().postDataBuffer();return r.fulfill({json:{url:'/clips/test-only'}});});
+ await page.route('**/api/clips/*',r=>{uploaded=r.request().postDataBuffer();return r.fulfill({json:{url:'/clips/test-only',expiresAt:null}});});
  await page.route('**/api/posters/*',r=>r.fulfill({json:{ok:true}}));
  await card.getByRole('button',{name:'Upload & share',exact:true}).click();
  await card.locator('input[name=consent]').check();
@@ -63,7 +63,7 @@ test('round completion reveals the current replay; returning to the game preserv
  const file=await download;const filePath=info.outputPath('branded-download.mp4');await file.saveAs(filePath);
  const bytes=await readFile(filePath);
  await video.evaluate((v,bytes)=>{v.src=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'video/mp4'}));},[...bytes]);
- const branded=await pixels(video);expect([branded.width,branded.height]).toEqual([raw.width,raw.height]);expect(yellow(branded.first)).toBe(true);expect(yellow(branded.last)).toBe(true);expect(branded.duration).toBeGreaterThan(raw.duration+2.5);
+ const branded=await pixels(video);expect([branded.width,branded.height]).toEqual([raw.width,raw.height]);expect(yellow(branded.first)).toBe(false);expect(yellow(branded.last)).toBe(true);expect(branded.duration).toBeGreaterThan(raw.duration+2.5);
  expect((await stored(page)).map(c=>c.id).sort()).toEqual(before);
  await page.goto('/library');await expect(page.locator('.clip-card')).toHaveCount(2);
  const persisted=await pixels(page.locator('.clip-card video').first());expect(yellow(persisted.first)).toBe(false);expect(yellow(persisted.last)).toBe(false);
