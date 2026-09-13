@@ -12,7 +12,7 @@ import {drawPreview, setupPlayground, startConcept} from './playground.js';
 import {renderLibrary, renderGallery, renderClip} from './clips.js';
 const app=document.querySelector('#app');
 const arrow='<span aria-hidden="true">↗</span>';
-const nav=()=>`<a class="skip" href="#main">Skip to content</a><header class="nav"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><nav aria-label="Main navigation"><a href="/#arcade" data-i18n="landing.arcade">The arcade</a><a href="/#why" data-i18n="landing.why">Why movement games</a><a href="/#built" data-i18n="landing.built">How we built it</a><a href="/gallery" data-i18n="landing.gallery">The gallery</a></nav><span data-account-nav></span><a class="nav-play" href="/#arcade">Let’s play ${arrow}</a></header>`;
+const nav=()=>`<a class="skip" href="#main">Skip to content</a><header class="nav"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><nav aria-label="Main navigation"><a href="/gallery" data-i18n="landing.gallery">The gallery</a></nav><span data-account-nav></span><a class="nav-play" href="/#arcade">Let’s play ${arrow}</a></header>`;
 const footer=()=>`<footer class="footer"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><p>Get moving. Have fun.</p><div><a href="/library" data-i18n="landing.myClips">My clips</a><a href="/shared" data-i18n="landing.mySharedClips">My shared clips</a><a href="/gallery">Gallery</a><a href="/#built">Built with Astra</a></div></footer>`;
 function home(){
 document.body.classList.add('landing-page');
