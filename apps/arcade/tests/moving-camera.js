@@ -36,7 +36,7 @@ export async function movingCamera(page,{neverReady=false,controlled=false}={}){
      points[ids[0]].y=down?.28:.2;points[ids[1]].y=down?.53:.45;
      points[ids[2]].y=.65;points[ids[2]].x=down?.68:.5;points[ids[3]].y=.9;
     }
-    for(const wrist of [15,16])points[wrist].y=raiseHands?.05:.3;
+    points[15].y=points[16].y=(window.testHandsUp??raiseHands)?.05:.3;
     setTimeout(()=>{if(!this.terminated)this.onmessage({data:{type:'pose',landmarks:window.testMissing?[]:points,time:data.time,inferenceMs:1}});},0);
    }
    terminate(){this.terminated=true;}

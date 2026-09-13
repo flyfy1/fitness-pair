@@ -1,6 +1,7 @@
+import {scheduleGameMusic} from '../../../packages/gameplay/soundtrack.js';
 import { FlightAudio } from '../../../experiments/gameplay/plank-flight/src/audio.js';
 
-/** Reuse local speech, synthesis and cleanup; give Dino its own arcade soundtrack. */
+/** Reuse local speech, synthesis and cleanup; use the shared Push-up Flight soundtrack. */
 export class DinoAudio extends FlightAudio {
   constructor(onCue = () => {}) {
     super(); this.onCue = onCue; this.activated = false; this.countdownId = null; this.tail = null;
@@ -65,20 +66,8 @@ export class DinoAudio extends FlightAudio {
       this.passed = passed; this.play(passed % 3 === 0 ? 'keep-going' : 'clear');
     }
     if (phase !== 'running' || this.muted || this.context?.state !== 'running') return;
-    const now = this.context.currentTime;
-    if (this.nextBeat < now) this.nextBeat = now;
-    const interval = 60 / Math.min(156, 128 + Math.max(0, speed - 180) * .4) / 4;
-    while (this.nextBeat < now + .08) {
-      const t = this.nextBeat, n = this.beat++ % 16;
-      if (n % 4 === 0) {
-        this.tone(140, t, .16, .55, 'sine', 42);
-        this.tone([130.81,130.81,164.81,196][n/4], t, .14, .14, 'triangle');
-      }
-      if (n % 2 === 0) this.hiss(t, .035, .06);
-      if (n === 4 || n === 12) this.hiss(t, .075, .13);
-      if (n % 2 === 1) this.tone([523.25,659.25,783.99,659.25,587.33,783.99,1046.5,783.99][Math.floor(n/2)], t, .095, .055, 'square');
-      this.nextBeat += interval;
-    }
+    scheduleGameMusic(this);
   }
+
   snapshot() { return {...super.snapshot(), activeNodes:this.nodes.size, phase:this.phase, beat:this.beat}; }
 }

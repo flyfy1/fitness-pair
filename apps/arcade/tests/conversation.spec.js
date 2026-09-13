@@ -1,8 +1,14 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
+test.use({launchOptions:{args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream',`--use-file-for-fake-audio-capture=${new URL('../../../experiments/gameplay/plank-flight/public/audio/three.wav',import.meta.url).pathname}`]}});
 
 async function syntheticMicrophone(page, mode='normal'){
  await page.addInitScript(mode=>{
   if(window!==window.top)return;
+  const NativeContext=window.AudioContext;
+  window.AudioContext=class extends NativeContext{
+   createBufferSource(){const source=super.createBufferSource(),connect=source.connect.bind(source);source.connect=target=>{const analyser=this.createAnalyser();connect(analyser);analyser.connect(target);window.voicePreviewAnalyser=analyser;return target;};return source;}
+  };
   window.microphoneCalls=[];window.syntheticMicrophones=[];
   navigator.mediaDevices.getUserMedia=async constraints=>{
    window.microphoneCalls.push(constraints);
@@ -20,19 +26,21 @@ const energy=async locator=>locator.evaluate(async media=>{
 });
 
 test('conversation is a separate local track; selected export includes it and original does not',async({page})=>{
+ test.setTimeout(75000);
  await syntheticMicrophone(page);const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Game sound',exact:true}).click();await game.locator('#demo').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  expect(await page.evaluate(()=>window.microphoneCalls.length)).toBe(0);
  await page.waitForTimeout(700);
  await game.getByRole('button',{name:'Record conversation',exact:true}).click();
- await expect(game.getByText('Microphone on · separate local track')).toBeVisible();
+ await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','recording');
  await page.waitForTimeout(1100);
  await game.getByRole('button',{name:'Stop conversation recording'}).click();
  expect(await page.evaluate(()=>window.syntheticMicrophones[0].stream.getAudioTracks()[0].readyState)).toBe('ended');
  await page.waitForTimeout(500);
  await game.getByRole('button',{name:'Record conversation',exact:true}).click();
+ for(let i=0;i<5;i++){await game.locator('#demo-action').focus();await page.keyboard.down('Space');await page.waitForTimeout(750);await page.keyboard.up('Space');}
  await expect(page.locator('#record-status')).toContainText('Saved on this device',{timeout:18000});
  expect(await page.evaluate(()=>window.syntheticMicrophones.every(x=>x.stream.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
  await page.goto('/library');await page.reload();
@@ -40,6 +48,12 @@ test('conversation is a separate local track; selected export includes it and or
  await expect(card.getByLabel('Include conversation in video')).not.toBeChecked();
  expect(await energy(video)).toBe(0);
  expect(await energy(card.locator('[data-conversation-download]'))).toBeGreaterThan(.01);
+ await expect(card.getByLabel('Listen to recorded voice in replay')).toBeChecked();
+ await video.evaluate(video=>video.play());
+ await expect(card).toHaveAttribute('data-voice-playing','true');
+ await expect.poll(()=>page.evaluate(()=>{const a=window.voicePreviewAnalyser;if(!a)return 0;const d=new Float32Array(a.fftSize);a.getFloatTimeDomainData(d);return Math.sqrt(d.reduce((sum,x)=>sum+x*x,0)/d.length);})).toBeGreaterThan(.01);
+ await video.evaluate(video=>video.pause());
+ await expect(card).toHaveAttribute('data-voice-playing','false');
  const originalURL=await video.getAttribute('src');
  await card.getByLabel('Include conversation in video').check();
  await expect(card.getByText('With conversation. Preview this version before sharing.')).toBeVisible({timeout:25000});
@@ -73,4 +87,49 @@ test('denied microphone does not block a guest game',async({page})=>{
  await game.getByRole('button',{name:'Record conversation',exact:true}).click();
  await expect(game.getByText('Microphone permission was denied. You can still play without conversation.')).toBeVisible();
  await game.getByRole('button',{name:'Try a demo'}).click();await expect(page.locator('#record-status')).toContainText('Recording');
+});
+
+// Exercise browser capture without replacing getUserMedia with a Web Audio stream.
+test.describe('native microphone capture',()=>{
+
+ test('microphone armed before play persists audible voice and uses a compact top-right icon',async({page})=>{
+  await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
+  const mic=game.getByRole('button',{name:'Record conversation',exact:true});
+  await expect(mic).toBeVisible();expect(await mic.textContent()).toBe('');
+  const box=await mic.boundingBox();expect(box.width).toBe(40);expect(box.y).toBe(12);expect(box.x+box.width).toBe(1428);
+  await game.getByRole('button',{name:'Enter fullscreen',exact:true}).click();
+  await expect(mic).toBeVisible();
+  await expect.poll(()=>mic.evaluate(el=>!document.fullscreenElement||document.fullscreenElement.contains(el))).toBe(true);
+  await game.getByRole('button',{name:'Exit fullscreen',exact:true}).click();
+  await mic.click();await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','ready');
+  await game.getByRole('button',{name:'Try a demo',exact:true}).click();
+  await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','recording');
+  await page.waitForTimeout(1000);await game.locator('#stop').click();
+  await expect(page.locator('#record-status')).toContainText('Saved on this device',{timeout:18000});
+  await expect(game.locator('.hopmodo-conversation')).toHaveAttribute('data-state','off');
+  await page.goto('/library');await page.reload();
+  const card=page.locator('.clip-card').first();expect(await energy(card.locator('[data-conversation-download]'))).toBeGreaterThan(.005);
+ });
+});
+
+
+test('voice follows encoded replay speed, seeking and the listening toggle',async({page})=>{
+ const source=await readFile(new URL('../src/conversation-playback.js',import.meta.url),'utf8');
+ await page.route('**/__test-voice-playback.js',route=>route.fulfill({contentType:'text/javascript',body:source}));
+ await page.goto('/library');
+ const result=await page.evaluate(async()=>{
+  const {attachConversationPlayback}=await import('/__test-voice-playback.js');
+  const calls=[];window.AudioContext=class{
+   currentTime=10;destination={};resume(){return Promise.resolve();}close(){return Promise.resolve();}
+   decodeAudioData(){return Promise.resolve({duration:20});}
+   createGain(){return {gain:{value:1},connect(){},disconnect(){}};}
+   createBufferSource(){const node={playbackRate:{value:1},connect(){},disconnect(){},stop(){calls.push('stop');},start(at,offset){calls.push({at,offset,rate:node.playbackRate.value});}};return node;}
+  };
+  const video=Object.assign(new EventTarget(),{currentTime:4,playbackRate:1,paused:false,ended:false,seeking:false,muted:false,volume:1});let enabled=true;
+  const playback=attachConversationPlayback(video,{blob:new Blob(['voice']),offsetSeconds:2},{enabled:()=>enabled,sourceRate:2});
+  await playback.sync();video.currentTime=.5;await playback.sync();video.currentTime=4;video.playbackRate=.5;await playback.sync();
+  enabled=false;await playback.sync();playback.dispose();return calls;
+ });
+ expect(result.filter(value=>typeof value==='object')).toEqual([{at:10,offset:6,rate:2},{at:10.5,offset:0,rate:2},{at:10,offset:6,rate:1}]);
+ expect(result.filter(value=>value==='stop')).toHaveLength(3);
 });

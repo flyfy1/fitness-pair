@@ -36,3 +36,13 @@ afterwards its existing head/one-shoulder framing remains sufficient.
 origin. Without an explicitly saved choice, every browser starts in English. Unavailable storage does not prevent an in-page change.
 The helper owns no game state or UI. Push-up Flight is the first integration;
 other games can independently resolve their own text/audio resources from it.
+
+## Default game audio
+
+Every game defaults to Push-up Flight's prerecorded countdown and original backing
+pattern. Existing engines call `scheduleGameMusic` and use `sharedVoiceURL`; their
+native action effects remain independent. A documented game-specific requirement
+can choose another sound. Shared voice files are bundled by Vite for standalone
+and arcade builds. No live speech service or microphone is involved. The arcade
+shell owns the control panel and recording indicator. Current acceptance focuses
+on the three listed demos: Motion Quest, Push-up Flight and Ready to Move.

@@ -3,7 +3,7 @@ const FORMATS=['audio/webm;codecs=opus','audio/webm','audio/mp4;codecs=mp4a.40.2
 const LIMIT=10*1024*1024;
 export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
  let stream=null,context=null,source=null,round=null,generation=0,pending=false,timer=0;
- const emit=()=>onChange({enabled:!!stream,pending,recording:!!stream&&!!round});
+ const emit=()=>onChange({enabled:!!stream,pending,recording:!!stream&&round?.recorder?.state==='recording'&&context?.state==='running'});
  function disconnect(){source?.disconnect();source=null;stream?.getTracks().forEach(t=>t.stop());stream=null;}
  function closeIdle(){if(context&&(!round?.recorder||context!==round.context)){context.close().catch(()=>{});context=null;}}
  function disable(){generation++;clearTimeout(timer);pending=false;disconnect();closeIdle();emit();}
@@ -26,7 +26,7 @@ export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
    }
    if(!target.recorder){output.stream.getTracks().forEach(t=>t.stop());target.resolve(null);throw new Error('This browser cannot record a conversation track. You can still play and record video.');}
   }
-  source=context.createMediaStreamSource(stream);source.connect(round.output);
+  source?.disconnect();source=context.createMediaStreamSource(stream);source.connect(round.output);
  }
  function settle(target){
   clearTimeout(target.timeout);target.output?.stream.getTracks().forEach(t=>t.stop());
@@ -44,7 +44,7 @@ export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
   if(!navigator.mediaDevices?.getUserMedia){onError('Microphone recording is unavailable in this browser.');return;}
   const token=++generation;pending=true;emit();
   try{
-   context??=new AudioContext();
+   context??=new AudioContext();context.onstatechange=emit;
    timer=setTimeout(()=>{if(token===generation){disable();onError('Microphone permission took too long. Click Record conversation to retry.');}},20000);
    await context.resume();if(token!==generation)return;
    const acquired=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
@@ -52,6 +52,7 @@ export function createConversationCapture({onChange=()=>{},onError=()=>{}}={}){
    clearTimeout(timer);pending=false;stream=acquired;
    if(!stream.getAudioTracks().some(t=>t.readyState==='live'))throw new Error('No microphone track is available.');
    for(const track of stream.getAudioTracks())track.addEventListener('ended',()=>{if(stream===acquired){disable();onError('Microphone disconnected. Your recorded video and conversation so far are kept.');}},{once:true});
+   await context.resume();if(token!==generation)return;
    attach();emit();
   }catch(error){if(token!==generation)return;disable();onError(error.name==='NotAllowedError'?'Microphone permission was denied. You can still play without conversation.':error.message||'Microphone could not start. You can still play.');}
  }

@@ -65,11 +65,11 @@ The native adapter does not assume any game name, global variable except the
 presentation API, canvas ID, score selector or movement type.
 
 
-The optional catalog `recordingControlPosition` overrides the shared microphone
-widget's default anchor for a native HUD. The widget, permission lifecycle and
-recording behavior stay identical; placement must keep game controls reachable
-at desktop and narrow widths. It is mounted in the game document so it remains
-available during native fullscreen and does not steal keyboard-game focus.
+The shared microphone control is a compact top-right icon. Gray is off, blue is
+waiting/armed, and red means a live microphone is attached to an active recorder.
+Its accessible name and tooltip explain the action; only errors open a status
+bubble. Voice remains a separate local track. Replays play it in sync by default,
+with a listening toggle; including it in downloaded/shared video remains explicit.
 
 ```mermaid
 flowchart LR

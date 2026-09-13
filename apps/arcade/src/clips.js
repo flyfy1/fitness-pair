@@ -1,3 +1,4 @@
+import {attachConversationPlayback} from './conversation-playback.js';
 import {games} from './games.js';
 import {getSession,loginURL,accountAPI,storageLabel,removeSharedClip,confirmRemoval} from './account.js';
 import {createShareCopy,fitsWebsiteShare} from './share-copy.js';
@@ -16,11 +17,11 @@ function playClipGame(clip, className='button primary'){
  return game?`<a class="${className}" href="/play/${game.id}">Play ${escape(game.title)} ↗</a>`:'';
 }
 export function mountClipCard(container,clip){
- let copyController=null,selectedClip=clip,mixedClip=null;
+ let copyController=null,selectedClip=clip,mixedClip=null,voicePlayback=null;
  const card=document.createElement('article');card.className='clip-card';card.dataset.clipId=clip.id;card.dataset.createdAt=clip.createdAt;if(clip.unsaved)card.dataset.unsaved='true';const url=objectURL(clip.blob),ownedURLs=[url];
- card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds${clip.playbackRate===2?' · 2× speed':''} · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-conversation> Include conversation in video</label><p data-conversation-status>Without conversation. The separate track stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
- card.dispose=()=>{copyController?.abort();card.querySelector('video').pause();ownedURLs.forEach(releaseURL);card.remove();};
- card.querySelector('[data-delete]').onclick=async()=>{copyController?.abort();try{if(!selectedClip.unsaved)await deleteClip(selectedClip.id);if(selectedClip!==clip){mixedClip=null;card.querySelector('[data-conversation]').checked=false;selectClip(clip);return;}ownedURLs.forEach(releaseURL);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
+ card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds${clip.playbackRate===2?' · 2× speed':''} · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}${clip.conversation?'<div class="conversation-choice"><label><input type="checkbox" data-voice-preview checked> Listen to recorded voice in replay</label><label><input type="checkbox" data-conversation> Include conversation in video downloads &amp; sharing</label><p data-conversation-status>Video downloads exclude voice until selected above. The recorded voice stays on this device.</p><a data-conversation-download>Download conversation track</a></div>':clip.conversationEmbedded?'<p>Conversation included in this version. The original video is kept separately.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button>${clip.shareCopy?'':'<button data-copy>Make short share copy</button>'}<button data-cancel-copy hidden>Cancel copy</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
+ card.dispose=()=>{copyController?.abort();voicePlayback?.dispose();card.querySelector('video').pause();ownedURLs.forEach(releaseURL);card.remove();};
+ card.querySelector('[data-delete]').onclick=async()=>{copyController?.abort();try{if(!selectedClip.unsaved)await deleteClip(selectedClip.id);if(selectedClip!==clip){mixedClip=null;card.querySelector('[data-conversation]').checked=false;selectClip(clip);return;}card.dispose();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
  const download=card.querySelector('.clip-actions [download]');let downloadClip=null;
  download.onclick=async event=>{
   if(selectedClip.branded!==false)return;
@@ -31,7 +32,7 @@ export function mountClipCard(container,clip){
   try{
    if(downloadClip?.parentId!==source.id)downloadClip=await createShareCopy(source,{fullLength:true,brandedDownload:true,signal:copyController.signal,onProgress:text=>{status.textContent=text;}});
    const exportURL=objectURL(downloadClip.blob);ownedURLs.push(exportURL);
-   const link=document.createElement('a');link.href=exportURL;link.download=`hopmodo-${clip.game}.${videoExtension(downloadClip.blob)}`;document.body.append(link);link.click();link.remove();
+   const link=document.createElement('a');link.href=exportURL;link.download=`hopmodo-${clip.game}${source.conversationEmbedded?'-with-conversation':''}.${videoExtension(downloadClip.blob)}`;document.body.append(link);link.click();link.remove();
    status.textContent='Download ready. Your preview and gallery upload keep the original video without promotional branding.';
   }catch(error){status.textContent=error.name==='AbortError'?'Download cancelled. Your original replay is safe.':error.message;}
   finally{copyController=null;card.querySelector('[data-cancel-copy]').hidden=true;}
@@ -54,12 +55,20 @@ export function mountClipCard(container,clip){
  function selectClip(value){
   selectedClip=value;const mediaURL=value===clip?url:objectURL(value.blob);if(value!==clip)ownedURLs.push(mediaURL);
   const video=card.querySelector('video');video.pause();video.src=mediaURL;
+  const listen=card.querySelector('[data-voice-preview]');if(listen)listen.disabled=value!==clip;
   const download=card.querySelector('.clip-actions [download]');download.href=mediaURL;download.download=`hopmodo-${clip.game}${value.conversationEmbedded?'-with-conversation':''}.${videoExtension(value.blob)}`;
-  const note=card.querySelector('[data-conversation-status]');if(note)note.textContent=value===clip?'Without conversation. The separate track stays on this device.':'With conversation. Preview this version before sharing.';
+  const note=card.querySelector('[data-conversation-status]');if(note)note.textContent=value===clip?'Video downloads exclude voice until selected above. The recorded voice stays on this device.':'With conversation. Preview this version before sharing.';
   card.querySelector('[data-publish]').innerHTML='';mountFriendSharing(card,value);
  }
  const choice=card.querySelector('[data-conversation]');
  if(choice){
+  const video=card.querySelector('video'),listen=card.querySelector('[data-voice-preview]');
+  voicePlayback=attachConversationPlayback(video,clip.conversation,{
+   enabled:()=>selectedClip===clip&&listen.checked,sourceRate:clip.playbackRate||1,
+   onState:playing=>{card.dataset.voicePlaying=String(playing);},
+   onError:()=>{card.querySelector('[data-conversation-status]').textContent='Voice was recorded. Use the conversation track download if your browser blocks its playback.';},
+  });
+  listen.onchange=voicePlayback.sync;
   const track=card.querySelector('[data-conversation-download]'),audioURL=objectURL(clip.conversation.blob);ownedURLs.push(audioURL);
   track.href=audioURL;track.download=`hopmodo-${clip.game}-conversation.${clip.conversation.blob.type.startsWith('audio/mp4')?'m4a':'webm'}`;
   choice.onchange=async()=>{

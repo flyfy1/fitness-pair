@@ -73,6 +73,16 @@ review pass. Do not invent team members or assign people without their agreement
 - Do not stop unrelated user processes. Local preview servers are not production
   services; do not infer a deployment target from the checkout location.
 
+## Shared game audio
+
+All games use the Push-up Flight countdown voice and background music by default,
+unless the user or a game-specific specification explicitly chooses an exception.
+Reuse the shared `packages/gameplay/soundtrack.js` and `voice-assets.js`
+helpers. The arcade shell owns the common control panel and recording indicator;
+do not add per-game copies or game-specific control positioning. Keep
+native action effects, mute/pause/exit behavior, and a stable game-audio stream
+for the shared recorder. Do not create another default soundtrack per game.
+
 ## Validation and delivery
 
 - Run the smallest relevant tests; run `npm test` and `npm run build` for shared

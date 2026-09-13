@@ -36,5 +36,5 @@ export const plankFlightAdapter=frame=>legacy(frame,(window,doc)=>{
 export const cameraStartAdapter=frame=>legacy(frame,(window,doc)=>{
  const state=window.cameraSetup?.getState(),canvas=doc.querySelector('#game-world');if(!state?.game||!canvas?.width)return null;
  const stage=doc.querySelector('#setup').getBoundingClientRect(),rect=canvas.getBoundingClientRect();
- return {canvas,video:doc.querySelector('#camera'),skeleton:doc.querySelector('#show-body')?.checked?doc.querySelector('#body-overlay'):null,isAR:true,layout:{width:stage.width,height:stage.height,x:rect.x-stage.x,y:rect.y-stage.y,canvasWidth:rect.width,canvasHeight:rect.height},round:state.game.roundId,ready:state.game.status==='running'&&state.testing,done:state.stage==='complete'||state.game.status==='over',score:`${state.game.score} points`};
+ return {canvas,video:doc.querySelector('#camera'),skeleton:doc.querySelector('#show-body')?.checked?doc.querySelector('#body-overlay'):null,isAR:true,layout:{width:stage.width,height:stage.height,x:rect.x-stage.x,y:rect.y-stage.y,canvasWidth:rect.width,canvasHeight:rect.height},audio:window.cameraSetup.getAudioStream?.(),round:state.game.roundId,ready:state.game.status==='running'&&state.testing,done:state.stage==='complete'||state.game.status==='over',score:`${state.game.score} points`};
 });

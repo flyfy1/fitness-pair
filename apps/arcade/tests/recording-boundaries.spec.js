@@ -28,7 +28,9 @@ test('calibrated synthetic camera round retains charge, final projectile, impact
  await page.waitForTimeout(300);expect(await page.evaluate(()=>window.recordStarts.length)).toBe(0);
  await inGame(page,()=>window.readyModel());await expect(game.locator('#arena-title')).toHaveText('Hold still');
  await page.waitForTimeout(500);expect(await page.evaluate(()=>window.recordStarts.length)).toBe(0);
- await expect(game.locator('#arena-title')).toHaveText('Squat down');
+ await expect(game.locator('.hands-start')).toBeVisible();
+ await inGame(page,()=>{window.testHandsUp=true;});await expect(game.locator('.hands-start-title')).toContainText('lower both');
+ await inGame(page,()=>{window.testHandsUp=false;});await expect(game.locator('#arena-title')).toHaveText('Squat down');
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  expect(await inGame(page,()=>window.motionQuest.getReplayState().charge)).toBe(0);
  const samples=[await sample(page,'ready')];
