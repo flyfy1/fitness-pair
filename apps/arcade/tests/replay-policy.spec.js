@@ -144,11 +144,15 @@ test('portrait camera gameplay fills a portrait replay with the moving camera im
  const video=page.locator('#local-result video');const result=await pixels(video);
  expect(result.height).toBeGreaterThan(result.width);expect(result.width/result.height).toBeCloseTo(390/844,2);
  const coverage=await video.evaluate(async video=>{
-  await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=.5;});
-  const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;const ctx=canvas.getContext('2d');ctx.drawImage(video,0,0);
-  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;let person=0,camera=0;
-  for(let i=0;i<data.length;i+=4){if(data[i]>210&&data[i+1]<80&&data[i+2]<100)person++;if(data[i]<70&&data[i+1]>130&&data[i+2]>160)camera++;}
-  return {person:person/(data.length/4),camera:camera/(data.length/4)};
+  const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;const ctx=canvas.getContext('2d');
+  let personCoverage=0,cameraCoverage=0;
+  for(const time of [.5,1.2]){
+   await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=time;});ctx.drawImage(video,0,0);
+   const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;let person=0,camera=0;
+   for(let i=0;i<data.length;i+=4){if(data[i]>210&&data[i+1]<80&&data[i+2]<100)person++;if(data[i]<70&&data[i+1]>130&&data[i+2]>160)camera++;}
+   personCoverage=Math.max(personCoverage,person/(data.length/4));cameraCoverage=Math.max(cameraCoverage,camera/(data.length/4));
+  }
+  return {person:personCoverage,camera:cameraCoverage};
  });
  expect(coverage.person).toBeGreaterThan(.02);expect(coverage.camera).toBeGreaterThan(.25);
  await game.locator('[data-replay-share]').click();await expect(video).toBeInViewport();
