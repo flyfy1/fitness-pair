@@ -29,14 +29,15 @@ test.describe('site language',()=>{
   await expect(page.locator('#site-language')).toHaveValue('zh');
   expect(await page.locator('main h1').innerText()).toMatch(/[\u3400-\u9fff]/);
  });
- test('storage denied still synchronizes the parent and a running game without replacing its session',async({page})=>{
+ test('storage denied still synchronizes initial language with the parent and retains it during flight',async({page})=>{
   await page.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Storage blocked','SecurityError');}}));
   await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
   await expect(game.locator('#language')).toHaveValue('zh');
+  await game.locator('#language').selectOption('en');
   await game.locator('#demo').click();
   await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
   const session=await game.locator('#scene').evaluate(()=>window.plankFlight.getState().sessionId);
-  await game.locator('#language').selectOption('en');
+  await expect(game.locator('#language')).toBeHidden();
   await expect(page.locator('html')).toHaveAttribute('lang','en');
   await expect(game.locator('html')).toHaveAttribute('lang','en');
   await expect(game.locator('#stop')).toHaveText('Finish & rest');

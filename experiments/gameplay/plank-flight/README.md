@@ -92,9 +92,16 @@ in `public/audio/encouragement/`; see [resource generation and cadence](resource
 Continuous backing music and effects remain synthesized by `src/audio.js`.
 Generation credentials never enter the browser or deployment archive.
 
-## Live difficulty
+## Initial configuration
 
-Three sliders remain available during play and retain their settings on retry:
+Set gate opening, speed, acceleration and language on the initial Enable camera
+screen. Clicking Enable camera or Try a demo immediately hides these controls and
+the speed diagnostic, including during camera setup, countdown, flight and results.
+Retries retain the selected settings and keep the controls hidden; reloading the
+page returns to initial configuration. Stop/finish, sound and fullscreen remain
+available, and guidance moves down to leave more of the stage clear.
+
+The three difficulty settings are:
 
 - **Gate opening:** 2–6× the helicopter height (rotor to landing skids), applied to
   existing and new gates. The hardest setting leaves exactly twice its height
@@ -103,8 +110,8 @@ Three sliders remain available during play and retain their settings on retry:
 - **Acceleration:** 0–1.5× per minute of flight, with total speed capped at 10×.
   Changes affect future acceleration; setting zero holds the current speed.
 
-The HUD shows the current speed, including accumulated acceleration. Changing a
-slider does not restart the round or steer the synthetic demo.
+Acceleration continues during flight using the selected setting even though its
+configuration controls are hidden.
 
 ## Pipeline and ownership
 
@@ -225,8 +232,8 @@ Camera entry uses the existing head and one-shoulder countdown directly. No rais
 ## English and Chinese resources
 
 The language selector changes Flight's interface, countdown and 18 varied spoken
-encouragement/endings together, and remembers the choice on this origin. Switching
-mid-flight preserves the current game and recording. English and Chinese variants
+encouragement/endings together, and remembers the choice on this origin. The selector is available only before initial game entry; the chosen language
+is retained during the game, recording and retries. English and Chinese variants
 share stable voice IDs, timing and musical motifs. Audio is served as committed
 resources without runtime speech API calls. See `resources/README.md` for translation,
 generation, provenance and scope; the arcade shares the same language preference and bilingual interface.
