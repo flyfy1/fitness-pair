@@ -292,3 +292,22 @@ test('missing and stalled rotation APIs never block portrait entry',async({brows
     expect(errors).toEqual([]);await context.close();
   }
 });
+
+
+test('narrow phone exposes camera entry before scrolling and setup can be scrolled by touch',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:320,height:740},isMobile:true,hasTouch:true});
+  const page=await context.newPage();await page.goto('http://127.0.0.1:5185/');
+  const panel=await page.locator('#panel').boundingBox(),start=await page.locator('#start').boundingBox();
+  expect(start.y).toBeGreaterThanOrEqual(panel.y);
+  expect(start.y+start.height).toBeLessThanOrEqual(panel.y+panel.height);
+  const session=await context.newCDPSession(page);
+  await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:160,y:440}]});
+  for(const y of [410,380,350,320]){
+    await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:160,y}]});
+    await page.waitForTimeout(30);
+  }
+  await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await expect.poll(()=>page.locator('#panel').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+  await page.locator('#demo').click();await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await context.close();
+});
