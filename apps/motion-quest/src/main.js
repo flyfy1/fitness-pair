@@ -9,7 +9,7 @@ import { cameraPoint } from './camera-projection.js';
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
 const video = $('camera'), overlay = $('skeleton'), ctx = overlay.getContext('2d');
-const startGate = createHandsStart(document.querySelector('.camera-stage'));
+const startGate = createHandsStart($('app'));
 const game = new ARGame($('game'));
 const detector = new SquatRecognizer();
 const links = [['leftShoulder','rightShoulder'],['leftShoulder','leftElbow'],['leftElbow','leftWrist'],['rightShoulder','rightElbow'],['rightElbow','rightWrist'],['leftShoulder','leftHip'],['rightShoulder','rightHip'],['leftHip','rightHip'],['leftHip','leftKnee'],['leftKnee','leftAnkle'],['rightHip','rightKnee'],['rightKnee','rightAnkle']];
@@ -171,7 +171,7 @@ async function startCamera() {
         clearTimeout(initTimer); clearTimeout(loadingHintTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
         $('start').hidden = true; $('start').disabled = false; $('calibrate').hidden = false;
         $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera AR · squat controls';
-        status('Stand tall to calibrate', 'Keep shoulders to ankles visible for about 2 seconds. Turn slightly sideways.', false, 'Stand tall');
+        status('Raise both hands to begin', 'Hold above your shoulders for one second, then lower both hands.', false, 'Raise BOTH hands');
       } else if (data.type === 'pose') {
         inFlight = false; lastResultAt = performance.now();
         $('fps').textContent = `${Math.round(data.inferenceMs)} ms / frame`;
@@ -180,10 +180,11 @@ async function startCamera() {
             tMs: data.time, source: gameState.source, width: video.videoWidth, height: video.videoHeight });
           drawSkeleton(frame.joints);
           game.setPose(frame.joints, video.videoWidth, video.videoHeight);
-          const action = detector.update(frame);
-          if (action) {
-            const canStart = startGate.update(frame, action.phase === 'ready');
-            if (canStart || action.phase === 'missing' || action.phase === 'calibrating') handlePose(action);
+          // Start gestures own setup first. Squat calibration and completion events
+          // begin only after the hands are released; they never share this input.
+          if (startGate.update(frame, true)) {
+            const action = detector.update(frame);
+            if (action) handlePose(action);
           }
         } catch (error) { failCamera(error); }
       } else if (data.type === 'error') failCamera(Object.assign(new Error(data.message), { name: data.name || 'Error' }));

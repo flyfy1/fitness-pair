@@ -5,8 +5,8 @@ to attack, and complete five repetitions to defeat the forest guardian.
 
 From the repository root run `npm ci` and `npm run dev`, then open
 <http://127.0.0.1:5178>. Use a recent desktop Chrome/Edge browser. Keep shoulders
-through ankles visible and turn slightly sideways; stand upright for about two
-seconds to calibrate. In preview mode, hold the button or Space for 0.65 seconds,
+through ankles visible. First raise both hands for one second, then lower them.
+Next turn slightly sideways and stand upright for about two seconds to calibrate. In preview mode, hold the button or Space for 0.65 seconds,
 then release. Preview input is synthetic, not evidence of real recognition.
 
 ## Ownership
@@ -134,3 +134,17 @@ local generated WAV assets from Push-up Flight; no audio service is contacted.
 Music lowers underneath speech. Game sound toggles every layer, and cancellation,
 backgrounding and page exit stop scheduled sound. Setup has no backing music.
 The same mixed game audio feeds local replays, without microphone access.
+
+## Start and squat input ownership
+
+Camera setup uses the shared hands-up gate first. Until both hands are released,
+no PoseFrame reaches the squat recognizer, no charge accumulates and no attack
+or gameplay recording starts. The gate is mounted on the app above the camera
+and game canvases; it temporarily hides the original arena message, preventing
+competing instructions. Once opened, it stays out of calibration, squats and
+in-round recalibration. A new camera session requires a new start gesture.
+
+Start instructions are text only on a transparent background. Browser evidence
+uses synthetic named-body inputs: pre-start squats do not score, start leads to
+standing calibration, five squat/stand cycles win, recalibration preserves the
+round, and completion releases the camera. This does not establish human accuracy.

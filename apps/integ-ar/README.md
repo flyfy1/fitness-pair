@@ -24,7 +24,8 @@ Pixel Defense AR alone opens a full-window practice screen on entry. After an
 explicit camera start and standing calibration, it asks for sustained left and
 right torso movement, one recognized left-hand shot, and observed hand lowering.
 A practice ship and labeled person diagram show each control; confirmed steps
-stay checked. Missing or stale tracking cannot finish a step.
+stay checked. Large text has no colored backdrop; the camera remains visible
+through the instruction area. Missing or stale tracking cannot finish a step.
 
 The original game stays paused with zero score and no shots during practice.
 Its presentation phase remains `setup`, so the shared recorder does not capture
