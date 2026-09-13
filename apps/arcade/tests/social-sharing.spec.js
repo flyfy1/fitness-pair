@@ -23,10 +23,17 @@ test('public clip shares a full message and opens platform URLs only after a cli
  for(const platform of ['LinkedIn','X (Twitter)','Facebook']){
   const link=panel.getByRole('link',{name:'Share on '+platform+' (opens a new tab)',exact:true});
   await expect(link).toHaveAttribute('rel','noopener noreferrer');
-  const opened=context.waitForEvent('page');await link.click();const popup=await opened;await popup.waitForLoadState();
-  expect(new URL(popup.url()).searchParams.get(platform==='Facebook'?'u':'url')).toBe(new URL('/clips/'+id,page.url()).href);await popup.close();
+  const opened=context.waitForEvent('page');await link.click();const popup=await opened;await expect(popup).toHaveURL(/https:\/\/(www.linkedin.com|x.com|www.facebook.com)\//);
+  if(platform==='X (Twitter)')expect(new URL(popup.url()).searchParams.get('text')).toBe(copied);
+  else{expect(new URL(popup.url()).searchParams.get(platform==='Facebook'?'u':'url')).toBe(new URL('/clips/'+id,page.url()).href);await expect(panel.getByRole('status')).toHaveText(`Message copied. Paste it into your ${platform} post, then review and publish there.`);}
+  expect(await popup.evaluate(()=>window.opener)).toBeNull();await popup.close();
  }
  expect(destinations).toHaveLength(3);
+ await page.locator('#site-language').selectOption('zh');
+ await expect(panel.locator('textarea')).toHaveValue(/观看我的视频：/);
+ const x=panel.locator('a[href*="x.com/intent"]');
+ expect(new URL(await x.getAttribute('href')).searchParams.get('text')).toBe(await panel.locator('textarea').inputValue());
+ await expect(panel.locator('a[href*="linkedin.com"]')).toHaveAttribute('title','点击复制消息，然后粘贴到你的 LinkedIn 帖子中。');
 });
 test('private full link survives copying and native sharing; no social platform shortcuts',async({page})=>{
  await setup(page,'private');await page.goto('/clips/'+id+'?share=synthetic%2Bfriend%3D');
@@ -91,4 +98,16 @@ test('local clip offers attachment text and private upload immediately offers th
  await expect(uploaded.getByText('上传成功。',{exact:true})).toBeVisible();
  await expect(uploaded.getByText('永不过期',{exact:true})).toBeVisible();
  await uploaded.getByRole('button',{name:'复制消息',exact:true}).click();expect(await page.evaluate(()=>window.copied)).toContain('share=synthetic%2Bfriend%3D');expect(uploads).toBe(1);
+});
+
+test('blocked clipboard keeps the original page and provides manual copy guidance',async({page,context})=>{
+ await setup(page,'public',true);
+ await context.route('https://www.linkedin.com/**',r=>r.fulfill({body:'Synthetic LinkedIn composer boundary'}));
+ await page.goto('/clips/'+id);const original=page.url();
+ const opened=context.waitForEvent('page');
+ await page.getByRole('link',{name:'Share on LinkedIn (opens a new tab)',exact:true}).click();
+ const popup=await opened;await expect(popup).toHaveURL(/linkedin.com\/sharing\/share-offsite/);
+ await expect(page.locator('.share-message [role=status]')).toHaveText('Automatic copying was unavailable. Copy the message above and paste it into your LinkedIn post.');
+ await expect(page).toHaveURL(original);expect(await page.getByLabel('Message to share').inputValue()).toContain('/clips/'+id);
+ await popup.close();
 });

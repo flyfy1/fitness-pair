@@ -109,3 +109,5 @@
 .publish-form select{display:block;width:100%;max-width:100%;min-height:44px;margin-top:8px;padding:10px;border:1px solid #425277;border-radius:6px;background:white;font:inherit}.publish-form select:focus-visible{outline:3px solid #ff5433;outline-offset:3px}
 
 .share-message{margin-top:20px;padding:16px;border:1px solid #42527755;border-radius:12px;max-width:680px;min-width:0}.share-message h3{font-size:19px;margin:0 0 8px}.share-message p{font-size:13px;overflow-wrap:anywhere}.share-message label{display:block;font-size:13px}.share-message textarea{display:block;box-sizing:border-box;width:100%;min-height:120px;padding:12px;margin:8px 0 12px;resize:vertical;font:inherit;line-height:1.5;color:var(--ink);background:white;border:1px solid #425277;border-radius:6px}.share-message .clip-actions{margin-bottom:0}.share-message .clip-actions button,.share-message .clip-actions a{min-height:44px}
+
+.share-message .clip-actions .social-share-logo{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;padding:10px}.social-share-logo img{display:block;width:22px;height:22px}

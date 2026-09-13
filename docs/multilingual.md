@@ -76,7 +76,7 @@ part of the arcade's translation catalog.
 
 - 87 shared/unit tests and 25 auth/server/resource tests pass.
 - The bilingual, Flight voice, sharing and current start/audio browser suites pass
-  (19 checks), including
+  (20 checks), including
   storage denial, explicit-choice persistence, 320/390 px menus, live language
   changes, Chinese countdown speech, a complete five-squat synthetic camera round,
   camera/worker cleanup, decoded replay audio and user-created title preservation.

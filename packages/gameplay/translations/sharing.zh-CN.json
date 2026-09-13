@@ -41,5 +41,11 @@
   {"id":"sharing.accountStoragePolicy","en":"Deleting clips frees space. Each video keeps the expiry selected when sharing. Permanent videos use storage until you remove them. Each clip can be up to 90 seconds / 200 MB.","zh":"删除片段可以释放空间。每个视频都会保留分享时选择的有效期。永久视频会占用空间，直到你将其删除。每个片段最长 90 秒、最大 200 MB。"},
   {"id":"sharing.uploaded","en":"Uploaded.","zh":"上传成功。"},
   {"id":"sharing.privateReady","en":"Private link ready.","zh":"私密链接已就绪。"},
-  {"id":"sharing.publicReady","en":"Public in the gallery.","zh":"已公开展示在作品展廊中。"}
+  {"id":"sharing.publicReady","en":"Public in the gallery.","zh":"已公开展示在作品展廊中。"},
+  {"id":"sharing.prefillHelp","en":"X prefills the complete message. LinkedIn and Facebook copy it for you to paste into their post box. Your video stays open while you finish sharing in another tab.","zh":"X 会预填完整消息。点击 LinkedIn 或 Facebook 会复制消息，请粘贴到对应的发帖框中。你可以在新标签页完成分享，视频页面会保持打开。"},
+  {"id":"sharing.xHover","en":"Open X with your message prefilled","zh":"打开 X 并预填你的消息"},
+  {"id":"sharing.copyHover","en":"Click to copy the message, then paste it into your {0} post.","zh":"点击复制消息，然后粘贴到你的 {0} 帖子中。"},
+  {"id":"sharing.copiedForPost","en":"Message copied. Paste it into your {0} post, then review and publish there.","zh":"消息已复制。请粘贴到你的 {0} 帖子中，检查后再发布。"},
+  {"id":"sharing.manualCopyForPost","en":"Automatic copying was unavailable. Copy the message above and paste it into your {0} post.","zh":"无法自动复制。请复制上方消息，并粘贴到你的 {0} 帖子中。"},
+  {"id":"sharing.xReady","en":"X opens with your complete message prefilled. Review and publish it there.","zh":"X 会打开并预填完整消息。请在那里检查后再发布。"}
 ]
