@@ -49,3 +49,26 @@ retry, slow-connection and storage-unavailable states leave the arcade usable.
 Saved files are reused by all five mounted games and subsequent visits when the
 browser retains them. Camera and game starts still require the player's action.
 See [cache design and limits](../../packages/pose-mediapipe/README.md).
+
+The hero places preparation in a white, ink-outlined panel below the primary
+arcade action. Ink text and progress fill contrast with the yellow artwork;
+cancel/retry remains a secondary text control with a 44px touch target. Status
+announcements include the explanation and recovery text. Unknown totals remain
+indeterminate with a stage/byte label, and retry clears stale measurements.
+The loader adds no animation, including under reduced motion.
+
+Loader UI verification (2026-09-13): production build passed. Four synthetic
+worker-message browser checks cover loading, unknown total, cancel/retry, error,
+and ready (saved/unsaved) at 320, 390, 768 and 1440px with reduced motion. Screenshots
+were visually reviewed for loading, ready and error layouts; primary arcade
+navigation remains usable. Four existing real-worker checks passed for device
+cache reuse across games/visits, storage denial, slow cancellation/retry, and
+simultaneous preloads. Text contrast is 15.35:1 (ink/white), action contrast 6.55:1
+(cobalt/white), and progress fill/track contrast 12.18:1. Impeccable's mechanical
+scan reported only the existing Arial font choices, retained from the approved
+identity. These checks establish UI and download behavior, not human recognition
+accuracy. Run the focused checks after building:
+
+```sh
+ARCADE_PORT=5297 npx playwright test --config apps/arcade/playwright.config.js apps/arcade/tests/tracking-loader-ui.spec.js apps/arcade/tests/tracking-preload.spec.js
+```

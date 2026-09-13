@@ -1,5 +1,5 @@
 export function mountTrackingLoader(container) {
-  container.innerHTML = `<div class="tracking-copy"><strong id="tracking-title" role="status">Getting movement controls ready</strong><span id="tracking-detail">Camera stays off until you choose to play.</span></div><div class="tracking-download"><progress aria-label="Movement controls download"></progress><span id="tracking-bytes"></span></div><button type="button">Cancel download</button>`;
+  container.innerHTML = `<div class="tracking-copy" role="status" aria-atomic="true"><strong id="tracking-title">Getting movement controls ready</strong><span id="tracking-detail">Camera stays off until you choose to play.</span></div><div class="tracking-download"><progress aria-label="Movement controls download" aria-describedby="tracking-bytes"></progress><span id="tracking-bytes"></span></div><button type="button">Cancel download</button>`;
   const title = container.querySelector('#tracking-title');
   const detail = container.querySelector('#tracking-detail');
   const bytes = container.querySelector('#tracking-bytes');
@@ -13,7 +13,7 @@ export function mountTrackingLoader(container) {
     bar.hidden = true; bytes.textContent = ''; button.hidden = false; button.textContent = 'Retry download';
   }
   function start() {
-    stop(); bar.hidden = false; bar.removeAttribute('value'); button.hidden = false; button.textContent = 'Cancel download';
+    stop(); bar.hidden = false; bar.removeAttribute('value'); bar.removeAttribute('aria-valuetext'); bytes.textContent = 'Checking saved files…'; button.hidden = false; button.textContent = 'Cancel download';
     set(title, 'Getting movement controls ready'); set(detail, 'Camera stays off until you choose to play.');
     try {
       worker = new Worker('/runtime/pose-worker.js');
@@ -24,7 +24,8 @@ export function mountTrackingLoader(container) {
           if (data.total > 0) { bar.max = data.total; bar.value = data.loaded; }
           else bar.removeAttribute('value');
           const mb = value => (value / 1_000_000).toFixed(1);
-          bytes.textContent = data.total > 0 ? `${Math.floor(data.loaded / data.total * 100)}% · ${mb(data.loaded)} / ${mb(data.total)} MB` : data.loaded ? `${mb(data.loaded)} MB received` : '';
+          bytes.textContent = data.total > 0 ? `${Math.floor(data.loaded / data.total * 100)}% · ${mb(data.loaded)} / ${mb(data.total)} MB` : data.loaded ? `${mb(data.loaded)} MB received` : data.state === 'checking' ? 'Checking saved files…' : 'Waiting for download size…';
+          bar.setAttribute('aria-valuetext', bytes.textContent);
         } else if (data.type === 'preloaded') {
           stop(); set(title, 'Movement controls ready');
           set(detail, data.persistent ? 'Saved on this device. Your browser may clear these files.' : 'This browser couldn’t save the files. Starting a game may download them again.');

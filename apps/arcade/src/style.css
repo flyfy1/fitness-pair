@@ -17,7 +17,71 @@
 /* Motion Quest retains its native viewport and interface; replay tools follow the game. */
 .quest-mode{background:#101511}.quest-play{padding:0}.quest-play #game-frame{width:100%;max-width:none;height:100dvh;min-height:320px;border:0;border-radius:0;margin:0;background:#101511}.quest-replay-tools{padding:24px max(20px,4vw);background:#f3f4ed}.quest-replay-tools>.back{display:inline-block;margin-bottom:16px}.quest-replay-tools .record-bar{padding:0;margin:0;max-width:none}.quest-play .local-result{padding:32px max(20px,4vw);margin:0;max-width:none;background:white}.quest-play .local-result>.clip-grid{max-width:1000px}
 
-/* A compact, measured download readout beside the invitation to play. */
-.tracking-preload{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:20px;width:fit-content;max-width:100%;margin:20px auto 0;padding:12px 16px;border-radius:6px;text-align:start;color:var(--ink);background:var(--yellow)}
-.tracking-copy{min-width:0}.tracking-copy strong,.tracking-copy span{display:block;font-size:13px;line-height:1.5}.tracking-copy span{font-size:12px;max-width:52ch}.tracking-download{width:165px;flex:none;font-size:12px;font-variant-numeric:tabular-nums}.tracking-download:has(progress[hidden]){display:none}.tracking-download progress{display:block;width:100%;height:6px;accent-color:var(--blue);margin-bottom:6px}.tracking-preload button{border:0;border-bottom:1px solid currentColor;background:transparent;color:var(--blue);font-size:12px;font-weight:700;min-height:44px;padding:8px 0;flex:none}.tracking-preload button:hover{color:var(--ink)}
-@media(max-width:600px){.tracking-preload{flex-wrap:wrap;justify-content:flex-start;gap:8px 20px;margin-top:16px}.tracking-copy{flex-basis:100%}.tracking-download{flex:1}.tracking-preload button{margin-inline-start:auto}}
+/* Separate preparation from the yellow playfield and the primary arcade action. */
+.tracking-preload {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px auto;
+  align-items: center;
+  gap: 16px 24px;
+  width: 820px;
+  max-width: 100%;
+  min-height: 104px;
+  margin: 32px auto 0;
+  padding: 20px 24px;
+  border: 1px solid var(--ink);
+  border-radius: 12px;
+  text-align: start;
+  color: var(--ink);
+  background: white;
+}
+.tracking-copy { min-width: 0; }
+.tracking-copy strong, .tracking-copy span { display: block; line-height: 1.5; }
+.tracking-copy strong { font-size: 14px; }
+.tracking-copy span { margin-top: 4px; font-size: 12px; max-width: 58ch; }
+.tracking-preload:has(progress[hidden]) .tracking-copy { grid-column: span 2; }
+.tracking-download { min-width: 0; font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.tracking-download:has(progress[hidden]) { display: none; }
+.tracking-download progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin: 0 0 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: #e1e5ef;
+  color: var(--ink);
+  accent-color: var(--ink);
+}
+.tracking-download progress::-webkit-progress-bar { background: #e1e5ef; }
+.tracking-download progress::-webkit-progress-value { background: var(--ink); border-radius: 4px; }
+.tracking-download progress::-moz-progress-bar { background: var(--ink); border-radius: 4px; }
+/* Unknown totals stay unfilled and static; the adjacent text explains the stage. */
+.tracking-download progress:indeterminate::-moz-progress-bar { background: transparent; }
+.tracking-preload button {
+  justify-self: end;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  min-height: 44px;
+  padding: 8px 0;
+}
+.tracking-preload button:hover { color: var(--ink); }
+.tracking-preload button:focus-visible { outline-color: var(--blue); }
+@media (max-width: 900px) {
+  .tracking-preload { grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; padding: 18px 20px; }
+  .tracking-copy { grid-column: 1 / -1; }
+  .tracking-preload:has(progress[hidden]) .tracking-copy { grid-column: 1; }
+}
+@media (max-width: 600px) {
+  .tracking-preload { margin-top: 24px; padding: 16px; }
+  .tracking-preload:has(progress[hidden]) .tracking-copy { grid-column: 1 / -1; }
+  .tracking-preload:has(progress[hidden]) button { grid-column: 2; }
+}
