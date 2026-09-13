@@ -49,17 +49,13 @@ async function syntheticCamera(page) {
   });
 }
 const state = page => page.evaluate(()=>window.dinoAR.getState());
-async function calibrate(page, button = 'Enable camera') {
+async function enterPlay(page, button = 'Enable camera') {
   await page.getByRole('button',{name:button,exact:true}).click();
-  await expect.poll(async()=>(await state(page)).camera.stage).toBe('maximum');
-  expect((await state(page)).status).not.toBe('running');
-  // A small lift below the old maximum threshold starts play while still airborne.
-  await page.evaluate(()=>{window.testRise=.02;});
-  await expect.poll(async()=>(await state(page)).status,{timeout:2000,intervals:[30]}).toBe('running');
+  await expect.poll(async()=>(await state(page)).status,{timeout:6000,intervals:[30]}).toBe('running');
   expect((await state(page)).camera.calibrated).toBe(true);
-  expect(await page.evaluate(()=>window.testRise)).toBe(.02);
-  await page.evaluate(()=>{window.testRise=0;});
-  await expect.poll(async()=>(await state(page)).height).toBe(0);
+  expect(await page.evaluate(()=>window.testRise)).toBe(0);
+  expect((await state(page)).height).toBe(0);
+  expect((await state(page)).jumps).toBe(0);
 }
 async function expectStopped(page) {
   expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
@@ -70,34 +66,43 @@ test('AR camera loop: anchored player, optional skeleton, proportional height, c
   await syntheticCamera(page); const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/'); await page.screenshot({path:'test-results/ar-ready.png'});
   await expect(page.locator('#skeleton')).toBeHidden();
-  await calibrate(page); expect((await state(page)).anchored).toBe(true);
+  await enterPlay(page); expect((await state(page)).anchored).toBe(true);
   const video = await page.locator('#camera').boundingBox(); expect(video).toMatchObject({x:0,y:0,width:1440,height:960});
   await page.getByLabel('Debug · show body skeleton').check(); await expect(page.locator('#skeleton')).toBeVisible();
   for (const ratio of [.5,1,.25,0]) {
     await page.evaluate(r=>{window.testRise=r*.115;},ratio);
     await expect.poll(async()=>Math.abs((await state(page)).height-ratio*165)).toBeLessThan(8);
   }
+  await expect.poll(async()=>(await state(page)).camera.bestHeightRatio).toBeGreaterThan(.95);
+  await expect(page.locator('#best-height')).not.toHaveText('BEST LIFT 0%');
   await page.getByLabel('Debug · show body skeleton').uncheck();
   await expect(page.locator('#skeleton')).toBeHidden(); expect((await state(page)).camera.state).toBe('ready');
+  const headline = await page.locator('#instruction').boundingBox();
+  expect(headline.y + headline.height).toBeLessThan(960*.27);
   await page.screenshot({path:'test-results/ar-live.png'});
   await expect.poll(async()=>{const d=(await state(page)).nextObstacleDistance;return d!==null&&d<80&&d>5;},{timeout:12000,intervals:[30]}).toBe(true);
+  await expect(page.locator('#cue')).toHaveText('Jump!');
   await page.evaluate(()=>{window.testRise=.14;}); await page.waitForTimeout(700); await page.evaluate(()=>{window.testRise=0;});
   await expect.poll(async()=>(await state(page)).passed).toBeGreaterThan(0);
   await expect.poll(async()=>(await state(page)).status,{timeout:10000}).toBe('over');
   await expectStopped(page);
-  await calibrate(page,'Jump & run again'); expect((await state(page)).passed).toBe(0);
+  await expect(page.locator('#best-height')).not.toHaveText('BEST LIFT 0%');
+  await enterPlay(page,'Play again'); expect((await state(page)).passed).toBe(0);
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
   expect(errors).toEqual([]);
 });
 
 test('mobile upper-body view, fullscreen, debug toggling and manual pause clean up',async({page})=>{
   await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/');
-  await page.evaluate(()=>{window.testUpper=true;}); await calibrate(page);
+  await page.evaluate(()=>{window.testUpper=true;}); await enterPlay(page);
   expect((await state(page)).camera.trackingMode).toBe('shoulders');
   await page.getByLabel('Debug · show body skeleton').check();
   await page.getByRole('button',{name:'Enter fullscreen',exact:true}).click();
   expect((await state(page)).status).toBe('running');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  const headline=await page.locator('#instruction').boundingBox();
+  expect(headline.y).toBeLessThan(844*.25); expect(headline.x+headline.width/2).toBeCloseTo(195,0);
+  expect(await page.locator('#cue').evaluate(e=>parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(48);
   await page.screenshot({path:'test-results/ar-mobile.png'});
   await page.getByRole('button',{name:'Exit fullscreen',exact:true}).click();
   await page.getByRole('button',{name:'Pause',exact:true}).click(); await expectStopped(page);
@@ -105,16 +110,14 @@ test('mobile upper-body view, fullscreen, debug toggling and manual pause clean 
 });
 
 test('stale/missing tracking freezes the round and requires explicit resume; recalibration removes anchor',async({page})=>{
-  await syntheticCamera(page); await page.goto('/'); await calibrate(page);
+  await syntheticCamera(page); await page.goto('/'); await enterPlay(page);
   await page.evaluate(()=>{window.testDelay=400;window.testRise=.14;});
   await expect.poll(async()=>(await state(page)).status).toBe('paused');
   const score=(await state(page)).score; await page.waitForTimeout(500); expect((await state(page)).score).toBe(score);
   expect((await state(page)).height).toBe(0);
   await page.evaluate(()=>{window.testDelay=0;window.testRise=0;});
-  // A >750 ms loss invalidates the reference. A new lift unlocks explicit resume.
-  await expect.poll(async()=>(await state(page)).camera.stage).toBe('maximum');
-  await page.evaluate(()=>{window.testRise=.14;}); await page.waitForTimeout(260);
-  await page.evaluate(()=>{window.testRise=0;});
+  // A >750 ms loss rebuilds the resting reference without another entry jump.
+  await expect.poll(async()=>(await state(page)).camera.stage).toBe('ready');
   await expect(page.getByRole('button',{name:'Resume run',exact:true})).toBeEnabled();
   await page.getByRole('button',{name:'Resume run',exact:true}).click();
   await expect.poll(async()=>(await state(page)).status,{timeout:6000}).toBe('running');
@@ -127,10 +130,10 @@ test('stale/missing tracking freezes the round and requires explicit resume; rec
 
 test('portrait full-body runway stays clear of HUD controls and missing tracking clears debug bones',async({page})=>{
   await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/');
-  await calibrate(page); await page.getByLabel('Debug · show body skeleton').check();
+  await enterPlay(page); await page.getByLabel('Debug · show body skeleton').check();
   await expect(page.locator('#arena')).toHaveClass(/floor-lane/);
   const controls=await page.locator('footer').boundingBox();
-  expect(controls.y+controls.height).toBeLessThan(844*.7);
+  expect(controls.y+controls.height).toBeLessThan(844*.8);
   await page.screenshot({path:'test-results/ar-mobile-fullbody.png'});
   await page.evaluate(()=>{window.testMissing=true;});
   await expect.poll(async()=>(await state(page)).status).toBe('paused');
@@ -138,7 +141,7 @@ test('portrait full-body runway stays clear of HUD controls and missing tracking
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
 });
 
-test('entry shows the real gate and accepts torso lift despite bent knees, stuck feet and lateral joint noise',async({page})=>{
+test('stable shoulders enter play directly despite bent knees, stuck feet and lateral joint noise',async({page})=>{
   await syntheticCamera(page); await page.goto('/');
   await page.evaluate(()=>{window.testUnstable=true;window.testFeetStill=true;window.testWidthNoise=true;});
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
@@ -149,9 +152,7 @@ test('entry shows the real gate and accepts torso lift despite bent knees, stuck
   await page.getByLabel('Debug · show body skeleton').check();
   await expect(page.locator('#tracking-detail')).toContainText('Stage: standing');
   await page.evaluate(()=>{window.testUnstable=false;});
-  await expect(page.getByRole('heading',{name:'Jump now to start.',exact:true})).toBeVisible();
-  expect((await state(page)).camera.trackingMode).toBe('shoulders');
-  await page.evaluate(()=>{window.testRise=.025;});
+  expect(await page.evaluate(()=>window.testRise)).toBe(0);
   await expect.poll(async()=>(await state(page)).status,{timeout:2000,intervals:[30]}).toBe('running');
   expect((await state(page)).anchored).toBe(true);
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
@@ -161,7 +162,7 @@ test('shoulders alone start the real game with missing or unreliable waist landm
   await syntheticCamera(page); await page.goto('/');
   for (const missing of [true,false]) {
     await page.evaluate(missing=>{window.testShouldersOnly=missing;window.testWeakHips=!missing;window.testRise=0;},missing);
-    await calibrate(page);
+    await enterPlay(page);
     expect((await state(page)).camera.trackingMode).toBe('shoulders');
     expect((await state(page)).anchorMode).toBe('shoulders');
     await page.getByLabel('Debug · show body skeleton').check();

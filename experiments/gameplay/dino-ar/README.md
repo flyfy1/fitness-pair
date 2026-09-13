@@ -15,7 +15,7 @@ gameplay experience, not a mode switch added to the original app.
 - **Job:** feel present inside the runner rather than control a separate dinosaur.
 - **Riskiest assumption:** an anchored collision marker over the player makes the
   obstacle timing understandable in a full-window video view.
-- **P1 loop:** enable camera → jump once → immediately play → jump to clear cacti → collision → camera off → retry.
+- **P1 loop:** enable camera → detect steady shoulders → automatically play → jump to clear cacti → collision → camera off → retry.
 - **Success proof:** a browser round calibrates, changes marker height, clears a
   cactus, collides, releases resources and restarts; a human trial must separately
   establish that timing and body placement are understandable.
@@ -42,27 +42,32 @@ the existing checksum-verified Lite model into ignored `public/runtime/`.
 Runtime camera processing stays local; video and landmarks are not saved.
 
 1. Keep the camera fixed, stand centered and leave room above your head. Select
-   **Enable camera**, wait for **Jump now to start**, then jump once. The host automatically captures
-   a short shoulder-height reference (200 ms, at least three samples). Until it is ready, the UI says **Stand
-   comfortably for a moment**. Coherent movement of both shoulders starts play while
-   you are still airborne. There is no maximum-height measurement, landing wait,
-   confirmation button or countdown.
+   **Enable camera**. After a short shoulder reference (200 ms, at least three
+   samples), the run starts automatically. There is no entry jump, maximum-height
+   calibration, confirmation button or countdown. The separate camera-start POC
+   owns setup-flow experiments; this POC focuses on playing.
 2. Detection requires only two visible shoulders. Missing or low-confidence hips,
-   knees and ankles cannot block entry. The runway anchors to visible pre-jump
-   feet, then the waist, or finally an upper-chest marker when only shoulders
-   are available. Detection and visual anchoring are independent.
-3. Jump in place to lift the glowing marker over orange cacti. Its filled box is
-   the player's collision area; each cactus's solid central trunk is its collision
-   area. Arms and glow are decorative. Movement level uses a body-proportion scale,
-   not a percentage of your personal maximum.
-4. **Debug · show body skeleton** shows bones/points and the compact diagnostic
-   line, including the number of usable shoulders (`0/2`, `1/2` or `2/2`). Use the
-   fullscreen button for browser fullscreen, with the existing in-window fallback.
-5. **Pause**, **Turn camera off**, leaving the page/window, errors and game over
-   release tracks and workers. Restarting the camera requires just another jump.
-   **Reset position** freezes the round and repeats the short reference and jump.
-   Tracking loss/delay freezes the run and requires explicit **Resume run**;
-   prolonged loss or position drift also requires another reference and jump.
+   knees and ankles cannot block entry. The runway anchors to visible resting
+   feet, then the waist, or an upper-chest marker when only shoulders are available.
+3. Jump in place to lift the glowing marker over orange cacti. The large upper-center
+   instruction changes to **Jump!** as a cactus approaches and **Cleared!** after
+   passing it. The marker's filled box and the cactus's solid central trunk are
+   their collision areas. Arms and glow are decorative.
+4. **LIFT** shows current movement on the game's fixed body-proportion scale.
+   **BEST LIFT** records the highest confirmed up/down cycle since the last position
+   reset or camera session, without interrupting play. It can exceed 100%, though
+   the playable height is capped at 100%. Neither number is centimeters or a
+   percentage of a measured physical maximum. An incomplete or lost cycle does
+   not update the best. This is passive in-game measurement, not an entry gate.
+5. **Debug · show body skeleton** shows bones/points and the compact diagnostic
+   line, including the number of usable shoulders (`0/2`, `1/2` or `2/2`). The
+   fullscreen button supports browser fullscreen and an in-window fallback.
+6. **Pause**, **Turn camera off**, leaving the page/window, errors and game over
+   release tracks and workers. **Play again** starts a new round after detecting
+   resting shoulders, without a trial jump. **Reset position** freezes the round,
+   takes a new short reference and automatically resumes. Tracking loss/delay
+   freezes the run and requires explicit **Resume run**; prolonged loss or position
+   drift also rebuilds the reference. No jump is needed to recover tracking.
 
 ## Geometry and rules
 
@@ -73,7 +78,7 @@ distance, and cleared cacti come from the existing collision engine. The session
 timestamps and camera provenance remain unchanged through recognition.
 
 `scene.js` uses the same mirrored `object-fit: cover` projection as the video.
-It never mirrors recognition inputs. When the first lift is detected, the cached pre-jump
+It never mirrors recognition inputs. When the resting reference is ready, the
 foot/hip midpoint becomes the fixed runway anchor. When neither is usable, the
 anchor is the shoulder midpoint plus a visual chest offset of 0.08 image height.
 This offset is game placement, not an inferred body joint. The standing shoulder
@@ -109,13 +114,13 @@ Tests label the generated video **synthetic camera**, replace only the camera/mo
 boundary, and run the real recognizer and game. A separate public still-image
 check runs the real local model and checks that no runtime requests leave localhost.
 
-The quick-start browser check uses a synthetic lift of 0.02 image height, below
-our previous maximum-calibration threshold. It asserts that the round is running
-before the fixture lands, then verifies proportional movement, clear/collision,
-retry, full-body/upper-body layouts, debug toggling and resource cleanup. Unit
-checks reject jitter, one-sided shoulder lifts, single-frame spikes and missing
-shoulders, and preserve input identity, timestamps and completion IDs. This is
-synthetic evidence, not a human detection-accuracy or responsiveness measurement.
+The direct-play browser check keeps the synthetic player stationary and asserts
+that the round starts with zero jumps. It then verifies proportional movement,
+passive best-lift measurement, an approaching-cactus cue, clear/collision/retry,
+large centered instructions, full/partial-body layouts and resource cleanup.
+Unit checks reject jitter, one-sided shoulder lifts, single-frame spikes and
+missing shoulders, and preserve input identity, timestamps and completion IDs.
+These checks are synthetic evidence, not human detection-accuracy measurements.
 
 For a future human comparison, use the same camera, player and starting position
 for the original Dino app and this AR variation. Without recording, observe whether
@@ -127,17 +132,18 @@ infer recognition accuracy from score. Participant recordings require prior cons
 for the baseline. Human timing, crop/framing comfort, body-to-marker registration
 and enjoyment remain unverified. No public deployment is configured by this work.
 
-### Cropped-camera regression (2026-09-13)
+### Earlier cropped-camera regression (2026-09-13)
 
 After the torso-based correction, the reported framing still did not clearly show
 the waist. Live DOM inspection showed `Stage: standing · tracking-lost · Input age:
 33 ms`: fresh model input was failing the joint-availability gate before any jump
 could be considered. No private video or landmarks were recorded.
 
-The POC now uses `ShoulderMotionRecognizer` instead of the shared hip-dependent
+The cropped-camera correction introduced `ShoulderMotionRecognizer` instead of the shared hip-dependent
 recognizer. Both shoulders need confidence >= 0.5 and valid image coordinates.
 After a short reference, a coherent rise above max(0.008 image height, 0.04 of the
-aspect-corrected shoulder span), on at least two samples over 60 ms, starts play.
+aspect-corrected shoulder span), on at least two samples over 60 ms, confirms motion.
+Originally that motion also gated entry; the direct-play revision removes that gate.
 The body movement is smoothed over 35 ms; return to reference for 150 ms emits a
 single stable completion ID. Missing shoulders cancel a partial cycle; recovery
 requires the starting height, and loss over 750 ms resets the reference. Camera
@@ -151,3 +157,12 @@ retry, full/partial-body layouts and local public-image inference checks pass.
 These are synthetic/public-fixture results; a real-person retry remains necessary
 for this exact camera framing. The shared recognizer and original Dino app are
 unchanged by this shoulder-only correction.
+
+### Direct-play revision (2026-09-13)
+
+The user confirmed that entry was working and moved setup-flow work to a separate
+POC. This experiment now enters the runner at rest and measures best lift during
+play. Shared recognizers, contracts, the original Dino app and camera-start remain
+unchanged. Validation: 7 local unit checks, the POC production build, and 8 Chrome
+checks, including the local model on a public image. Human obstacle timing and
+recognition accuracy remain unverified; no participant recording was collected.
