@@ -1,0 +1,37 @@
+[Unit]
+Description=Fitness Pair result sharing
+After=network.target
+
+[Service]
+Type=simple
+User=fitness-sharing
+Group=fitness-sharing
+WorkingDirectory=/opt/fitness-sharing/current
+EnvironmentFile=/etc/fitness-sharing.env
+Environment=DATA_DIR=/var/lib/fitness-sharing
+Environment=PORT=8410
+Environment=PUBLIC_ORIGIN=https://fitness.integ.life
+ExecStart=/usr/bin/node /opt/fitness-sharing/current/server.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+StateDirectory=fitness-sharing
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+MemoryMax=512M
+TasksMax=64
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

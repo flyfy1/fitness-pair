@@ -1,0 +1,11 @@
+{
+    admin off
+}
+fitness.integ.life {
+    request_body {
+        max_size 20971520
+    }
+    reverse_proxy 127.0.0.1:8410 {
+        header_up X-Real-IP {remote_host}
+    }
+}
