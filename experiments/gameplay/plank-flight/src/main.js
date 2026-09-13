@@ -3,16 +3,15 @@ import { PoseCamera } from './camera.js';
 import { PlankRecognizer } from './recognizer.js';
 import { createFlight, consumeAction, stepFlight, COAST_SECONDS } from './engine.js';
 import { render } from './render.js';
+import { setupFullscreen } from './fullscreen.js';
 
 document.querySelector('#app').innerHTML = `
-<header><div class="brand">Plank Flight<span>A little lift.</span></div><div class="tag">FITNESS PAIR / EXPERIMENT 04</div></header>
-<main class="shell"><div class="intro"><div><div class="tag">YOUR ROOM. YOUR SKY.</div><h1>Every second is a little brave.</h1></div><p>A helicopter, a little courage, and you.<br>Hold a plank to lift. Take a breath to descend.<br>The whole adventure happens over your live camera.</p></div>
-<section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter and obstacles over the camera"></canvas>
-<div class="hud"><div><span class="badge" id="mode">LOCAL CAMERA AR</span><p class="mode-note" id="demo-note"></p></div><div class="stats"><strong id="seconds">0.0 s</strong>support detected · <span id="gates">0</span> gates</div></div>
-<div class="panel" id="panel"><h2 id="title">Your next little adventure.</h2><p id="message">Set the camera to your side so your whole body is visible. Your head becomes the pilot; your plank gives the helicopter lift.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
-<div class="cue"><span id="cue" role="status">A side view works best. Keep your head, arms and feet in frame.</span><progress id="calibration" max="1" value="0" hidden aria-label="Support calibration"></progress></div></section>
-<div class="toolbar"><button id="stop" hidden>Stop camera</button><button id="lift" class="demo-lift" hidden>Hold to lift · Space</button><span class="privacy">On-device camera processing · No recording or uploads</span></div>
-<div class="guide"><div><b><span>01</span>Find your side</b>Place the camera near floor level. Forearm plank, high plank and push-up support are experimental inputs.</div><div><b><span>02</span>Make a little room to fly</b>Hold for 1.2 seconds to take off. Support lifts; a brief rest lowers you through the gates.</div><div><b><span>03</span>Rest is part of the journey</b>After 3 seconds without support, your flight gently tumbles to a close. You can try again whenever you feel ready.</div></div></main>`;
+<main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter and obstacles over the camera"></canvas>
+<div class="hud"><div><h1 class="brand">Plank Flight <small>A little lift.</small></h1><span class="badge" id="mode">LOCAL CAMERA AR</span><p class="mode-note" id="demo-note"></p></div><div class="stats"><strong id="seconds">0.0 s</strong>support detected · <span id="gates">0</span> gates</div></div>
+<div class="panel" id="panel"><h2 id="title">Your next little adventure.</h2><p id="message">Set the camera to your side so your whole body is visible. Your head becomes the pilot; your plank gives the helicopter lift.</p><p class="instructions">Hold support for 1.2 seconds to take off. Hold to rise, rest briefly to descend. After 3 seconds of rest, your flight comes to a gentle end.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
+<div class="cue"><span id="cue" role="status">A side view works best. Keep your head, arms and feet in frame.</span><progress id="calibration" max="1" value="0" hidden aria-label="Support calibration"></progress></div>
+<div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button><button id="lift" class="demo-lift" hidden>Hold to lift · Space</button></div><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
+<span class="privacy">Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
 
 const $ = id => document.getElementById(id);
 const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d');
@@ -20,7 +19,7 @@ const recognizer=new PlankRecognizer();
 let mode='camera',pose=null,pilot=null,state=createFlight({sessionId:'idle',source:{kind:'synthetic',id:'idle'}});
 let lastAction=null,lastFrame=performance.now(),demoHeld=false,demoSeq=0,starting=false,halted=false;
 const headCanvas=document.createElement('canvas');headCanvas.width=headCanvas.height=100;
-function panel(title,message,label='Try again') { $('panel').hidden=false;$('title').textContent=title;$('message').textContent=message;$('start').textContent=label;$('start').disabled=false;$('demo').hidden=false; }
+function panel(title,message,label='Try again') { document.querySelector('.instructions').hidden=true; $('panel').hidden=false;$('title').textContent=title;$('message').textContent=message;$('start').textContent=label;$('start').disabled=false;$('demo').hidden=false; }
 function clearHead() { pose=null;pilot=null;headCanvas.getContext('2d').clearRect(0,0,100,100); }
 function interrupt(message) {
   if (halted || state.finished) return;
@@ -68,6 +67,7 @@ function startDemo(){
   $('mode').textContent='SYNTHETIC DEMO';$('demo-note').textContent='Keyboard input · no camera recognition';$('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='End demo';$('lift').hidden=false;$('calibration').hidden=true;
   $('cue').textContent='Hold Space or the lift button to take off.';
 }
+setupFullscreen(document.querySelector('.stage'),$('fullscreen'),message=>{$('view-status').textContent=message;});
 $('start').onclick=startCamera;$('demo').onclick=startDemo;$('stop').onclick=()=>interrupt(mode==='camera'?'Camera and model stopped. Take your time.':'Demo stopped. Camera play starts a separate flight.');
 $('lift').onpointerdown=e=>{e.preventDefault();$('lift').setPointerCapture(e.pointerId);demoHeld=true;};
 for(const name of ['pointerup','pointercancel','lostpointercapture'])$('lift').addEventListener(name,()=>{demoHeld=false;});
