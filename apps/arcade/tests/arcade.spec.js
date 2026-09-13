@@ -20,12 +20,14 @@ test('concept is labeled and can complete with a keyboard',async({page})=>{
  const target=page.getByRole('button',{name:'Pop the orbit',exact:true});for(let i=0;i<10;i++)await target.press('Enter');
  await expect(page.getByText(/Ten pops/)).toBeVisible();await page.getByRole('button',{name:'Start again'}).click();await expect(target).toBeVisible();await expect(page.locator('#pop-score')).toHaveText('0');
 });
-test('Dino launches keyboard play without camera or automatic recording',async({page})=>{
+test('Dino starts a local replay with keyboard play and keeps it through pause',async({page})=>{
  await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await expect(page.getByRole('button',{name:'Record my game',exact:true})).toBeEnabled();
- await expect(page.locator('#record-status')).toContainText('Recording is off');
+ await expect(page.getByRole('button',{name:'Record my game',exact:true})).toHaveCount(0);
+ await expect(page.locator('#record-status')).toContainText('records automatically');
  await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(game.locator('#pause')).toBeEnabled();await game.locator('#pause').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect.poll(()=>page.evaluate(()=>document.querySelector('#game-frame').contentWindow.dinoGame.getState().status)).toBe('paused');
  expect(await page.evaluate(()=>document.querySelector('#game-frame').contentDocument.querySelector('#camera').srcObject===null)).toBe(true);
 });
@@ -41,8 +43,6 @@ test('synthetic Motion Quest recording saves locally, survives reload, and never
   },configurable:true});
  });
  const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
- await page.getByRole('button',{name:'Record my game',exact:true}).click();
- await expect(page.locator('#record-panel')).toHaveAttribute('data-state','armed');
  await game.locator('#demo').click();
  await expect(page.locator('#record-status')).toContainText('Recording');
  for(let i=0;i<5;i++){await game.locator('#demo-action').focus();await page.keyboard.down('Space');await page.waitForTimeout(750);await page.keyboard.up('Space');}
@@ -79,15 +79,15 @@ test('gallery and missing clips have usable honest states',async({page})=>{
  await page.goto('/clips/550e8400-e29b-41d4-a716-446655440000');await expect(page.getByRole('heading',{name:'CLIP UNAVAILABLE.'})).toBeVisible();
 });
 
-test('recording can be armed and cancelled before play without creating a clip',async({page})=>{
+test('waiting for a game creates no recording and has no opt-in control',async({page})=>{
  await page.goto('/play/motion-quest');
- await page.getByRole('button',{name:'Record my game',exact:true}).click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','armed');
- await page.getByRole('button',{name:'Cancel recording',exact:true}).click();await expect(page.locator('#record-status')).toContainText('Nothing was recorded');
+ await expect(page.locator('#record-status')).toContainText('records automatically');
+ await expect(page.locator('#record-panel button')).toHaveCount(0);
+ await page.waitForTimeout(600);
  await page.goto('/library');await expect(page.getByRole('heading',{name:'NO CLIPS YET.'})).toBeVisible();
 });
 test('Dino recording starts with gameplay and saves automatically at game over',async({page})=>{
  await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await page.getByRole('button',{name:'Record my game',exact:true}).click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','armed');
  await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.getByRole('heading',{name:'Your replay is ready.'})).toBeVisible({timeout:20000});
@@ -108,8 +108,8 @@ test('synthetic camera fixture is mirrored behind AR layers and recorder release
   const video=doc.querySelector('#camera');video.srcObject=canvas.captureStream(24);await video.play();
   window.syntheticCamera=video.srcObject;doc.querySelector('#start').hidden=true;
  });
- await page.getByRole('button',{name:'Record my game',exact:true}).click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
- await page.waitForTimeout(1200);await page.getByRole('button',{name:'Stop & save clip',exact:true}).click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.waitForTimeout(1200);await page.evaluate(()=>{document.querySelector('#game-frame').contentDocument.querySelector('#rep-count').textContent='5';});
  await expect(page.locator('#local-result video')).toBeVisible();
  const sample=await page.locator('#local-result video').evaluate(async v=>{
   await v.play();v.pause();v.currentTime=.5;await new Promise(resolve=>v.addEventListener('seeked',resolve,{once:true}));
@@ -121,4 +121,54 @@ test('synthetic camera fixture is mirrored behind AR layers and recorder release
  expect(await page.evaluate(()=>window.recordingStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
  expect(await page.evaluate(()=>window.syntheticCamera.getTracks()[0].readyState)).toBe('live');
  await page.evaluate(()=>window.syntheticCamera.getTracks().forEach(t=>t.stop()));
+});
+
+test('a second Dino round gets its own replay without rearming or duplicate clips',async({page})=>{
+ await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle',{timeout:20000});
+ await page.waitForTimeout(600);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle');
+ await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle',{timeout:20000});
+ await page.goto('/library');await expect(page.locator('video')).toHaveCount(2);
+});
+test('replays do not stop at the former 60-second cutoff',async({page})=>{
+ await page.clock.install();await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await game.locator('#demo').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.clock.fastForward(65000);
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#record-status')).toContainText('65 seconds');
+ await expect(page.locator('#local-result')).toBeHidden();
+});
+
+test('an immediate restart records while the previous ending card finishes',async({page})=>{
+ await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','finishing',{timeout:15000});
+ await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:1200});
+ await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:4500});
+ await expect(page.getByRole('heading',{name:'Your replay is ready.'})).not.toBeFocused();
+ await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:12000});
+});
+test('a backgrounded preview resumes automatic capture when visible again',async({page})=>{
+ await page.goto('/play/motion-quest');await page.frameLocator('#game-frame').locator('#demo').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(600);
+ await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle');
+ await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.waitForTimeout(600);await page.evaluate(()=>{document.querySelector('#game-frame').contentDocument.querySelector('#rep-count').textContent='5';});
+ await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:7000});
+});
+test('storage failure preserves download fallbacks from consecutive rounds',async({page})=>{
+ await page.addInitScript(()=>{if(window===window.top)Object.defineProperty(window,'indexedDB',{get(){throw new Error('Storage blocked for fixture');}});});
+ await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:20000});
+ const firstURL=await page.locator('#local-result video').getAttribute('src');
+ await game.locator('#start').click();await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:20000});
+ await expect(page.getByText(/Not saved — download before leaving/)).toHaveCount(2);
+ expect(await page.evaluate(async url=>(await fetch(url)).status,firstURL)).toBe(200);
+ await expect(page.locator('#local-result a[download]')).toHaveCount(2);
 });

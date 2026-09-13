@@ -15,6 +15,7 @@ export class Runner {
     this.status = 'ready';
   }
   reset() {
+    this.roundId = (this.roundId ?? 0) + 1;
     this.status = 'running'; this.y = 0; this.velocity = 0;
     this.elapsed = 0; this.distance = 0; this.score = 0; this.passed = 0;
     this.speed = this.controlMode === 'motion' ? 180 : 310;
@@ -89,6 +90,6 @@ export class Runner {
     this.obstacles = this.obstacles.filter(obstacle => obstacle.x + obstacle.w > -20);
   }
   snapshot() {
-    return { status: this.status, score: this.score, distance: this.distance, passed: this.passed, jumps: this.jumps, speed: this.speed, airborne: this.y > 0, height: this.y, controlMode: this.controlMode };
+    return { roundId: this.roundId, status: this.status, score: this.score, distance: this.distance, passed: this.passed, jumps: this.jumps, speed: this.speed, airborne: this.y > 0, height: this.y, controlMode: this.controlMode };
   }
 }

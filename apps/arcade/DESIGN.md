@@ -17,4 +17,4 @@ Lead with “Games that get you moving” and explain the controls with concrete
 
 Hopmodo is the public-facing platform identity, using the jumping figure developed in `design/`. Its static cobalt wordmark appears in navigation and footer, with the mark as favicon. The repository and Sites app identity remain unchanged.
 
-The replay flow is an Operate surface: opt in, play, review, then share or download. Keep recording off by default; show the current state beside the control. At completion, focus the replay heading. Burn the name, mark, game score, and actual public website into the file so the identity survives a download. Native file sharing and gallery publication are distinct actions.
+The replay flow is an Operate surface: play, review, then share or download. Recording starts with the game; show a clear on-device recording notice and live status. At completion, focus the replay heading. Burn the name, mark, game score, and actual public website into the file so the identity survives a download. Native file sharing and gallery publication are distinct actions.
