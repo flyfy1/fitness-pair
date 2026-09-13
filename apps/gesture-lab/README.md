@@ -3,6 +3,9 @@
 An independent app for exploring seven built-in MediaPipe hand poses and an
 experimental sideways wave. Thumbs up means **Confirm**; waving side to side
 means **No**. A still open palm and thumbs down do not trigger No.
+The separate **Rate 1–5** mode recognizes documented finger-number patterns
+and previews one rating after a stable hold. Ratings are session-only and are
+not yet connected to a game's scoring or saved to a server.
 The existing [Tracking Lab](../../experiments/pose-models/tracking-poc/README.md)
 remains the landmark/cursor/pinch observation tool; this app tests categorical
 gestures and discrete commands with the same installed runtime family.
@@ -57,10 +60,58 @@ uploads camera frames. Camera access requires localhost or HTTPS.
 | I love you | `ILoveYou` | Recognition only |
 
 The official model has seven named static poses and a `None` result for an
-unrecognized pose. No detected hand is a separate state. The custom wave is
-not a pretrained class. Pinch, OK, arbitrary finger counts and sign-language
-translation are outside this model's built-in catalog and this POC.
+unrecognized pose. No detected hand is a separate state. The custom wave and
+finger numbers are not pretrained classes. Pinch, OK, arbitrary finger patterns
+and sign-language translation are outside this POC.
 Source: [Google's Gesture Recognizer Web guide](https://developers.google.com/edge/mediapipe/solutions/vision/gesture_recognizer/web_js).
+
+## Rating POC: 1–5
+
+Choose **Rate 1–5**, enable the camera, and face one palm toward it. Hold the
+number still for 700 ms to preview a rating. Lower the hand for at least 350 ms
+before the next rating. Holding a number or changing directly to another number
+does not submit repeatedly. Switching modes stops the camera, clears the preview
+and starts a new session on the next enable. Confirm / No stays inactive in
+rating mode, so V means 2 and a still open palm means 5.
+
+| Rating | Documented pattern |
+| --- | --- |
+| 1 | Index finger extended; other fingers and thumb folded |
+| 2 | Index and middle fingers extended; other fingers and thumb folded |
+| 3 | Index, middle and ring fingers extended; pinky and thumb folded |
+| 4 | Four fingers extended; thumb folded across the palm |
+| 5 | All five fingers extended and spread |
+
+The extension uses the existing named 21-joint hand observations; no model,
+dependency or shared contract change is needed. `ratings.js` corrects image
+aspect ratio, checks finger joint angles and reach, and distinguishes an open
+thumb from a thumb folded across the palm. Ambiguous, incomplete, cropped or
+too-small hands produce no rating. Rules use distances/angles instead of
+screen-up or left/right assumptions. A thumbs up is not 1, and the I Love You
+pattern is not 3. Other regional ways of signing numbers are not supported.
+
+Numeric holds require a stable wrist position and apparent hand scale; movement,
+tracking gaps, changing hand side or number restart the hold. A continuously
+waving palm does not rate, but a deliberate still pause can eventually rate 5.
+Ratings are experimental geometry, not a learned numeric classifier, and there
+is no numeric confidence percentage. Canned gesture scores do not gate numeric
+recognition because 3 and 4 can legitimately have a canned result of `None`.
+Oblique views, folded-finger occlusion and partial bends still need human trials.
+
+The MVP addition is one loop: show a number → hold → see `Rate N/5` and the last
+rating → release → repeat. `Rating_1` through `Rating_5` are app-local action IDs
+with unique completion IDs. The existing session-bound consumer deduplicates
+them. Persistent ratings, aggregation and game integration remain later work.
+
+Rating extension verified on 2026-09-13: 14 app unit tests and 8 production Chrome
+tests passed, alongside 38 repository tests and both app builds. Synthetic named
+hands exercise all five values, reflection/rotation, rejected inputs, movement,
+release and mode isolation. Google's public `victory.jpg` runs through the real
+model and geometry to produce `Rate 2/5`, with no external browser requests.
+The first geometry draft rejected that image's folded thumb; projecting the
+thumb direction relative to the palm replaced the inadequate distance-only rule.
+Desktop and 390px rating layouts were visually checked. Numeric 1, 3, 4 and 5
+have synthetic evidence only; all five values still need live human trials.
 
 ## Recognition and experimental boundary
 
@@ -76,6 +127,7 @@ Source: [Google's Gesture Recognizer Web guide](https://developers.google.com/ed
   continuous classification. Release to no hand / unrecognized pose for 350 ms
   rearms recognition. Open palm remains observable without latching, so a
   held palm can proceed into a wave.
+  These canned-class rules apply to Confirm / No mode; numeric rules are above.
 - Wave requires three horizontal legs / two reversals in 300–1,800 ms. Each leg
   exceeds max(7.5% of image width, 65% of apparent wrist-to-middle-knuckle size).
   Vertical drift, scale changes, lost/ambiguous hands, hand-side changes and

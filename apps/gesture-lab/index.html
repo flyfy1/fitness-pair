@@ -9,7 +9,12 @@
   <body>
     <main>
       <header><a class="brand" href="/">FITNESS PAIR <span>/ GESTURE LAB</span></a><span class="pill">LOCAL CAMERA POC</span></header>
-      <section class="intro"><p class="eyebrow">A LITTLE LESS CLICKING</p><h1>Let your hands do the talking.</h1><p>Thumbs up to confirm. Wave side to side to say no.<br>Explore what your camera can recognize, one hand at a time.</p></section>
+      <section class="intro"><p class="eyebrow">A LITTLE LESS CLICKING</p><h1>Let your hands do the talking.</h1><p>Thumbs up to confirm. Wave side to side to say no.<br>Or switch to rating mode and show a number from 1 to 5.</p></section>
+      <section class="mode-picker" aria-label="Interaction mode">
+        <label for="mode">Try a control</label>
+        <select id="mode"><option value="controls">Confirm / No</option><option value="ratings">Rate 1–5</option></select>
+        <p id="mode-help">Thumbs up confirms; a sideways wave says No.</p>
+      </section>
       <div class="workspace">
         <section class="camera-panel" aria-label="Live camera">
           <div class="camera-top"><span id="camera-tag">CAMERA OFF</span><span>ON-DEVICE · NO RECORDING</span></div>
@@ -19,12 +24,14 @@
         </section>
         <section class="readout" aria-label="Recognition and commands">
           <p class="eyebrow">LIVE RECOGNITION</p><div id="gesture-icon" class="current-icon">—</div><h2 id="gesture-name">No hand detected</h2><p id="confidence">Model confidence —</p><progress id="hold" max="1" value="0" aria-label="Gesture hold progress"></progress><p id="cue">Hold thumbs up briefly, or wave an open palm.</p>
-          <div class="commands"><div><span>👍 Confirm</span><strong id="confirm-count">0</strong></div><div><span>👋 No</span><strong id="no-count">0</strong></div></div>
+          <div id="control-counts" class="commands"><div><span>👍 Confirm</span><strong id="confirm-count">0</strong></div><div><span>👋 No</span><strong id="no-count">0</strong></div></div>
+          <div id="rating-panel" hidden><p class="eyebrow">LAST RATING</p><strong id="rating-value">—</strong><span> / 5</span><p id="rating-count">0 ratings this session</p><small>Preview only · No rating is saved or sent.</small></div>
           <div id="feedback" role="status" aria-live="polite">Your next gesture goes here.</div><p id="timing">Waiting for camera</p>
         </section>
       </div>
-      <section class="library"><div class="section-heading"><div><p class="eyebrow">THE GESTURE LIBRARY</p><h2>Seven poses. One motion.</h2></div><p>7 built-in model gestures + 1 experimental wave rule</p></div><div id="catalog"></div><p class="note"><strong>None</strong> means a hand was found, but no supported pose was recognized. It is not an extra gesture. Pinch, OK, finger counting and sign-language translation are not included in this POC.</p></section>
-      <section class="history-panel"><h2>Recent recognized actions</h2><p>Session only. Release your hand for a moment between actions. Open palm is a live pose; only a sideways wave triggers No.</p><ol id="history"><li>No actions yet.</li></ol></section>
+      <section id="rating-library" class="library" hidden><div class="section-heading"><div><p class="eyebrow">FINGER RATINGS · EXPERIMENTAL</p><h2>Show a number. Hold to rate.</h2></div><p>Keep one hand still for 0.7 seconds, then lower it before the next rating.</p></div><div id="rating-catalog"></div><p class="note">Use the finger patterns below, with your palm facing the camera. Either hand works. Thumbs up is not 1, and waving is not a rating. These are geometric rules over tracked joints, not five extra model classes.</p></section>
+      <section id="gesture-library" class="library"><div class="section-heading"><div><p class="eyebrow">THE GESTURE LIBRARY</p><h2>Seven poses. One motion.</h2></div><p>7 built-in model gestures + 1 experimental wave rule</p></div><div id="catalog"></div><p class="note"><strong>None</strong> means a hand was found, but no supported pose was recognized. It is not an extra gesture. Switch to Rate 1–5 to try finger numbers. Pinch, OK and sign-language translation are not included in this POC.</p></section>
+      <section class="history-panel"><h2>Recent recognized actions</h2><p>Session only. Lower your hand between actions. Switching modes starts a new session; ratings never trigger Confirm or No.</p><ol id="history"><li>No actions yet.</li></ol></section>
       <footer><span>Experimental controls · Human accuracy not yet measured</span><a href="https://developers.google.com/edge/mediapipe/solutions/vision/gesture_recognizer/web_js" target="_blank" rel="noreferrer">MediaPipe model documentation ↗</a></footer>
     </main>
     <script type="module" src="/src/main.js"></script>
