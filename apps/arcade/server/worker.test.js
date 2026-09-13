@@ -37,11 +37,24 @@ for(const identity of ['private-key','metadata'])test(`mock GCP ${identity} publ
  const forbidden=await worker.fetch(new Request(url,{method:'DELETE',headers:{Authorization:'Bearer stranger'}}),env);assert.equal(forbidden.status,403);
  const stolenKey=await worker.fetch(new Request(url,{method:'DELETE',headers:{Authorization:'Bearer '+headers['X-Management-Key']}}),env);assert.equal(stolenKey.status,401);
  assert.equal((await publish()).status,200);assert.equal(writes,2);
+ const posterURL='https://arcade.test/api/posters/'+clip.id;
+ const jpeg=new Uint8Array([255,216,255,224,0,4,1,2,3,4,255,217]);
+ const posterHeaders={'Content-Type':'image/jpeg','X-Sharing-Consent':'gallery-v1',Authorization:'Bearer player'};
+ const putPoster=(body=jpeg,extra={})=>worker.fetch(new Request(posterURL,{method:'PUT',headers:{...posterHeaders,...extra},body}),env);
+ assert.equal((await putPoster(jpeg,{Authorization:'Bearer stranger'})).status,403);
+ assert.equal((await putPoster(jpeg,{'Content-Type':'image/svg+xml'})).status,415);
+ assert.equal((await putPoster(jpeg,{'X-Sharing-Consent':''})).status,400);
+ assert.equal((await putPoster(new Uint8Array(256*1024+1))).status,413);
+ assert.equal((await putPoster(video)).status,415);
+ assert.equal((await putPoster()).status,201);assert.equal((await putPoster()).status,200);assert.equal(writes,3);
+ const poster=await worker.fetch(new Request(posterURL),env);assert.equal(poster.headers.get('Content-Type'),'image/jpeg');assert.deepEqual(new Uint8Array(await poster.arrayBuffer()),jpeg);
+ assert.deepEqual(objects.get('videos/'+clip.id),video);assert.equal((await env.ACCOUNTS.list(owner)).usedBytes,video.length);
  const gallery=await worker.fetch(new Request('https://arcade.test/api/clips'),env);assert.equal((await gallery.json()).clips.length,1);
  const media=await worker.fetch(new Request('https://arcade.test/api/media/'+clip.id,{headers:{Range:'bytes=0-3'}}),env);assert.equal(media.status,206);assert.equal((await media.arrayBuffer()).byteLength,4);
  const wrong=await worker.fetch(new Request(url,{method:'DELETE',headers:{Authorization:'Bearer wrong'}}),env);assert.equal(wrong.status,401);
  const removed=await worker.fetch(new Request(url,{method:'DELETE',headers:{Authorization:'Bearer player'}}),env);assert.equal(removed.status,200);assert.equal(objects.size,0);assert.equal((await env.ACCOUNTS.list(owner)).usedBytes,0);
  assert.equal((await worker.fetch(new Request('https://arcade.test/api/media/'+clip.id),env)).status,404);
+ assert.equal((await worker.fetch(new Request(posterURL),env)).status,404);
 });
 
 test('all mounted games use shared same-origin tracking assets and support clip metadata',async()=>{

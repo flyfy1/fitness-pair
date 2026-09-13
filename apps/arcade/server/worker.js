@@ -1,4 +1,5 @@
 import {isPlayableGame} from '../game-catalog.js';
+const MAX_POSTER_BYTES=256*1024;
 const MAX_BYTES=20*1024*1024, TTL=7*86400000, ID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const fail=(status,message)=>Object.assign(new Error(message),{status});
@@ -19,9 +20,9 @@ export function validateUpload(request,url){
  const length=request.headers.get('Content-Length');if(length!==null&&(!Number.isSafeInteger(Number(length))||Number(length)<=0||Number(length)>MAX_BYTES))throw fail(413,'Clip must be nonempty and no larger than 20 MiB.');
  return {title,source,game,duration,mime};
 }
-async function readBounded(request){
+async function readBounded(request,maxBytes=MAX_BYTES){
  if(!request.body)throw fail(400,'Empty recording.');const reader=request.body.getReader(),chunks=[];let total=0;
- try{while(true){const {value,done}=await reader.read();if(done)break;total+=value.length;if(total>MAX_BYTES){await reader.cancel();throw fail(413,'Clip is larger than 20 MiB.');}chunks.push(value);}}finally{reader.releaseLock();}
+ try{while(true){const {value,done}=await reader.read();if(done)break;total+=value.length;if(total>maxBytes){await reader.cancel();throw fail(413,'Media exceeds its size limit.');}chunks.push(value);}}finally{reader.releaseLock();}
  if(total<12)throw fail(415,'This recording is too short to be a video.');const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
 }
 function publicClip(record){const {id,title,source,game,duration,mime,createdAt,expiresAt,bytes}=record;return {id,title,source,game,duration,mime,createdAt,expiresAt,bytes,url:'/clips/'+id};}
@@ -70,7 +71,7 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
    const settled=await Promise.allSettled(names.map(n=>record(env,n.slice(8,-5))));for(const r of settled)if(r.status==='rejected'&&r.reason.status!==404)throw r.reason;
    const clips=settled.filter(r=>r.status==='fulfilled').map(r=>publicClip(r.value)).sort((a,b)=>b.createdAt-a.createdAt);return json({enabled:true,clips,nextPageToken:listing.nextPageToken||null});
   }
-  const match=/^\/api\/(clips|media)\/([^/]+)$/.exec(path);
+  const match=/^\/api\/(clips|media|posters)\/([^/]+)$/.exec(path);
   if(match){
    const [,kind,id]=match;if(!ID.test(id))throw fail(404,'Clip not found.');if(!storageEnabled(env))throw fail(503,'Community publishing is being connected. Your local clips remain on this device.');
    if(['PUT','DELETE'].includes(request.method)){const origin=request.headers.get('Origin');if(origin&&origin!==url.origin)throw fail(403,'Publish or remove clips from the arcade website.');}
@@ -103,6 +104,8 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
     if(!account.clips.some(clip=>clip.id===id))throw error;
     const media=await gcp(env,`videos/${id}`,{method:'DELETE'});
     if(!media.ok&&media.status!==404)throw fail(503,'Could not remove this upload. Please retry.');
+    const poster=await gcp(env,`videos/${id}.jpg`,{method:'DELETE'});
+    if(!poster.ok&&poster.status!==404)throw fail(503,'Could not remove the thumbnail. Please retry.');
     await env.ACCOUNTS.release(user.userId,id);return json({removed:true});
    }
    if(kind==='clips'&&request.method==='DELETE'){
@@ -116,8 +119,29 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
     const result=await gcp(env,`gallery/${id}.json`,{method:'DELETE'});if(!result.ok&&result.status!==404)throw fail(503,'Could not remove this clip. Please retry.');
     const media=await gcp(env,`videos/${id}`,{method:'DELETE'});
     if(!media.ok&&media.status!==404)throw fail(503,'The link was removed. Retry removal in My shared clips to release its storage.');
+    const poster=await gcp(env,`videos/${id}.jpg`,{method:'DELETE'});
+    if(!poster.ok&&poster.status!==404)throw fail(503,'Could not remove the thumbnail. Please retry removal.');
     if(entry.ownerId)await env.ACCOUNTS.release(entry.ownerId,id);
     return json({removed:true});
+   }
+   if(kind==='posters'&&request.method==='PUT'){
+    if(!enabled(env))throw fail(503,'Account sharing is unavailable.');
+    const user=await env.ACCOUNTS.requireUser(request,true);
+    if(entry.ownerId!==user.userId)throw fail(403,'Only the publishing account can add this thumbnail.');
+    if(request.headers.get('X-Sharing-Consent')!=='gallery-v1')throw fail(400,'Confirm sharing before uploading a thumbnail.');
+    if(request.headers.get('Content-Type')!=='image/jpeg')throw fail(415,'Use a JPEG thumbnail.');
+    const length=Number(request.headers.get('Content-Length'));
+    if(length>MAX_POSTER_BYTES)throw fail(413,'Thumbnail must be no larger than 256 KiB.');
+    if(uploadBusy)throw fail(429,'An upload is finishing. Please retry shortly.');uploadBusy=true;
+    try{
+     const body=await readBounded(request,MAX_POSTER_BYTES);
+     if(body[0]!==255||body[1]!==216||body.at(-2)!==255||body.at(-1)!==217)throw fail(415,'The thumbnail is not a JPEG.');
+     const response=await gcp(env,`videos/${id}.jpg`,{method:'POST',body,mime:'image/jpeg'});
+     if(!response.ok&&response.status!==412)throw fail(503,'Video published, but its thumbnail could not be saved. Retry publishing to finish it.');
+     // A concurrent removal must not leave a newly written poster available.
+     try{await record(env,id);}catch(error){if(error.status===404)await gcp(env,`videos/${id}.jpg`,{method:'DELETE'});throw error;}
+     return json({url:'/api/posters/'+id},response.status===412?200:201);
+    }finally{uploadBusy=false;}
    }
    if(!['GET','HEAD'].includes(request.method))throw fail(405,'Method not allowed.');
    if(kind==='clips'){
@@ -125,8 +149,9 @@ export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
     return json({...publicClip(entry),canDelete:!!(user&&entry.ownerId===user.userId),legacy:!entry.ownerId});
    }
    const range=request.headers.get('Range');if(range&&!/^bytes=(\d+-\d*|-\d+)$/.test(range))throw fail(416,'Invalid byte range.');
-   const media=await gcp(env,`videos/${id}`,{query:'?alt=media',range});if(![200,206,416].includes(media.status))throw fail(404,'This video is unavailable.');
-   const headers=new Headers({'Content-Type':entry.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Disposition':'inline','Accept-Ranges':'bytes','Cross-Origin-Resource-Policy':'same-origin'});for(const name of ['Content-Length','Content-Range'])if(media.headers.has(name))headers.set(name,media.headers.get(name));
+   const poster=kind==='posters';
+   const media=await gcp(env,`videos/${id}${poster?'.jpg':''}`,{query:'?alt=media',range});if(![200,206,416].includes(media.status))throw fail(404,'This video is unavailable.');
+   const headers=new Headers({'Content-Type':poster?'image/jpeg':entry.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Disposition':'inline','Accept-Ranges':'bytes','Cross-Origin-Resource-Policy':'same-origin'});for(const name of ['Content-Length','Content-Range'])if(media.headers.has(name))headers.set(name,media.headers.get(name));
    return new Response(request.method==='HEAD'?null:media.body,{status:media.status,headers});
   }
   if(path.startsWith('/api/'))throw fail(404,'Not found.');

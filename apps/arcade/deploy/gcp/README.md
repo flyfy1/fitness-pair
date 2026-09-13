@@ -92,3 +92,15 @@ and unit if present, then restart only `fitness-arcade.service` and
 `fitness-sharing-proxy.service`. If there was no prior arcade release, stop/disable
 `fitness-arcade.service` and restore the prior proxy configuration. Legacy clip
 data is never restored or overwritten as part of an arcade rollback.
+
+## Backfill existing gallery thumbnails
+
+After deploying poster support, run `backfill-thumbnails.mjs` in the installed
+release under the arcade service identity and its existing environment file.
+The default is a dry run; `--apply` creates only missing JPEG objects with a GCS
+generation precondition, verifies byte-for-byte public readback, and reports counts.
+FFmpeg runs on the VM with local-file input only, a 20-second deadline, and a
+temporary private directory below `FITNESS_STATE_DIR/.local` that is removed after
+each clip. Original videos, publication records and account state are not rewritten.
+Do not print the environment file or token responses. Browser-local clips are
+separate: use Generate thumbnail in My clips on the device that owns them.

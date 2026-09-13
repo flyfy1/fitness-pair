@@ -1,3 +1,4 @@
+import {mountSharedPreview} from './clip-preview.js';
 import {listClips, updateClip} from './local-clips.js';
 
 export const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -72,10 +73,11 @@ export async function renderShared(container, notice = '') {
     if (!account.clips.length) { grid.innerHTML = '<div class="empty-state"><h2>NO SHARED CLIPS YET.</h2><p>Choose a video from My local clips to publish it here.</p><a class="text-link" href="/library">Open My local clips →</a></div>'; return; }
     for (const clip of account.clips) {
       const card = document.createElement('article'); card.className = 'clip-card';
-      card.innerHTML = `${clip.unavailable ? '<p class="notice">This upload did not finish or is being removed. Remove it to release its reserved storage.</p>' : `<video controls playsinline preload="none" src="/api/media/${clip.id}" aria-label="${escapeHTML(clip.title)}"></video>`}<h3>${escapeHTML(clip.title)}</h3><p>${storageLabel(clip.bytes)} · Expires ${new Date(clip.expiresAt).toLocaleDateString()}</p><div class="clip-actions">${clip.unavailable ? '' : `<a href="/clips/${clip.id}">Open shared link ↗</a>`}<button data-remove>Remove</button></div><div data-confirmation></div>`;
+      card.innerHTML = `${clip.unavailable ? '<p class="notice">This upload did not finish or is being removed. Remove it to release its reserved storage.</p>' : ''}<h3>${escapeHTML(clip.title)}</h3><p>${storageLabel(clip.bytes)} · Expires ${new Date(clip.expiresAt).toLocaleDateString()}</p><div class="clip-actions">${clip.unavailable ? '' : `<a href="/clips/${clip.id}">Open shared link ↗</a>`}<button data-remove>Remove</button></div><div data-confirmation></div>`;
       card.querySelector('[data-remove]').onclick = () => confirmRemoval(card.querySelector('[data-confirmation]'), async () => {
         await removeSharedClip(clip.id); await renderShared(container, 'Shared clip removed. Your storage has been updated.');
       });
+      if(!clip.unavailable)mountSharedPreview(card,clip);
       grid.append(card);
     }
   } catch (error) {
