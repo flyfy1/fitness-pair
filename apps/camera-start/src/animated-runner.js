@@ -1,6 +1,6 @@
 import { Runner } from '../../dino-run/src/engine.js';
 
-const DELAY_S = .10, GRAVITY = 1000, LIFT = 650, MAX_LIFT_S = .36;
+const DELAY_S = .03, GRAVITY = 1000, LIFT = 500, MAX_LIFT_S = .25;
 
 /** A movement triggers one arc. Camera height never directly positions the sprite. */
 export class AnimatedRunner extends Runner {
@@ -91,7 +91,7 @@ export class AnimatedRunner extends Runner {
       arc.pending -= dt;
       if (arc.pending > 0) return;
       dt = Math.max(0, -arc.pending);
-      arc.pending = null; arc.velocity = 400;
+      arc.pending = null; arc.velocity = 360;
     }
     if (arc.height === 0 && arc.velocity === 0) return;
     // Longer observed rise-to-return time sustains lift. Even at full lift,

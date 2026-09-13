@@ -21,13 +21,13 @@ test('camera fills the window and distant instructions remain large on desktop, 
   }
 });
 
-test('standing, slider range, one-hand confirmation and countdown finish without requiring wrists to reappear', async ({page})=>{
+test('standing, automatic setup, one-hand confirmation and countdown finish without requiring wrists to reappear', async ({page})=>{
   await syntheticCamera(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?mode=detect');
   await standingSetup(page);await page.screenshot({path:'test-results/height-captured.png'});
   await page.evaluate(()=>{window.poseTest.hand='up';});
   await expect.poll(()=>page.evaluate(()=>window.cameraSetup.getState().heightConfirmed)).toBe(true);
   await page.evaluate(()=>{window.poseTest.wristsMissing=true;});
-  await expect(page.locator('#status')).toHaveText('RANGE CONFIRMED · GET READY');
+  await expect(page.locator('#status')).toHaveText('MOVEMENT CONFIRMED · GET READY');
   await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   expect(await page.evaluate(()=>window.testStream.getTracks().some(t=>t.readyState==='live'))).toBe(true);
   await page.getByRole('button',{name:'Finish test',exact:true}).click();
@@ -41,7 +41,7 @@ test('standing, slider range, one-hand confirmation and countdown finish without
 test('countdown interruption exposes a readable reason and writes it to persistent downloadable logs',async({page})=>{
   await syntheticCamera(page);await page.goto('/?mode=detect');await standingSetup(page);
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
-  await expect(page.locator('#status')).toHaveText('RANGE CONFIRMED · GET READY');
+  await expect(page.locator('#status')).toHaveText('MOVEMENT CONFIRMED · GET READY');
   await page.evaluate(()=>{window.poseTest.delay=400;});
   await expect(page.locator('#instruction')).toHaveText('Tracking paused.');
   const events=await page.evaluate(()=>window.cameraSetup.getLog());
@@ -121,7 +121,7 @@ test('mixed takeoff noise preserves the jump step and short countdown loss pause
   expect(before.some(e=>e.event==='screen-state'&&e.stage==='missing')).toBe(false);
   expect(before.some(e=>e.event==='calibration-stage'&&e.from==='maximum'&&e.to==='standing')).toBe(false);
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
-  await expect(page.locator('#status')).toHaveText('RANGE CONFIRMED · GET READY');
+  await expect(page.locator('#status')).toHaveText('MOVEMENT CONFIRMED · GET READY');
   await page.waitForTimeout(600);
   await page.evaluate(()=>{window.poseTest.noiseFrames=4;});
   await expect.poll(()=>page.evaluate(()=>window.poseTest.noiseFrames)).toBe(0);
@@ -149,20 +149,16 @@ test('a single coherent height spike cannot start setup or inflate the live resp
 });
 
 
-test('slider changes live response and confirms without any jump; skeleton clears on loss and toggle', async({page})=>{
+test('automatic setup previews small movement without a slider; skeleton clears on loss and toggle', async({page})=>{
   await syntheticCamera(page); await page.goto('/?mode=detect');
   await expect(page.getByLabel('Skeleton debug view',{exact:true})).toBeChecked();
   await standingSetup(page);
-  await expect(page.getByRole('slider')).toBeEnabled();
-  await page.getByRole('slider').fill('10');
-  await expect(page.locator('#range-value')).toHaveText('10%');
+  await expect(page.getByRole('slider')).toHaveCount(0);
   await page.evaluate(()=>{window.poseTest.rise=.02;});
-  await expect.poll(()=>page.locator('#movement-meter').evaluate(el=>el.value)).toBeGreaterThan(75);
-  await page.getByRole('slider').fill('80');
-  await expect.poll(()=>page.locator('#movement-meter').evaluate(el=>el.value)).toBeLessThan(15);
+  await expect.poll(()=>page.locator('#movement-meter').evaluate(el=>el.value)).toBeGreaterThan(45);
   const hasInk = () => page.locator('#body-overlay').evaluate(c=>c.width>0 && c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0));
   expect(await hasInk()).toBe(true);
-  await page.screenshot({path:'test-results/body-and-slider.png'});
+  await page.screenshot({path:'test-results/body-and-movement.png'});
   await page.evaluate(()=>{window.poseTest.missing=true;});
   await expect.poll(hasInk).toBe(false);
   await page.evaluate(()=>{window.poseTest.missing=false;window.poseTest.rise=0;});
@@ -171,23 +167,19 @@ test('slider changes live response and confirms without any jump; skeleton clear
   await expect(page.locator('#body-overlay')).toBeHidden();
   await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
-  await expect(page.getByRole('slider')).toBeDisabled();
   await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const log = await page.evaluate(()=>window.cameraSetup.getLog());
-  expect(log.some(e=>e.event==='height-confirmed'&&e.rangeSource==='slider'&&e.torsoPercent===80)).toBe(true);
+  expect(log.some(e=>e.event==='height-confirmed'&&e.rangeSource==='automatic'&&e.torsoPercent===15)).toBe(true);
 });
 
 
-test('stopping after confirmation permits a new slider value for the next camera session', async({page})=>{
+test('stopping after confirmation restores automatic setup for the next camera session', async({page})=>{
   await syntheticCamera(page); await page.goto('/?mode=detect'); await standingSetup(page);
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
-  await expect(page.getByRole('slider')).toBeDisabled();
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
-  await page.getByRole('slider').fill('10');
-  await expect(page.locator('#range-value')).toHaveText('10%');
   await standingSetup(page);
   await page.evaluate(()=>{window.poseTest.rise=.02;});
-  await expect.poll(()=>page.locator('#movement-meter').evaluate(el=>el.value)).toBeGreaterThan(75);
+  await expect.poll(()=>page.locator('#movement-meter').evaluate(el=>el.value)).toBeGreaterThan(45);
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
 });
 

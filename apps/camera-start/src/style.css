@@ -78,11 +78,8 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
 .controls label { display: block; font-size: 20px; font-weight: 650; }
 .controls .body-toggle { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
 .controls input[type=checkbox] { width: 22px; height: 22px; accent-color: #c2fc67; }
-.controls output { float: right; color: #c2fc67; }
-#jump-range { width: 100%; height: 32px; margin: 4px 0; accent-color: #c2fc67; cursor: pointer; }
-#jump-range:focus-visible { outline: 3px solid #c2fc67; outline-offset: 2px; }
-#range-help, .range-note { margin: 0; font-size: 14px; line-height: 1.4; color: #d9e7dc; }
-.range-note { margin-top: 8px; }
+.setup-note { margin: 0; font-size: 14px; line-height: 1.4; color: #d9e7dc; }
+.setup-note { margin-top: 8px; }
 .movement-readout { display: flex; gap: 12px; align-items: center; font-size: 15px; margin-top: 8px; }
 #movement-meter { flex: 1; width: 60px; height: 16px; accent-color: #c2fc67; }
 .guidance { padding-top: 20px; }
@@ -90,7 +87,7 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
   .controls { padding: 10px 14px; margin-top: 12px; }
   .controls label { font-size: 17px; }
   .controls .body-toggle { margin-bottom: 6px; }
-  #range-help, .range-note { font-size: 12px; }
+  .setup-note { font-size: 12px; }
   .movement-readout { font-size: 13px; }
   .guidance { padding-top: 14px; }
   #detail { font-size: 22px; margin: 12px auto; }
@@ -100,7 +97,7 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
 @media (max-height: 650px) and (orientation: landscape) {
   .controls { position: absolute; left: 24px; top: 100px; width: 280px; margin: 0; padding: 12px; }
   .controls label { font-size: 16px; }
-  #range-help, .range-note, .movement-readout { font-size: 12px; }
+  .setup-note, .movement-readout { font-size: 12px; }
   .guidance { margin: auto 0 auto 306px; width: calc(100% - 306px); padding-top: 10px; }
   .guidance h1 { font-size: 46px; }
   .guidance #detail { font-size: 19px; margin: 8px auto; }
@@ -118,7 +115,7 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
 #game-stats { display: flex; justify-content: flex-end; gap: 24px; font-size: 18px; text-shadow: 0 2px 8px #000; }
 #game-stats strong { margin-left: 6px; font-size: 26px; color: #c2fc67; font-variant-numeric: tabular-nums; }
 #end-run { color: #fff; border: 1px solid #ffffff70; background: #12291f; border-radius: 8px; min-height: 40px; padding: 8px 14px; margin-top: 8px; }
-.playing .steps, .playing .range-note { display: none; }
+.playing .steps, .playing .setup-note { display: none; }
 .playing .guidance { position: absolute; top: 13%; left: 50%; transform: translateX(-50%); margin: 0; padding: 0; width: min(960px,94%); }
 .playing #instruction { font-size: clamp(52px,6vw,86px); }
 .playing #detail { font-size: 25px; margin: 12px auto; }
@@ -135,8 +132,7 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
   .playing #game-stats strong { display: inline; font-size: 20px; }
   .playing .controls label { font-size: 12px; }
   .playing .body-toggle { margin: 0; }
-  .playing #range-help, .playing .movement-readout { grid-column: 1/-1; font-size: 11px; margin: 0; }
-  .playing #jump-range { margin: 0; height: 20px; }
+  .playing .movement-readout { grid-column: 1/-1; font-size: 11px; margin: 0; }
   .playing #jump-results { font-size: 12px; }
   .playing #jump-count { font-size: 18px; }
   .playing #mode-link { margin: 0; font-size: 12px; }
@@ -155,8 +151,6 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
   .playing #game-stats strong { display: inline; font-size: 20px; }
   .playing .body-toggle { margin-bottom: 6px; }
   .playing .controls label { font-size: 13px; }
-  .playing #jump-range { height: 20px; margin: 2px 0; }
-  .playing #range-help { display: none; }
   .playing .movement-readout { margin-top: 4px; font-size: 11px; }
   .playing #jump-results { font-size: 13px; }
   .playing #end-run { min-height: 34px; margin-top: 4px; font-size: 13px; }
