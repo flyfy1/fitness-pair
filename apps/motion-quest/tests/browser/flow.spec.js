@@ -8,11 +8,15 @@ test('preview game: a held action attacks, five hits win, restart clears state',
   await page.screenshot({ path: 'test-results/desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Try a gameplay preview' }).click();
   await expect(page.locator('#mode-label')).toContainText('simulated movement');
+  await expect(page.locator('#arena-title')).toHaveText('Hold to charge');
+  expect(await page.locator('#arena-title').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(96);
   const action = page.locator('#demo-action');
   for (let i = 1; i <= 5; i++) {
     await action.focus(); await page.keyboard.down('Space');
     await expect(page.locator('#charge-value')).toHaveText('100%');
+    await expect(page.locator('#arena-title')).toHaveText('Release to attack');
     await page.keyboard.up('Space'); await expect(page.locator('#rep-count')).toHaveText(String(i));
+    await expect(page.locator('#arena-title')).toHaveText(i < 5 ? `Hit! ${i} / 5` : 'Quest complete!');
   }
   await expect(page.locator('#victory')).toBeVisible();
   await expect(page.locator('#damage-count')).toHaveText('100');
@@ -26,6 +30,9 @@ test('narrow layout and pointer control fit without horizontal overflow', async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Try a gameplay preview' }).click();
   const action = page.locator('#demo-action'); await action.scrollIntoViewIfNeeded();
+  const headline = await page.locator('#arena-title').boundingBox();
+  expect(Math.abs(headline.x + headline.width / 2 - 195)).toBeLessThan(2);
+  expect(await page.locator('#arena-title').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(44);
   const box = await action.boundingBox(); await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down(); await expect(page.locator('#charge-value')).toHaveText('100%'); await page.mouse.up();
   await expect(page.locator('#rep-count')).toHaveText('1');
@@ -38,6 +45,7 @@ test('denied camera permission has a useful error and preview still works', asyn
   });
   await page.goto('/'); await page.locator('#start').click();
   await expect(page.locator('#status-title')).toHaveText('Camera permission denied');
+  await expect(page.locator('#arena-title')).toHaveText('Camera blocked');
   await expect(page.locator('#start')).toBeEnabled();
   await page.locator('#demo').click(); await expect(page.locator('#demo-action')).toBeVisible();
 });
@@ -130,12 +138,18 @@ test('synthetic landmark sequence runs through actual detector and wins; complet
           points[ids[2]].y = .65; points[ids[2]].x = down ? .68 : .5;
           points[ids[3]].y = .9;
         }
-        setTimeout(() => { if (!this.terminated) this.onmessage({ data: { type: 'pose', landmarks: points, time: data.time, inferenceMs: 1 } }); }, 0);
+        setTimeout(() => { if (!this.terminated) this.onmessage({ data: { type: 'pose', landmarks: window.testMissing ? [] : points, time: data.time, inferenceMs: 1 } }); }, 0);
       }
       terminate() { this.terminated = true; }
     };
   });
   await page.goto('/'); await page.locator('#start').click();
+  await expect(page.locator('#arena-title')).toHaveText('Hold still');
+  await page.evaluate(() => { window.testMissing = true; });
+  await expect(page.locator('#arena-title')).toHaveText('Step into view');
+  await page.evaluate(() => { window.testMissing = false; });
+  await expect(page.locator('#arena-title')).toHaveText('Stand to attack', { timeout: 10_000 });
+  await page.screenshot({ path: 'test-results/large-action-cue.png' });
   await expect(page.locator('#rep-count')).toHaveText('5', { timeout: 25_000 });
   await expect(page.locator('#victory')).toBeVisible();
   expect(await page.evaluate(() => window.testWorker.terminated && window.testStream.getTracks().every(t => t.readyState === 'ended'))).toBe(true);
@@ -173,4 +187,13 @@ test('landscape controls remain reachable over the full camera stage', async ({ 
   await expect(page.locator('#start')).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
   await page.screenshot({ path: 'test-results/landscape.png' });
+  for (let i = 1; i <= 5; i++) {
+    await page.locator('#demo-action').focus(); await page.keyboard.down('Space');
+    await expect(page.locator('#charge-value')).toHaveText('100%');
+    await page.keyboard.up('Space'); await expect(page.locator('#rep-count')).toHaveText(String(i));
+  }
+  await expect(page.locator('#victory')).toBeVisible();
+  await expect(page.locator('#again')).toBeInViewport();
+  await expect(page.locator('#arena-subtitle')).toHaveText('5 / 5 hits');
+  await page.screenshot({ path: 'test-results/landscape-victory.png' });
 });

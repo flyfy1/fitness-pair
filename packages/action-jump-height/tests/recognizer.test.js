@@ -468,3 +468,94 @@ test('crouching cannot bypass missing joints, sideways relocation or depth chang
     assert.equal(h.recognizer.baseline, null);
   }
 });
+
+
+const robustOptions = { manualMaximum: true, preferUpperBody: true, robustTracking: true };
+test('robust calibration bridges mixed dropout and geometry noise through a crouched jump', () => {
+  const h = harness(() => {}, robustOptions); h.hold();
+  const baseline = { ...h.recognizer.baseline };
+  h.hold(25, 0, crouch);
+  const rejected = [
+    h.update(.04, f => { f.joints.leftShoulder.y -= .10; }),
+    h.update(.06, f => { f.joints.rightHip.confidence = .3; }),
+    h.update(.08, f => { f.joints = {}; }),
+  ];
+  assert.ok(rejected.every(f => f.quality === 'tracking-grace' && !f.completion && !f.canConfirmMaximum));
+  h.hold(6, .10);
+  const captured = h.recognizer.measuredRise; assert.ok(captured > .09);
+  h.hold(3, .12, f => { f.joints = {}; });
+  assert.equal(h.recognizer.measuredRise, captured, 'no height is inferred from missing frames');
+  h.hold(10, 0, crouch); h.hold(10);
+  assert.equal(h.recognizer.confirmMaximum(), true);
+  assert.deepEqual(h.recognizer.baseline, baseline);
+});
+
+test('robust filter rejects isolated height spikes, shoulder shrugs and width jitter', () => {
+  const h = harness(() => {}, robustOptions); h.hold();
+  for (let i = 0; i < 10; i++) {
+    h.update(.13); h.hold(4);
+    h.update(0, f => { f.joints.leftShoulder.y -= .12; }); h.hold(4);
+  }
+  h.hold(15, 0, f => { f.joints.leftHip.x += .018; });
+  assert.equal(h.recognizer.stage, 'maximum');
+  assert.equal(h.recognizer.measuredRise, 0); assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(7, .08); h.hold(10);
+  assert.ok(h.recognizer.measuredRise > .075); assert.equal(h.recognizer.confirmMaximum(), true);
+});
+
+test('robust gaps never supply a landing and sustained missing or drift resets calibration', () => {
+  for (const noise of [f => { f.joints = {}; }, f => { for (const j of Object.values(f.joints)) j.x += .18; }]) {
+    const h = harness(() => {}, robustOptions); h.hold(); h.hold(7, .08); h.hold(10);
+    assert.equal(h.recognizer.confirmMaximum(), true);
+    h.hold(6, .05); h.hold(3, 0, noise);
+    const returnFrames = h.hold(4);
+    assert.ok(returnFrames.every(f => !f.completion), 'requires a new observed 200 ms landing');
+    assert.equal(h.hold(8).filter(f => f.completion).length, 1);
+    const lost = h.hold(30, 0, noise);
+    assert.ok(lost.every(f => !f.completion && !f.canConfirmMaximum && f.heightRatio === 0));
+    assert.equal(h.recognizer.baseline, null); assert.equal(h.recognizer.measuredRise, 0);
+  }
+});
+
+test('robust standing preserves progress through a brief glitch without counting unseen time', () => {
+  const h = harness(() => {}, robustOptions); h.hold(30);
+  h.hold(5, 0, f => { f.joints = {}; });
+  assert.equal(h.hold(5).at(-1).stage, 'standing');
+  assert.equal(h.hold(10).at(-1).stage, 'maximum');
+});
+
+
+test('recovery after a silent gap beyond grace discards flight and requires an observed landing', () => {
+  const h = harness(() => {}, robustOptions); h.hold(); h.hold(8, .08); h.hold(10);
+  assert.equal(h.recognizer.confirmMaximum(), true);
+  h.hold(6, .05); h.update(0, f => { f.joints = {}; });
+  assert.equal(h.update(.05, undefined, 400).phase, 'missing');
+  assert.ok(h.hold(10).every(f => !f.completion));
+});
+
+
+test('configured jump range skips maximum measurement but requires a fresh upright baseline', () => {
+  const h = harness(() => {}, robustOptions);
+  assert.equal(h.recognizer.setJumpRange(.25), true);
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(); assert.equal(h.recognizer.measuredRise, 0);
+  assert.equal(h.recognizer.canConfirmMaximum, true);
+  h.update(0, f => { f.joints = {}; });
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(10);
+  assert.equal(h.recognizer.confirmMaximum(), true);
+  assert.ok(Math.abs(h.recognizer.peakRise - .23 * .25) < .0001);
+  assert.equal(h.recognizer.setJumpRange(.5), false, 'confirmed range stays fixed');
+  assert.ok(h.hold(6, .025).at(-1).heightRatio > .4);
+  for (const bad of [NaN, Infinity, -.1, 0, .09, .81, '0.25']) assert.throws(()=>h.recognizer.setJumpRange(bad), RangeError);
+});
+
+test('range preview changes with the slider without charging or pretending a measured maximum', () => {
+  const h = harness(() => {}, robustOptions); h.recognizer.setJumpRange(.1); h.hold();
+  const small = h.hold(6, .02).at(-1);
+  assert.ok(small.previewHeightRatio > .8); assert.equal(small.progress, 0); assert.equal(small.completion, null);
+  h.recognizer.setJumpRange(.8);
+  const large = h.update(.02); assert.ok(large.previewHeightRatio < .12);
+  h.recognizer.recalibrate(); assert.equal(h.recognizer.canConfirmMaximum, false);
+  assert.equal(h.recognizer.configuredRange, .8, 'preference survives recalibration, the old baseline does not');
+});

@@ -9,12 +9,12 @@ This app ends at **Ready to play** and does not launch Dino or another game.
 - **Player:** someone standing far enough from a camera for body tracking.
 - **Job:** understand the current state and complete setup without reading a sidebar.
 - **Risk:** small text and hidden start conditions make successful calibration look stuck.
-- **Loop:** enable camera → stand still → one comfortable jump/rise → raise one hand
+- **Loop:** enable camera → stand still → choose a comfortable range with the slider → raise one hand
   to confirm → stand steady for three seconds → Ready to play.
 - **Proof:** browser geometry and screenshots, synthetic camera flow, readable
   interruption reasons, persisted/exported state logs and camera cleanup.
 - **No-gos:** no game, new model, backend, recording, physical-height claims or deployment.
-- **Appetite:** this one onboarding loop; verify before adding more controls.
+- **Appetite:** one setup loop, a range slider and an optional movement overlay.
 
 ## Run
 
@@ -73,13 +73,12 @@ npm run build --workspace camera-start
 npm run test:browser --workspace camera-start
 ```
 
-Five Chrome checks pass against a production build on isolated port 5192:
-viewport camera coverage and large-text layouts at 1440×960, 390×844 and 844×390;
-complete synthetic calibration/gesture/countdown despite cropped wrists; visible
-countdown interruption and persisted/downloaded logs; mobile confirmation and
-torso-loss rejection; permission-error recovery and native fullscreen exit.
-Resource cleanup is checked on completion and cancellation. Runtime model assets
-and screenshots are ignored; no participant recordings are included.
+Production Chrome checks on isolated port 5192 cover viewport camera coverage and
+large text at 1440×960, 390×844 and 844×390; slider-based setup without a jump;
+hand/button confirmation; changing live response with the slider; optional body
+overlay visibility and cleanup; noisy takeoff; interrupted countdowns; persisted
+logs; permission recovery and fullscreen. Shared tests verify selected ranges,
+input validation and the unchanged default maximum-calibration mode.
 
 Synthetic input proves software transitions, not human recognition accuracy or
 readability from a measured physical distance. The user still needs to try this
@@ -89,9 +88,44 @@ The preview uses its own origin on port 5274. Port 5190 was previously controlle
 by an unrelated cached games app in the desktop browser; its cache/storage were
 left untouched. This POC registers no Service Worker.
 
-The preparatory-crouch regression covers a one-second crouch, torso unfolding,
-takeoff, a crouched landing and upright confirmation. The screen shows **JUMP
-PREPARATION** and retains the standing reference; the runtime log records
-`prepare-jump` instead of resetting to standing calibration. Six production Chrome
-checks and 46 shared/recognizer tests pass for this update. Synthetic coverage does
-not replace a trial of the player's actual movement.
+## Short tracking interruptions and noise
+
+The setup POC now opts into debounced recognition. A brief missing-joint or
+geometry rejection keeps the existing step visible for 350 ms, retains the
+baseline and selected range, and pauses countdown time. Sustained loss shows
+tracking guidance; after 750 ms of rejected observations calibration resets.
+Rejected frames never contribute height, landing evidence or confirmation.
+Three-sample median filtering rejects isolated height spikes, while a 180 ms
+instruction debounce prevents jump/confirm prompts from rapidly alternating.
+
+`tracking-signal` records transitions, rejection reason, rejected duration and
+input sequence. `tracking-hold-started` / `tracking-hold-ended` show when the
+screen held its previous instruction and for how long. Logs remain local, bounded
+and free of images or body coordinates.
+
+Regression coverage includes mixed low-confidence/geometry/missing frames during
+crouch-to-takeoff, a single coherent height spike, and a short countdown interruption
+that resumes without restarting. Shared tests additionally check long loss,
+silent gaps, drift and observed landing requirements. The new thresholds still
+need a trial with the user's camera and natural movement.
+
+
+## Movement controls
+
+**Show body movement** toggles a live skeleton over the mirrored camera, using
+only visible, confident named joints. It aligns with the video's cover crop;
+missing/stale joints are cleared rather than displayed as a frozen body. Turning
+the switch off, stopping the camera or completing setup clears the overlay.
+Nothing is recorded.
+
+**Movement for a full jump** chooses upward torso movement as 10–80% of the
+standing torso length, initially 25%. Lower means less real movement for the same
+response. This is a relative screen-space setting, not centimeters or a measured
+personal maximum. The **Live jump response** meter previews that mapping after
+the standing baseline is captured. Trying a movement is optional: standing still
+is sufficient to unlock confirmation. The chosen range becomes fixed when
+confirmed; **Try again** allows another setup. The chosen value stays for this
+page session. No camera-derived baseline is reused across sessions.
+
+The log marks `rangeSource: slider` on confirmation, and records range changes
+and overlay toggles. These settings are configuration, never evidence of a jump.

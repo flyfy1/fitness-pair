@@ -142,3 +142,46 @@ landing may end a tracked flight, but manual height confirmation requires a retu
 to upright baseline. Missing joints, significant sideways/depth changes and initial
 crouched calibration retain their existing rejection rules. These are bounded 2D
 heuristics verified with synthetic sequences; human crouch/jump accuracy is unverified.
+
+
+## Debounced tracking in Camera Start
+
+The separate Camera Start POC enables `robustTracking: true` alongside manual
+maximum confirmation and upper-body preference. Other callers retain the default
+recognition behavior. This opt-in policy:
+
+- Preserves the standing reference, captured maximum and pending motion during
+  up to 350 ms of missing or rejected geometry. Rejected frames still emit
+  `phase: missing`, zero height and no completion; `quality: tracking-grace` and
+  `trackingReason` identify the temporary rejection. No joints are synthesized.
+- Excludes missing time from standing stability and clears landing/confirmation
+  holds immediately. Recovery requires a fresh observed landing hold. Longer
+  gaps cancel pending motion; sustained rejection beyond 750 ms recalibrates.
+- Applies a three-observed-sample median before exponential height smoothing.
+  Isolated coherent height spikes cannot establish a maximum. This adds about
+  one input frame of response latency to typical rise/fall sequences.
+- Uses torso length, anchor positions and upright geometry rather than narrow
+  projected shoulder/hip widths as the upper-body distance checks. Significant
+  torso-scale and lateral drift remain rejected.
+
+The host holds the current large instruction for 350 ms during a brief dropout,
+freezes its countdown, and hides confirmation controls until current tracking is
+valid. Competing jump/confirm instructions must persist for 180 ms before display.
+These are synthetic-tested thresholds, not measured guarantees of human accuracy.
+
+
+## Selected range instead of maximum measurement
+
+Manual-confirmation hosts can call `setJumpRange(torsoRatio)` with a finite number
+from 0.1 to 0.8. It stores a user setting, not a measured movement. After fresh
+standing calibration and the usual upright return hold, `confirmMaximum()` can
+accept that selected range without a jump. The resulting peak is baseline torso
+length times the chosen ratio. Missing tracking and pre-baseline confirmation
+remain blocked. Invalid values throw; non-manual hosts and already confirmed
+ranges reject changes. The setting survives recalibration, but the baseline does
+not. Callers that never set a range retain maximum-jump calibration unchanged.
+
+Configured outputs add `rangeSource: slider` and `previewHeightRatio` (0–1) for a
+host's live response meter. Preview is zero on missing tracking; during calibration
+it never changes contract `progress` or emits a completion. Camera Start opts into
+this path; the standalone Dino host keeps its own start policy.

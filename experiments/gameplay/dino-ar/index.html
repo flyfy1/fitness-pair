@@ -18,17 +18,15 @@
       <span id="tracking">Camera off · local processing</span>
       <output id="tracking-detail" hidden></output>
     </aside>
-    <section id="welcome">
-      <span class="eyebrow">YOU ARE THE PLAYER</span>
-      <h1>Your room.<br>Your next adventure.</h1>
-      <p>Step into the video. Jump over the cacti.<br>Your movement brings the game to life.</p>
-      <div class="steps"><span>01 · Enable camera</span><span>02 · Jump once</span><span>03 · Play in your world</span></div>
+    <section id="instruction" class="status">
+      <span class="eyebrow" id="phase">YOU ARE THE PLAYER</span>
+      <h1 id="cue">Jump over the cacti.</h1>
+      <p id="detail">Keep both shoulders visible. Your waist and feet can stay outside the frame.</p>
     </section>
     <footer>
-      <div class="status"><span class="eyebrow" id="phase">READY WHEN YOU ARE</span><h2 id="cue">Step back. Leave room to jump.</h2><p id="detail">Keep both shoulders visible. Your waist and feet can stay outside the frame.</p></div>
       <div class="actions"><button id="primary">Enable camera</button><button id="recalibrate" class="secondary" hidden>Reset position</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>
-      <div class="meter"><span id="height-label">JUMP TO START</span><div><i id="height-bar"></i></div><strong id="height">—</strong></div>
-      <small class="privacy">Video stays on this device · No recording · Relative movement, not physical height</small>
+      <div class="meter"><span id="height-label">LIFT</span><div><i id="height-bar"></i></div><strong id="height">—</strong><strong id="best-height">BEST LIFT 0%</strong></div>
+      <small class="privacy">Video stays on this device · No recording · Lift is relative movement · Not centimeters</small>
     </footer>
     <p id="announcement" class="sr-only" role="status" aria-live="polite"></p>
   </main>

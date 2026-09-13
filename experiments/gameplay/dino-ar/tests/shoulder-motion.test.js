@@ -17,13 +17,17 @@ function harness() {
   return {recognizer,frame,update,hold,last:()=>last};
 }
 
-test('shoulder-only camera starts before landing; height follows motion and completion IDs survive resets',()=>{
-  const h=harness(); assert.equal(h.hold().at(-1).cue,'jump-to-start');
-  const lift=h.hold(3,.025); assert.equal(lift.at(-1).calibrated,true); assert.equal(lift.at(-1).completion,null);
+test('shoulder-only camera enters play at rest; completed motion records best lift and stable IDs',()=>{
+  const h=harness(); const ready=h.hold().at(-1);
+  assert.equal(ready.calibrated,true); assert.equal(ready.heightRatio,0); assert.equal(ready.completion,null);
+  const lift=h.hold(3,.025); assert.equal(lift.at(-1).completion,null);
   const peak=h.hold(4,.06).at(-1); assert.ok(peak.heightRatio>lift.at(-1).heightRatio);
+  assert.equal(peak.bestHeightRatio,0); // A partial motion is not a completed best.
   const landed=h.hold().filter(f=>f.completion); assert.equal(landed.length,1);
-  const firstId=landed[0].completion.id;
-  h.recognizer.recalibrate(); h.hold(); h.hold(3,.025);
+  assert.ok(landed[0].bestHeightRatio>.3);
+  const firstId=landed[0].completion.id, best=landed[0].bestHeightRatio;
+  h.hold(3,.025); assert.equal(h.hold().at(-1).bestHeightRatio,best);
+  h.recognizer.recalibrate(); assert.equal(h.hold().at(-1).bestHeightRatio,0); h.hold(3,.025);
   const second=h.hold().find(f=>f.completion); assert.notEqual(second.completion.id,firstId);
 });
 
@@ -36,9 +40,9 @@ test('cropped or low-confidence hips cannot block shoulder motion',()=>{
 
 test('jitter, one shoulder, one-frame spikes, missing shoulders and stale/foreign frames cannot score',()=>{
   const h=harness(); h.hold();
-  assert.ok(h.hold(8,.004).every(f=>!f.calibrated));
-  assert.ok(h.hold(4,0,f=>{f.joints.leftShoulder.y-=.05;}).every(f=>!f.calibrated));
-  assert.equal(h.update(.025).calibrated,false); assert.ok(h.hold().every(f=>!f.completion));
+  assert.ok(h.hold(8,.004).every(f=>f.heightRatio===0 && !f.completion));
+  assert.ok(h.hold(4,0,f=>{f.joints.leftShoulder.y-=.05;}).every(f=>f.heightRatio===0 && !f.completion));
+  assert.equal(h.update(.025).heightRatio,0); assert.ok(h.hold().every(f=>!f.completion));
   assert.equal(h.recognizer.update(h.last()),null);
   assert.throws(()=>h.recognizer.update({...h.frame(),sessionId:'foreign'}));
   assert.equal(h.update(0,f=>{delete f.joints.rightShoulder;}).phase,'missing');
@@ -48,7 +52,7 @@ test('jitter, one shoulder, one-frame spikes, missing shoulders and stale/foreig
 test('loss cancels a pending completion and long loss or camera drift resets the reference',()=>{
   const h=harness(); h.hold(); h.hold(3,.025);
   h.update(0,f=>{f.joints={};});
-  assert.ok(h.hold().every(f=>!f.completion));
+  assert.ok(h.hold().every(f=>!f.completion && f.bestHeightRatio===0));
   const lost=h.update(0,f=>{f.joints={};},800); assert.equal(lost.calibrated,false);
   h.hold(); h.hold(3,.025);
   assert.equal(h.update(0,f=>{f.joints.leftShoulder.x+=.2;f.joints.rightShoulder.x+=.2;}).calibrated,false);
