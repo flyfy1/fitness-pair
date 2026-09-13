@@ -14,6 +14,17 @@ recognizer.recalibrate(); // preserves the session's completion sequence
 
 ## Calibration and motion
 
+The AR experiment opts into `new JumpHeightRecognizer({ quickStart: true })`:
+capture 250 ms of stable standing, then accept a coherent upward movement above
+max(0.012 image height, 0.035 torso length), observed over at least two samples and
+60 ms. It emits a calibrated active frame while airborne; no maximum jump,
+landing confirmation or host countdown is required. The game scale is half the
+standing torso length (minimum 0.04 image height), not the player's personal
+maximum. The initial lift emits no completion; its eventual valid landing may
+emit one. Existing loss, drift, source/session and completion-ID guards still
+apply. Upper-body movement is still a proxy, not confirmed physical takeoff.
+The default and manual-maximum modes below remain unchanged.
+
 1. Use a fixed, front-facing camera with room above the head. Keep both shoulders
    and both hips visible at minimum. Full-body tracking is preferred when knees
    and ankles are also visible; otherwise upper-body tracking is selected. Stand

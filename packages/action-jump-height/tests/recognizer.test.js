@@ -5,6 +5,37 @@ import { JumpHeightRecognizer } from '../index.js';
 
 // Artificial, named 2D geometry. These fixtures are not participant evidence.
 const session = { sessionId: 'synthetic-jump-session', source: { kind: 'synthetic', id: 'jump-height-geometry/1' } };
+
+test('quick start accepts a small coherent lift before landing, using body scale rather than jump peak', () => {
+  for (const upper of [false, true]) {
+    const h = harness(frame => { if (upper) for (const side of ['left','right']) {
+      delete frame.joints[side+'Knee']; delete frame.joints[side+'Ankle'];
+    } }, { quickStart: true });
+    assert.equal(h.hold(8).at(-1).cue, 'jump-to-start');
+    const lift = h.hold(3,.02);
+    assert.equal(lift.at(-1).calibrated, true);
+    assert.equal(lift.at(-1).phase, 'active');
+    assert.ok(Math.abs(lift.at(-1).peakRise - .115) < .001);
+    assert.equal(lift.at(-1).completion, null);
+    const land = h.hold(8);
+    assert.equal(land.filter(f=>f.completion).length,1);
+    const id = land.find(f=>f.completion).completion.id;
+    h.recognizer.recalibrate(); h.hold(8); h.hold(3,.02);
+    const next = h.hold(8).find(f=>f.completion);
+    assert.notEqual(next.completion.id,id);
+  }
+});
+
+test('quick start ignores jitter, one-frame spikes, isolated foot lifts and missing poses', () => {
+  const h = harness(()=>{}, { quickStart: true }); h.hold(8);
+  assert.ok(h.hold(10,.005).every(f=>!f.calibrated));
+  assert.equal(h.update(.02).calibrated,false);
+  assert.ok(h.hold(8).every(f=>!f.calibrated));
+  assert.ok(h.hold(5,0,frame=>{frame.joints.leftAnkle.y-=.1;}).every(f=>!f.calibrated));
+  const missing=h.update(0,frame=>{frame.joints={};});
+  assert.equal(missing.phase,'missing'); assert.equal(missing.calibrated,false);
+  assert.equal(h.recognizer.update(h.pose(0,frame=>{frame.joints={};},800)).stage,'standing');
+});
 function harness(defaultModify = () => {}, options = {}) {
   const recognizer = new JumpHeightRecognizer(options);
   recognizer.reset(session);
