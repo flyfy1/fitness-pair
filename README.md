@@ -25,6 +25,16 @@ countdown, Dino follows your relative rise and descent. Height is a percentage o
 your own calibration, not centimeters. Keyboard mode remains available separately.
 See [Dino setup and evidence](apps/dino-run/README.md).
 
+## Arcade landing page and local clips
+
+`npm run build` now builds the complete arcade, including Motion Quest and Dino Run.
+Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
+`npm run build:motion-quest` retains the standalone baseline build.
+The arcade lives in `apps/arcade/`; game sources remain independently owned.
+Opt-in recordings save to IndexedDB on the player’s device. GCP gallery publishing
+is prepared but disabled until the owner provides bucket and runtime identity settings.
+See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
+
 ## Team map
 
 ```text

@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*", "contracts"],
-  "engines": { "node": ">=22.12.0" },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "contracts"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "npm run dev --workspace @fitness-pair/motion-quest",
-    "build": "npm run build --workspace @fitness-pair/motion-quest",
+    "build": "node scripts/build-arcade.mjs",
     "preview": "npm run preview --workspace @fitness-pair/motion-quest",
     "test": "node --test tests/*.test.mjs packages/action-jump-height/tests/*.test.js",
     "test:browser": "npm run test:browser --workspace @fitness-pair/motion-quest",
@@ -15,6 +21,10 @@
     "explore:pose": "node experiments/pose-models/baseline.mjs",
     "explore:actions": "node experiments/action-recognition/baseline.mjs",
     "explore:gameplay": "node experiments/gameplay/mock-round.mjs",
-    "explore:evaluation": "node experiments/evaluation/baseline.mjs"
+    "explore:evaluation": "node experiments/evaluation/baseline.mjs",
+    "build:arcade": "node scripts/build-arcade.mjs",
+    "preview:arcade": "node scripts/preview-arcade.mjs",
+    "test:arcade": "node --test apps/arcade/server/worker.test.js",
+    "build:motion-quest": "npm run build --workspace @fitness-pair/motion-quest"
   }
 }
