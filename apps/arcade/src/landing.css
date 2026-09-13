@@ -1,0 +1,112 @@
+/* Home-only refinement. Game shells and embedded game styles keep their identity. */
+.landing-page {
+  --ink: #252824;
+  --paper: #f7f6f2;
+  --muted: #5d625b;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+}
+.landing-page .nav {
+  height: 88px;
+  background: var(--paper);
+  border-bottom: 1px solid #25282418;
+}
+.landing-page .nav nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.landing-page .nav-play { border-color: #25282438; }
+.landing-page .brand { font-size: 27px; }
+.landing-page .hero { background: var(--paper); padding-bottom: 32px; }
+.landing-page .hero-copy { padding-top: 64px; }
+.landing-page .hero-note { color: var(--muted); margin-bottom: 24px; }
+.landing-page .live-dot { background: #d6df5c; box-shadow: 0 0 0 4px #d6df5c30; }
+.landing-page h1, .landing-page h2 {
+  font-family: 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+  font-weight: 550;
+  letter-spacing: -.04em;
+  line-height: 1.08;
+}
+.landing-page .hero h1 { font-size: clamp(48px, 7.2vw, 96px); color: var(--ink); }
+.landing-page .hero h1 > span { font-size: 1em; color: var(--blue); }
+.landing-page .hero-bottom { margin-top: 32px; max-width: 1080px; gap: 28px; }
+.landing-page .hero-bottom p { background: transparent; color: var(--muted); padding: 0; line-height: 1.6; }
+.landing-page .button { border-radius: 8px; gap: 24px; font-weight: 600; }
+.landing-page .button:hover { transform: translateY(-2px); }
+.landing-page .tracking-preload { border-color: #25282430; margin-top: 32px; background: #fffefa; }
+.landing-page .playground {
+  margin: 40px auto 0;
+  width: 88%;
+  max-width: 1400px;
+  height: clamp(280px, 27vw, 390px);
+  overflow: hidden;
+  border-radius: 14px;
+  background: #e9e8dd;
+}
+.landing-page .playground > img { mask-image: none; filter: saturate(.48); }
+.landing-page .playground-poke, .landing-page .motion-toggle {
+  bottom: 20px;
+  min-height: 44px;
+  background: #fffefa;
+  box-shadow: none;
+  font-size: 12px;
+}
+.landing-page .scene-caption { bottom: 23px; background: #fffefae8; font-weight: 500; }
+.landing-page .section { padding-top: 96px; padding-bottom: 96px; }
+.landing-page h2 { font-size: clamp(38px, 4.1vw, 60px); }
+.landing-page .kicker { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+.landing-page .section-head > p { color: var(--muted); }
+.landing-page .game-grid { gap: 32px; }
+.landing-page .game-info { padding-top: 24px; }
+.landing-page .game-info h3 { font-size: 26px; font-weight: 600; letter-spacing: -.025em; }
+.landing-page .game-meta, .landing-page .arcade-footnote { color: var(--muted); }
+.landing-page .game-status { font-size: 11px; font-weight: 600; }
+.landing-page .game-poster { background: #e8e9e4; color: #42483f; letter-spacing: -.035em; }
+.landing-page .why-section { background: #292e2a; }
+.landing-page .why-section .kicker { color: #c6ccc3; }
+.landing-page .why-title h2 { font-size: clamp(38px, 4.1vw, 60px); }
+.landing-page .why-title h2 span { color: #e6eab2; }
+.landing-page .why-copy p { color: #ebeee7; }
+.landing-page .spring-mark { color: #e6eab2; font-size: 88px; margin-top: 32px; }
+.landing-page .how-section { background: #eeeee7; }
+.landing-page .steps li > span { font-family: inherit; font-size: 32px; font-weight: 500; }
+.landing-page .steps p { color: var(--muted); }
+.landing-page .pipeline span { background: #eeeee7; }
+.landing-page .built-section { background: var(--paper); }
+.landing-page .build-notes p, .landing-page .note-tag { color: var(--muted); }
+.landing-page .build-notes h3 { font-weight: 550; letter-spacing: -.025em; }
+.landing-page .share-section { background: #eaece6; }
+.landing-page .share-section h2 { font-size: clamp(38px, 4.1vw, 60px); }
+.landing-page .clip-shape {
+  background: #343c34;
+  color: #f6f7eb;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 12px 20px 28px #25282420;
+  transform: rotate(-5deg);
+}
+.landing-page .clip-shape > span { font-family: inherit; font-size: clamp(38px, 4vw, 58px); font-weight: 550; letter-spacing: -.035em; }
+.landing-page .clip-shape i { background: #e6eab2; color: #343c34; }
+.landing-page .share-arrow { font-size: 100px; }
+.landing-page .final-invite { background: var(--paper); padding: 88px 20px 96px; }
+.landing-page .final-invite h2 { font-size: clamp(56px, 7vw, 96px); color: var(--ink); }
+.landing-page .footer { background: var(--paper); color: var(--ink); border-top: 1px solid #25282425; }
+@media (max-width: 900px) {
+  .landing-page .nav { height: 78px; }
+  .landing-page .nav nav a:nth-child(2) { display: none; }
+  .landing-page .hero-copy { padding-top: 48px; }
+  .landing-page .game-grid { gap: 20px; }
+  .landing-page .section { padding-top: 72px; padding-bottom: 72px; }
+}
+@media (max-width: 600px) {
+  .landing-page .nav { height: 72px; }
+  .landing-page .brand { font-size: 25px; }
+  .landing-page .nav nav a:nth-child(3), .landing-page .nav nav a:nth-child(4) { display: none; }
+  .landing-page .hero-copy { padding-top: 36px; }
+  .landing-page .hero h1 { font-size: clamp(42px, 10.8vw, 64px); }
+  .landing-page .hero-bottom { margin-top: 24px; gap: 24px; }
+  .landing-page .hero-note { font-size: 11px; }
+  .landing-page .playground { margin-top: 28px; width: 90%; height: 290px; }
+  .landing-page .section { padding-top: 56px; padding-bottom: 56px; }
+  .landing-page .game-grid { gap: 40px; }
+  .landing-page .spring-mark { font-size: 64px; }
+  .landing-page .footer { gap: 24px; }
+}

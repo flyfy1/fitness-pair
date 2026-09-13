@@ -30,6 +30,17 @@ The public-facing platform is Hopmodo. Repository/package names, the Sites app t
 
 ## Browser references
 
+## Landing palette refinement
+
+The home route uses `src/landing.css`, scoped under `.landing-page`: warm ivory,
+charcoal, cobalt actions, and restrained yellow accents. The illustration remains
+interactive inside a contained frame. Shared and in-game styles are unchanged.
+Validation on 2026-09-13: production build and eight focused browser checks passed
+(landing navigation, mobile/reduced motion, keyboard Dino entry, game cards and
+shared assets, and loader states at 320/390/768/1440px). Desktop and mobile visuals
+were reviewed; direct Motion Quest entry retained its native interface and had
+no landing-page class. These checks cover presentation, not human recognition.
+
 - [Web Share file support and click activation](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share)
 - [Canvas capture streams](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream)
 
