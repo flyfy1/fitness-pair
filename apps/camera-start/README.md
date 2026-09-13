@@ -1,24 +1,26 @@
-# Ready to Move — camera-first setup POC
+# Ready to Move — camera-controlled Dino POC
 
 A standalone experiment for completing game setup while standing away from the
 screen. The camera fills the viewport; the current instruction is the primary UI.
-After setup, this app runs a continuous **jump detection test** over the live
-camera. It does not launch Dino or another game.
+After setup, the default page runs **Dino** over the live camera. The existing
+AR scene and runner engine are reused; this app supplies the calibrated movement
+controls. The standalone jump detection test remains at `/?mode=detect`.
 
 ## MVP card
 
 - **Player:** someone standing far enough from a camera for body tracking.
-- **Job:** understand the current state and complete setup without reading a sidebar.
-- **Risk:** the player needs visible confirmation that each complete movement is detected
-  once, while noise and missing tracking must not create counts.
-- **Loop:** enable camera → stand still → choose a comfortable range with the slider → raise one hand
-  to confirm → stand steady for three seconds → jump/rise and return → see an
-  explicit detected-jump confirmation and count → repeat or finish the test.
-- **Proof:** browser geometry and screenshots, synthetic camera flow, readable
-  interruption reasons, persisted/exported state logs and camera cleanup.
-- **No-gos:** no game, new model, backend, recording, physical-height claims or deployment.
-- **Appetite:** the existing setup plus repeated jump detection, a range slider and the
-  default-visible skeleton debug view.
+- **Job:** complete setup, then control a dinosaur using comfortable body movement.
+- **Risk:** setup must hand off live controls without losing the baseline; missing
+  tracking and paused movement must not advance the round or create jump counts.
+- **Loop:** enable camera → stand still → choose a range with the slider → raise
+  one hand to confirm → three-second countdown → rise and return to control Dino
+  → clear cacti or collide → see results → play again.
+- **Proof:** production-browser synthetic setup, proportional movement, obstacle
+  clearance, collision, replay, pause/resume, tracking recovery and camera cleanup.
+- **No-gos:** no new game engine, model, backend, recording, physical-height claims
+  or deployment.
+- **Appetite:** connect the existing controls to the existing playable game, keep
+  the skeleton, readable instructions, local logs and isolated detection mode.
 
 ## Run
 
@@ -47,8 +49,9 @@ Interrupted tracking clearly states why the countdown stopped and restarts it
 when steady tracking returns. Long torso loss/position drift still recalibrates.
 
 Camera tracks and the model worker stop on cancellation, errors, page exit,
-hidden tabs and **Finish test**. Finishing setup keeps the camera active for the
-jump test. Try again starts a fresh camera session and resets the jump count.
+hidden tabs, collision and **Finish run** / **Finish test**. Finishing setup keeps
+the camera active. Play again starts a fresh camera session and resets the round.
+Manual pause keeps tracking active so the player can resume with a gesture.
 
 ## Local runtime log
 
@@ -60,7 +63,8 @@ the current session can still be inspected and exported from memory.
 Events include camera initialization/stopping/errors, calibration transitions,
 gesture detection, rejected/accepted height confirmation, visible waiting reasons,
 countdown start/interruption, setup completion, jump start/return/detection and
-test pause/finish. Each `jump-detected` carries a stable event ID and count. Timestamps show their order.
+test pause/finish, game start/pause/resume, obstacles cleared and round results.
+Each `jump-detected` carries a stable event ID and count. Timestamps show their order.
 Logs contain no image/video, body coordinates or landmarks and are never uploaded.
 The view shows the latest 40 entries; the JSON contains the retained 300 entries.
 `window.cameraSetup.getState()` and `.getLog()` expose the same compact diagnostic
@@ -88,7 +92,11 @@ input validation and the unchanged default maximum-calibration mode.
 
 Synthetic input proves software transitions, not human recognition accuracy or
 readability from a measured physical distance. The user still needs to try this
-screen at their actual camera distance. This POC isolates that evaluation from gameplay.
+screen at their actual camera distance. Detection-only mode isolates recognition
+evaluation from gameplay. The game checks additionally cover proportional Dino
+height, clearing a cactus, collision, replay, button/gesture pause and resume,
+tracking-loss freezing, camera restart without resetting the round, and visible
+controls at the three viewport sizes above.
 
 The preview uses its own origin on port 5274. Port 5190 was previously controlled
 by an unrelated cached games app in the desktop browser; its cache/storage were
@@ -122,7 +130,7 @@ need a trial with the user's camera and natural movement.
 mirrored camera as soon as tracking starts. It uses only visible, confident named
 joints. The switch can hide it. It aligns with the video's cover crop;
 missing/stale joints are cleared rather than displayed as a frozen body. Turning
-the switch off, stopping the camera or completing setup clears the overlay.
+the switch off, stopping the camera or completing a round clears the overlay.
 Nothing is recorded.
 
 **Movement for a full jump** chooses upward torso movement as 10–80% of the
@@ -131,17 +139,46 @@ response. This is a relative screen-space setting, not centimeters or a measured
 personal maximum. The **Live jump response** meter previews that mapping after
 the standing baseline is captured. Trying a movement is optional: standing still
 is sufficient to unlock confirmation. The chosen range becomes fixed when
-confirmed; **Try again** allows another setup. The chosen value stays for this
-page session. No camera-derived baseline is reused across sessions.
+confirmed; **Play again** (or **Try again** in detection mode) allows another
+setup. The chosen value stays for this page session. No camera-derived baseline is reused across sessions.
 
 The log marks `rangeSource: slider` on confirmation, and records range changes
 and overlay toggles. These settings are configuration, never evidence of a jump.
 
 
+## Play Dino
+
+The default `/` route finishes the countdown into a running game. The player's
+filtered relative torso height controls Dino's height continuously, including
+its descent. The slider sets the movement needed to reach full game height;
+there is no mandatory maximum jump. Half-body tracking still requires both
+shoulders and hips. The scene comes from `experiments/gameplay/dino-ar/src/scene.js`
+and the motion-mode rules from `apps/dino-run/src/engine.js`.
+
+The left playfield shows the dinosaur, ground and incoming cacti. Large cues
+announce **Jump!**, **Cleared!** and confirmed jumps; the controls show score,
+cacti cleared, confirmed jumps and the live movement meter. Score advances with
+running distance; jump counts come only from explicit completed movement events.
+The full-camera background and default skeleton stay live during play.
+
+Raise **both hands for one second** to pause or resume, lowering them between
+commands. **Pause** and **Resume run** buttons provide the same controls. Resume
+requires fresh tracking at the standing baseline, so movement made while paused
+does not score. Tracking loss immediately freezes obstacles and score; brief loss
+resumes when valid tracking returns. Sustained loss requires setup again, keeping
+the current round and score. **Stop camera** releases the camera; **Resume with
+camera** starts a new tracking session, repeats setup and continues that round.
+
+A collision or **Finish run** shows the results and stops owned camera tracks and
+the model worker. **Play again** resets the score and counts and returns to setup.
+Local diagnostics include `game-started`, `game-paused`, `game-resume-blocked`,
+`game-resumed`, `obstacle-cleared` and `round-finished`, alongside the existing
+jump detection events. No camera images or skeleton coordinates are recorded.
+
 ## Jump detection test
 
-Once the existing range confirmation and countdown succeed, **Try a small jump**
-starts the test. Skeleton and response meter stay live. **Moving up** and
+Select **Jump detection only** or open `/?mode=detect`. Once range confirmation
+and countdown succeed, **Try a small jump** starts the test. Skeleton and response meter stay live. **Moving up** and
 **Coming back down** indicate the recognizer's current motion. **Jump detected!**
 is shown for 1.8 seconds after an explicit completed action; the confirmed count
 stays visible, and a new rise can immediately start another cycle. A stable
