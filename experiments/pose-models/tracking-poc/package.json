@@ -1,0 +1,12 @@
+{
+  "name": "@fitness-pair/tracking-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:assets": "node prepare-assets.mjs",
+    "dev": "npm run prepare:assets && vite --host 127.0.0.1 --port 5186 --strictPort",
+    "build": "npm run prepare:assets && vite build",
+    "test": "node --test adapter.test.mjs",
+    "test:browser": "playwright test"
+  }
+}

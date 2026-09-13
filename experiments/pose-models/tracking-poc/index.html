@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tracking Lab · Fitness Pair</title></head>
+<body>
+  <main>
+    <header><a href="./">FITNESS PAIR <span>/ TRACKING LAB</span></a><span class="badge">Local camera POC</span></header>
+    <div class="intro"><p class="eyebrow">MOVEMENT EXPLORATION / 01</p><h1>See your movement.</h1><p>Hands at your desk. Arms in frame. Your whole body in motion.</p></div>
+    <div class="layout">
+      <section class="viewer" aria-label="Camera tracking preview">
+        <div class="stage" id="stage"><video id="camera" muted autoplay playsinline></video><canvas id="overlay"></canvas>
+          <div id="placeholder"><span class="target">＋</span><h2>Your camera is off</h2><p>Choose a mode, then enable your camera.</p></div>
+          <span class="stage-tag" id="source">CAMERA OFF</span><span class="stage-tag right">MIRRORED VIEW</span>
+        </div>
+        <div class="viewer-footer"><span><i></i> Video stays on this device</span><span>One person · up to two hands</span></div>
+      </section>
+      <aside>
+        <h2>Tracking mode</h2>
+        <div class="modes" role="group" aria-label="Tracking mode">
+          <button data-mode="hands" aria-pressed="true"><strong>Hands</strong><small>Fingers & pinch · 21 points per hand</small></button>
+          <button data-mode="full" aria-pressed="false"><strong>Full body</strong><small>Shoulders to ankles · 12 joints</small></button>
+          <button data-mode="upper" aria-pressed="false"><strong>Upper body</strong><small>Shoulders, elbows & wrists · 6 joints</small></button>
+        </div>
+        <p id="guide">Show one or both hands. Move your index finger, then bring your thumb and index finger together.</p>
+        <button id="start" class="primary">Enable camera</button><button id="stop" class="stop" hidden>Stop camera</button>
+        <div class="status-box"><strong id="status" role="status" aria-live="polite">Ready when you are</strong><p id="detail">No recording. No uploads. No calibration needed.</p></div>
+        <div class="metrics"><div><span>Visible points</span><strong id="points">—</strong></div><div><span>Inference</span><strong id="timing">—</strong></div><div><span>Result rate</span><strong id="rate">—</strong></div></div>
+        <p id="movement">Live movement feedback appears here.</p>
+      </aside>
+    </div>
+    <footer>Tracking experiment, not an exercise assessment. <span>Mode changes stop the camera. Enable it again to continue.</span></footer>
+  </main><script type="module" src="./main.js"></script>
+</body></html>
