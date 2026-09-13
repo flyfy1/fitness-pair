@@ -1,0 +1,11 @@
+{
+  "name": "hand-tracking-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node prepare-assets.mjs && vite --host 127.0.0.1 --port 5182 --strictPort",
+    "build": "node prepare-assets.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5182 --strictPort",
+    "test:browser": "playwright test"
+  }
+}
