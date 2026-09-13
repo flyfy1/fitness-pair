@@ -45,6 +45,22 @@ function geometry(frame, mode) {
 
 /** Relative image displacement only: no camera, recording, or model-specific joints. */
 export class JumpHeightRecognizer {
+  constructor({ manualMaximum = false, preferUpperBody = false } = {}) {
+    this.manualMaximum = manualMaximum; this.preferUpperBody = preferUpperBody;
+  }
+
+  get canConfirmMaximum() {
+    return this.stage === 'maximum' && this.measuredRise >= Math.max(.015, (this.baseline?.torso ?? 0) * .06)
+      && this.confirmGroundedSince !== null && this.lastTMs - this.confirmGroundedSince >= LANDING_MS;
+  }
+
+  confirmMaximum() {
+    if (!this.manualMaximum || !this.canConfirmMaximum) return false;
+    this.peakRise = this.measuredRise; this.stage = 'ready';
+    this.flight = null; this.landingSince = null; this.filteredRise = 0;
+    this.armed = true; return true;
+  }
+
   reset({ sessionId, source }) {
     this.sessionId = sessionId;
     this.source = { ...source };
@@ -55,6 +71,7 @@ export class JumpHeightRecognizer {
 
   recalibrate() {
     this.stage = 'standing'; this.baseline = null; this.peakRise = null;
+    this.measuredRise = 0; this.confirmGroundedSince = null;
     this.trackingMode = null; this.lowerAbsentSince = null; this.fallbackAnchor = null;
     this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
     this.flight = null; this.landingSince = null; this.lastValidTMs = null;
@@ -70,6 +87,7 @@ export class JumpHeightRecognizer {
       source: { ...frame.source }, recognizerId: RECOGNIZER_ID, action: 'jump-height',
       phase, progress: heightRatio, calibrationProgress, cue, completion,
       stage: this.stage, calibrated, heightRatio, peakRise: this.peakRise, quality, trackingMode: this.trackingMode,
+      measuredRise: this.measuredRise, canConfirmMaximum: this.canConfirmMaximum,
     };
     assertActionFrame(result);
     return result;
@@ -86,7 +104,7 @@ export class JumpHeightRecognizer {
     const imageKey = `${frame.image.width}:${frame.image.height}`;
     if (this.imageKey && this.imageKey !== imageKey) this.recalibrate();
     this.imageKey = imageKey;
-    const fullPose = geometry(frame, 'full-body');
+    const fullPose = this.preferUpperBody ? null : geometry(frame, 'full-body');
     const upperPose = geometry(frame, 'upper-body');
     // A stable visible torso can recover cropped legs, but the signals need their
     // own standing and maximum calibrations. Never carry flight/peak across modes.
@@ -121,6 +139,7 @@ export class JumpHeightRecognizer {
     }
     const pose = this.trackingMode === 'full-body' ? fullPose : upperPose;
     if (!pose) {
+      this.confirmGroundedSince = null;
       // A lost interval cannot provide evidence of a landing or stable standing.
       this.flight = null; this.landingSince = null; this.armed = false; this.rearmSince = null;
       this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
@@ -140,6 +159,7 @@ export class JumpHeightRecognizer {
     const movedDown = upperBody ? false
       : Math.min(pose.leftAnkleY - baseline.leftAnkleY, pose.rightAnkleY - baseline.rightAnkleY) > .045;
     if (scaleChanged || movedSideways || movedDown || bentTorso) {
+      this.confirmGroundedSince = null;
       this.driftSince ??= frame.tMs;
       this.flight = null; this.landingSince = null; this.armed = false;
       this.filterTMs = null; this.filteredRise = 0;
@@ -160,6 +180,8 @@ export class JumpHeightRecognizer {
     const landThreshold = Math.max(.005, baseline.torso * .025);
     const airborne = rawRise > liftThreshold;
     const grounded = leftRise <= landThreshold && rightRise <= landThreshold && hipRise <= liftThreshold;
+    if (grounded) this.confirmGroundedSince ??= frame.tMs;
+    else this.confirmGroundedSince = null;
 
     if (!this.armed) {
       this.rearmSince ??= frame.tMs;
@@ -183,6 +205,10 @@ export class JumpHeightRecognizer {
     if (this.flight) {
       this.flight.peak = Math.max(this.flight.peak, this.filteredRise);
       if (airborne) this.flight.samples++;
+      if (this.stage === 'maximum' && this.manualMaximum && this.flight.samples >= 2
+        && frame.tMs - this.flight.started >= 60) {
+        this.measuredRise = Math.max(this.measuredRise, this.flight.peak);
+      }
       if (grounded) this.landingSince ??= frame.tMs;
       else this.landingSince = null;
       if (this.landingSince !== null && frame.tMs - this.landingSince >= LANDING_MS) {
@@ -190,7 +216,7 @@ export class JumpHeightRecognizer {
         this.flight = null; this.landingSince = null; this.filteredRise = 0;
         const validFlight = flight.samples >= 2 && frame.tMs - LANDING_MS - flight.started >= 60;
         if (this.stage === 'maximum') {
-          if (validFlight && flight.peak >= Math.max(.025, baseline.torso * .12)) {
+          if (!this.manualMaximum && validFlight && flight.peak >= Math.max(.025, baseline.torso * .12)) {
             this.peakRise = flight.peak; this.stage = 'ready';
             return this.output(frame, { phase: 'ready', cue: 'ready' });
           }
@@ -201,19 +227,22 @@ export class JumpHeightRecognizer {
             id: `${frame.sessionId}:${RECOGNIZER_ID}:jump:${this.repIndex}`, repIndex: this.repIndex,
           } });
         }
+      } else if (frame.tMs - this.flight.started > FLIGHT_TIMEOUT_MS && this.manualMaximum && this.stage === 'maximum') {
+        // Keep a measured range while the player returns and confirms it.
+        this.flight = null; this.landingSince = null;
       } else if (frame.tMs - this.flight.started > FLIGHT_TIMEOUT_MS) {
         this.recalibrate();
         return this.output(frame, { phase: 'calibrating', cue: 'rebaseline', quality: 'position-changed', calibrationProgress: 0 });
       }
     }
     if (this.stage === 'maximum') {
-      if (!this.flight && frame.tMs - this.maximumSince > MAXIMUM_WAIT_MS) {
+      if (!this.manualMaximum && !this.flight && frame.tMs - this.maximumSince > MAXIMUM_WAIT_MS) {
         this.recalibrate();
         return this.output(frame, { phase: 'calibrating', cue: 'rebaseline', quality: 'calibration-timeout', calibrationProgress: 0 });
       }
       return this.output(frame, { phase: 'calibrating',
-        cue: this.flight ? 'land-and-hold' : this.retryMaximum ? 'jump-higher-and-retry' : 'jump-maximum',
-        quality: this.retryMaximum ? 'insufficient-height' : 'tracked', calibrationProgress: this.flight ? .75 : .5 });
+        cue: this.manualMaximum && this.canConfirmMaximum ? 'confirm-maximum' : this.flight ? 'land-and-hold' : this.retryMaximum ? 'jump-higher-and-retry' : 'jump-maximum',
+        quality: this.retryMaximum && !this.canConfirmMaximum ? 'insufficient-height' : 'tracked', calibrationProgress: this.canConfirmMaximum ? 1 : this.flight ? .75 : .5 });
     }
     // Grounded jitter and post-loss airborne fragments must not move the game.
     const ratio = this.flight && !grounded ? this.filteredRise / this.peakRise : 0;

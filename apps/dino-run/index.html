@@ -25,6 +25,13 @@
       <aside class="sidebar" aria-label="Player camera and game dashboard">
         <div class="camera-preview"><div class="camera-placeholder"><span>◎</span>Your camera view<small>Shoulders and hips in view</small></div><video id="camera" muted playsinline aria-label="Local camera preview"></video><canvas id="skeleton" aria-hidden="true"></canvas><span id="camera-tag">CAMERA OFF</span><div class="camera-actions"><button id="recalibrate" hidden>Recalibrate</button><button id="stop-camera" hidden>Turn camera off</button></div></div>
         <div class="dashboard">
+          <section id="gesture-controls" class="gesture-controls" aria-label="Body controls">
+            <h3>Hands-free controls</h3>
+            <p>One hand up: confirm / next<br>Both hands up: pause / resume</p>
+            <small>Hold 1 second. Lower both hands between commands.</small>
+            <div class="height-track"><span id="gesture-progress"></span></div>
+            <p id="gesture-status" role="status">Enable camera once to use body controls.</p>
+          </section>
           <section class="run-summary" aria-label="Run statistics">
             <div class="run-status"><i></i><span class="live-state" id="live-state">READY TO ROAM</span></div>
             <div class="scores"><div><span>SCORE</span><strong id="score">00000</strong></div><div class="best"><span>PERSONAL BEST</span><strong id="best">00000</strong></div><div class="distance"><span>DISTANCE</span><strong id="distance">0 m</strong></div></div>

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 async function syntheticCamera(page) {
   // Synthetic landmarks test integration only, not actual camera recognition accuracy.
   await page.addInitScript(() => {
-    window.testRise = 0; window.testMissing = false; window.testDelay = 0; window.testUpperBody = false;
+    window.testRise = 0; window.testMissing = false; window.testDelay = 0; window.testUpperBody = false; window.testHands = 'down'; window.testWristMissing = false;
     navigator.mediaDevices.getUserMedia = async () => {
       const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
       const ctx = canvas.getContext('2d'); ctx.fillRect(0, 0, 640, 480);
@@ -25,6 +25,10 @@ async function syntheticCamera(page) {
           for (const [side, x] of [[[11,23,25,27], .44], [[12,24,26,28], .56]]) {
             side.forEach((id, i) => { if (window.testUpperBody && i >= 2) return; points[id] = { x, y: [.25,.48,.68,.88][i] - window.testRise, visibility: .99 }; });
           }
+          if (!window.testWristMissing) {
+            points[15] = { x: .36, y: (window.testHands === 'one' || window.testHands === 'both' ? .10 : .58) - window.testRise, visibility: .99 };
+            points[16] = { x: .64, y: (window.testHands === 'both' ? .10 : .58) - window.testRise, visibility: .99 };
+          }
         }
         setTimeout(() => { if (!this.terminated) this.onmessage?.({ data: { type: 'pose', landmarks: points, time: data.time } }); }, window.testDelay);
       }
@@ -39,6 +43,8 @@ async function calibrate(page, startName = 'Enable camera') {
   await page.evaluate(() => { window.testRise = .14; });
   await page.waitForTimeout(260);
   await page.evaluate(() => { window.testRise = 0; });
+  await expect.poll(() => page.evaluate(() => window.dinoGame.getState().camera.canConfirmMaximum)).toBe(true);
+  await page.getByRole('button', { name: 'Use measured height', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.dinoGame.getState().camera.calibrated)).toBe(true);
   expect(await page.evaluate(() => window.dinoGame.getState().status)).toBe('ready');
   await expect.poll(() => page.evaluate(() => window.dinoGame.getState().status), {timeout: 6000}).toBe('running');
@@ -174,17 +180,70 @@ test('a camera run clears an obstacle, ends on collision, then recalibrates for 
   await page.getByRole('button',{name:'Turn camera off'}).click();
 });
 
-test('full-body leg loss pauses, switches to upper-body calibration, and resumes only after explicit request', async ({page}) => {
+test('visible legs disappearing do not invalidate torso calibration; actual torso loss requires reconfirmation', async ({page}) => {
   await syntheticCamera(page);await page.goto('/');await calibrate(page);
-  expect(await page.evaluate(()=>window.dinoGame.getState().camera.trackingMode)).toBe('full-body');
-  await page.evaluate(()=>{window.testUpperBody=true;});
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.trackingMode)).toBe('upper-body');
+  await page.evaluate(()=>{window.testUpperBody=true;});await page.waitForTimeout(900);
+  expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('running');
+  await page.evaluate(()=>{window.testMissing=true;});
   await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status)).toBe('paused');
-  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.trackingMode)).toBe('upper-body');
+  await page.waitForTimeout(900);await page.evaluate(()=>{window.testMissing=false;});
   await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.stage)).toBe('maximum');
   await page.evaluate(()=>{window.testRise=.14;});await page.waitForTimeout(260);await page.evaluate(()=>{window.testRise=0;});
-  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.calibrated)).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.canConfirmMaximum)).toBe(true);
   expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('paused');
-  await page.getByRole('button',{name:'Resume run',exact:true}).click();
+  await page.getByRole('button',{name:'Use measured height',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status),{timeout:6000}).toBe('running');
+  await page.getByRole('button',{name:'Turn camera off'}).click();
+});
+
+test('one hand confirms calibration; both hands pause and resume without returning to the computer', async ({page}) => {
+  await syntheticCamera(page);await page.goto('/');
+  await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.stage)).toBe('maximum');
+  // A hand command alone cannot invent a maximum.
+  await page.evaluate(()=>{window.testHands='one';});await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.calibrated)).toBe(false);
+  await page.evaluate(()=>{window.testHands='down';});await page.waitForTimeout(500);
+  await page.evaluate(()=>{window.testRise=.08;});await page.waitForTimeout(260);
+  await page.evaluate(()=>{window.testRise=0;});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.canConfirmMaximum)).toBe(true);
+  await page.evaluate(()=>{window.testHands='one';});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.calibrated)).toBe(true);
+  await page.waitForTimeout(3300);
+  expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('ready');
+  await page.evaluate(()=>{window.testWristMissing=true;});await page.waitForTimeout(3300);
+  expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('ready');
+  await page.evaluate(()=>{window.testWristMissing=false;});
+  await page.evaluate(()=>{window.testHands='down';});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status),{timeout:6000}).toBe('running');
+  await page.evaluate(()=>{window.testHands='both';});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status)).toBe('paused');
+  const score=await page.evaluate(()=>window.dinoGame.getState().score);
+  await page.waitForTimeout(1600);
+  expect(await page.evaluate(()=>window.dinoGame.getState().score)).toBe(score);
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.calibrated)).toBe(true);
+  expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='live'))).toBe(true);
+  await page.screenshot({path:'test-results/gesture-paused.png'});
+  await page.evaluate(()=>{window.testHands='down';});await page.waitForTimeout(500);
+  await page.evaluate(()=>{window.testHands='both';});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.awaitingStart)).toBe(true);
+  await page.evaluate(()=>{window.testHands='down';});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status),{timeout:6000}).toBe('running');
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.calibrated)).toBe(true);
+  await page.keyboard.press('KeyP');
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.state)).toBe('ready');
+  await page.getByRole('button',{name:'Turn camera off'}).click();
+  expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
+});
+
+test('stale and incomplete gestures cannot confirm a range or start a paused game', async ({page}) => {
+  await syntheticCamera(page);await page.goto('/');await calibrate(page);
+  await page.keyboard.press('KeyP');
+  await page.evaluate(()=>{window.testDelay=400;window.testHands='both';});await page.waitForTimeout(1400);
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.awaitingStart)).toBe(false);
+  await page.evaluate(()=>{window.testDelay=0;window.testWristMissing=true;});await page.waitForTimeout(1400);
+  expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('paused');
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.awaitingStart)).toBe(false);
   await page.getByRole('button',{name:'Turn camera off'}).click();
 });

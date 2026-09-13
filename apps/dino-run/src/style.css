@@ -144,3 +144,8 @@ kbd { font-family: inherit; font-size: 9px; display: inline-block; background: #
   .overlay-card > small { margin-top: 10px; font-size: 9px; }
   .game-footer { min-height: 28px; padding: 5px 14px; font-size: 9px; }
 }
+
+.gesture-controls { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #dce4cf; }
+.gesture-controls p { font-size: 11px; line-height: 1.5; margin: 6px 0; }
+.gesture-controls small { font-size: 9px; color: #708064; }
+#gesture-status { color: #486342; min-height: 32px; }
