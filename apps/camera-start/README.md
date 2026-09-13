@@ -95,3 +95,25 @@ PREPARATION** and retains the standing reference; the runtime log records
 `prepare-jump` instead of resetting to standing calibration. Six production Chrome
 checks and 46 shared/recognizer tests pass for this update. Synthetic coverage does
 not replace a trial of the player's actual movement.
+
+
+## Short tracking interruptions and noise
+
+The setup POC now opts into debounced recognition. A brief missing-joint or
+geometry rejection keeps the existing step visible for 350 ms, retains the
+baseline and measured maximum, and pauses countdown time. Sustained loss shows
+tracking guidance; after 750 ms of rejected observations calibration resets.
+Rejected frames never contribute height, landing evidence or confirmation.
+Three-sample median filtering rejects isolated height spikes, while a 180 ms
+instruction debounce prevents jump/confirm prompts from rapidly alternating.
+
+`tracking-signal` records transitions, rejection reason, rejected duration and
+input sequence. `tracking-hold-started` / `tracking-hold-ended` show when the
+screen held its previous instruction and for how long. Logs remain local, bounded
+and free of images or body coordinates.
+
+Regression coverage includes mixed low-confidence/geometry/missing frames during
+crouch-to-takeoff, a single coherent height spike, and a short countdown interruption
+that resumes without restarting. Shared tests additionally check long loss,
+silent gaps, drift and observed landing requirements. The new thresholds still
+need a trial with the user's camera and natural movement.
