@@ -40,6 +40,11 @@ Skeleton debug view stays live; raise both hands to pause or resume. Detection-o
 mode remains at `/?mode=detect`. Local runtime logs explain blocked steps and round
 results. See [camera controls and gameplay](apps/camera-start/README.md).
 
+Recognition Lab is an independent AR skeleton capture and replay app at
+<http://127.0.0.1:5276>: `npm run dev --workspace recognition-lab`. Capture movement
+locally, bookmark recognition failures, and turn annotated windows into replayable
+regression cases. See [capture, privacy and test workflow](apps/recognition-lab/README.md).
+
 ## Arcade landing page and local clips
 
 `npm run build` now builds the complete arcade, including Motion Quest and Dino Run.

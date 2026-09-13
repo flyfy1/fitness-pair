@@ -37,9 +37,9 @@ standing calibration is required. Moving during this countdown does not reset it
 
 Your helicopter's cockpit is anchored to your head in the mirrored video. Moving
 lower makes it descend; pushing up makes it rise; sideways movement follows too.
-Staying still leaves the helicopter in place instead of adding lift. The entire
-video remains visible, including its letterboxing; viewport rotation/resizing and
-fullscreen use the same projection for the overlay and collisions.
+Staying still leaves the helicopter in place instead of adding lift. The video
+fills the screen with a centered, aspect-preserving crop; viewport rotation/resizing
+and fullscreen use the same projection for the overlay and collisions.
 
 The timer shows **flight time**, not detected exercise time. Gates are game obstacles,
 not repetition events. Head tracking can also respond to seated or standing motion;
@@ -50,6 +50,18 @@ crash/encouragement sequence. Gate collisions play that sequence and release the
 camera when it finishes. Before takeoff, **Stop camera** simply cancels setup.
 The separate **Try a demo** mode follows pointer/touch position or arrow keys and
 is labeled synthetic. Demo input cannot override a camera session.
+
+## Live difficulty
+
+Three sliders remain available during play and retain their settings on retry:
+
+- **Gate opening:** 30–70% of screen height, applied to existing and new gates.
+- **Speed:** 0.4–1.8×. Moving it sets the current speed and clears accumulated gain.
+- **Acceleration:** 0–1.5× per minute of flight, with total speed capped at 3×.
+  Changes affect future acceleration; setting zero holds the current speed.
+
+The HUD shows the current speed, including accumulated acceleration. Changing a
+slider does not restart the round or steer the synthetic demo.
 
 ## Pipeline and ownership
 
@@ -66,17 +78,21 @@ local model → PoseFrame + optional head → ActionFrame + headControl → Game
   are used. Raw model indices stay here.
 - `src/recognizer.js`: `HeadFlightController` accepts a visible head and either
   shoulder with confidence ≥ 0.6. It emits the experimental `head-flight` action,
-  preserving timestamps, session, sequence and provenance. A gap over 250 ms resets
+  preserving timestamps, session, sequence and provenance. A gap over 400 ms resets
   the takeoff timer. Missing head/shoulder input explains what is needed.
 - `headControl: {x, y, image: {width, height}} | null` is an experiment-only optional
   ActionFrame extension in unmirrored, normalized image coordinates. Calibration
   may position the helicopter but has zero progress and never earns flight time.
   Completion remains null: there are no fabricated push-up events or rep scores.
-- `src/projection.js`: one mirrored, aspect-preserving contain projection. The engine
+- `src/projection.js`: one mirrored, aspect-preserving cover projection. The engine
   derives viewport position and collision geometry from this projection; the renderer
   anchors the cockpit there. Recognition coordinates are never mirrored.
-- `src/engine.js`: rejects stale, foreign or invalid head input, advances flight time
-  only on fresh active control, and handles gates, collisions and crash completion.
+- `src/engine.js`: rejects stale, foreign or invalid head input, advances the world
+  throughout a flight, and handles gates, collisions and crash completion. Contact
+  must persist for 180 ms to trigger a crash; a single-frame overlap is tolerated.
+- `src/tracking-gate.js`: holds position on missing/stale tracking and requires
+  200 ms of consecutive good observations before resuming head control.
+- `src/difficulty.js`: shared gate geometry, speed and incremental acceleration.
 - `src/camera.js`: existing Dino camera lifecycle copied into this experiment, with
   bounded initialization and inference, cancellation and owned-resource cleanup.
 - `src/main.js`: UI, head crop, automatic start, pointer-only demo, pause and retry.
@@ -87,14 +103,21 @@ local model → PoseFrame + optional head → ActionFrame + headControl → Game
 
 The initial model download uses the baseline's pinned SHA-256. Model/runtime files
 are ignored and processed locally. The optional head crop stays in memory and is
-cleared on stop, failure or completion. No camera pixels or participant recordings
+cleared on manual stop, restart or round completion. During tracking loss it stays
+with the helicopter until the round ends. No camera pixels or participant recordings
 are saved, uploaded, or committed.
 
-Model initialization is bounded at 30 seconds, stalled inference at 1 second.
-Camera frames older than 250 ms cannot start/control a round. Missing head/shoulder
-tracking during a flight, window blur, hidden tab or camera failure pauses and releases
-resources; this is not interpreted as fatigue or workout failure. Starting again
-creates a fresh session. Late-arriving permission streams are stopped after cancellation.
+Model initialization is bounded at 30 seconds, stalled inference at 3 seconds.
+Camera frames older than 400 ms cannot start/control a round. During a flight,
+missing head/shoulder tracking or a head outside the visible crop holds the last
+helicopter position. Flight time, acceleration and obstacles keep moving; there is
+no tracking-loss reset or timeout. Stable tracking resumes control in the same
+round. Persistent loss can end in a normal obstacle collision. A terminal camera
+error releases owned resources while the world continues at the held position.
+
+Window blur, hidden tab and explicit pause still release resources and pause play.
+Starting again creates a fresh session. Late-arriving permission streams are
+stopped after cancellation. Tracking loss is not interpreted as workout failure.
 
 ## Full-window play
 
@@ -120,13 +143,16 @@ preview stays on 5184. Generated screenshots, runtime files and model weights ar
 
 2026-09-13 updated evidence:
 
-- Seven synthetic unit checks: close-up automatic takeoff, missing/low-confidence
+- Twelve synthetic unit checks: close-up automatic takeoff, missing/low-confidence
   input, stale and foreign frames, down/up/sideways following, no hold-based lift,
-  aspect/mirror projection, collision/finalization and head extraction without hips.
-- Browser checks: one synthetic shoulder and nose start the camera round; head
+  aspect/mirror projection, collision/finalization and head extraction without hips;
+  tracking debounce, continued world motion through loss, sustained-contact collision,
+  live difficulty and acceleration limits.
+- Nine browser checks: one synthetic shoulder and nose start the camera round; head
   positions map within one CSS pixel through descent/ascent, sideways movement,
   portrait/landscape and fullscreen; collision, encouragement, retry, pointer demo,
-  permission denial, late cancellation, tracking loss and resource cleanup.
+  permission denial, late cancellation, tracking loss/recovery without reset, sustained
+  loss followed by collision, live sliders and resource cleanup.
 - Separate real local inference on a public static image checks head output, automatic
   takeoff and no external runtime requests. It does not establish push-up accuracy.
 - The user's observed shoulder/head-only framing exposed the old full-body startup

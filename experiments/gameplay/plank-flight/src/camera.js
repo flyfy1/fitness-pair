@@ -2,7 +2,7 @@
 import { fromMediaPipe } from './pose-provider.js';
 
 const INITIALIZATION_TIMEOUT_MS = 30_000;
-const INFERENCE_TIMEOUT_MS = 1_000;
+const INFERENCE_TIMEOUT_MS = 3_000;
 const FRAME_INTERVAL_MS = 1000 / 30;
 
 /** A single local camera session; the host explicitly starts each new attempt. */
