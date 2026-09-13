@@ -125,3 +125,12 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
   .difficulty label { font-size: 11px; gap: 0; }
   .difficulty input { min-height: 28px; }
 }
+
+.countdown {
+  position: absolute; inset: 30% 0 auto; text-align: center; pointer-events: none;
+  font: 900 clamp(80px, 15vw, 180px)/1 system-ui, sans-serif; color: #ffe09b;
+  text-shadow: 0 6px 0 #103340, 0 0 45px #f6c77b80;
+  animation: countdown-pulse 1s ease-out infinite;
+}
+@keyframes countdown-pulse { from { transform: scale(1.12); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .countdown { animation: none; } }
