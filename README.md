@@ -25,6 +25,11 @@ countdown, Dino follows your relative rise and descent. Height is a percentage o
 your own calibration, not centimeters. Keyboard mode remains available separately.
 See [Dino setup and evidence](apps/dino-run/README.md).
 
+Gesture Lab is a separate hand-control POC. Start it with
+`npm run dev --workspace gesture-lab` at <http://127.0.0.1:5182>. Explore seven
+built-in hand poses and an experimental sideways wave: thumbs up confirms;
+waving side to side says No. See [the gesture catalog and trial instructions](apps/gesture-lab/README.md).
+
 ## Team map
 
 ```text
