@@ -3,12 +3,12 @@ import { Runner } from '../../../../apps/dino-run/src/engine.js';
 import { PoseCamera } from '../../../../apps/dino-run/src/camera.js';
 import { setupFullscreen } from '../../../../apps/dino-run/src/fullscreen.js';
 import { ShoulderMotionRecognizer } from './shoulder-motion.js';
-import { anchorFromPose, drawSkeleton, drawWorld } from './scene.js';
+import { sceneGeometry, drawSkeleton, drawWorld } from './scene.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner(); runner.setControlMode('motion');
 const recognizer = new ShoulderMotionRecognizer();
-let action = null, pose = null, groundPose = null, anchor = null, cameraState = 'off';
+let action = null, pose = null, cameraState = 'off';
 let awaiting = false, lastPoseAt = 0, lastFrame = 0, lastPaint = 0;
 let message = '', error = '', previousStatus = 'ready';
 let lastPassed = 0, clearedAt = -Infinity, bestLift = 0;
@@ -24,7 +24,7 @@ const camera = new PoseCamera({
     cameraState = status.state;
     if (status.state === 'requesting') {
       recognizer.reset(status); runner.bindMotionSession(status);
-      action = null; pose = null; groundPose = null; anchor = null; lastPoseAt = 0; bestLift = 0;
+      action = null; pose = null; lastPoseAt = 0; bestLift = 0;
     }
     paint();
   },
@@ -36,20 +36,17 @@ const camera = new PoseCamera({
     if (!next) return;
     const justReady = !action?.calibrated && next.calibrated;
     action = next; bestLift = action.bestHeightRatio;
-    if (!action.calibrated) { anchor = null; groundPose = null; }
-    if (justReady) groundPose = frame;
     if (!fresh || action.phase === 'missing' || !action.calibrated) {
       if (runner.status === 'running') pause('Tracking changed. Stand steady, then choose Resume run.');
     } else {
-      if (!anchor && groundPose) anchor = anchorFromPose(groundPose, action);
-      if (awaiting && anchor && (runner.status === 'ready' || justReady || action.heightRatio < .03)) {
+      if (awaiting && (runner.status === 'ready' || justReady || action.heightRatio < .03)) {
         runner.command(runner.status === 'paused' ? 'resume' : 'start'); awaiting = false;
       }
       runner.applyMotion(action);
     }
   },
   onStop() {
-    cameraState = 'off'; action = null; pose = null; groundPose = null; anchor = null;
+    cameraState = 'off'; action = null; pose = null;
     awaiting = false;
     if (runner.status === 'running') pause('Camera stopped. Enable the camera again to continue.');
     paint();
@@ -78,11 +75,10 @@ function paint() {
     if (runner.status === 'over') {
       camera.stop('round-complete');
       $('announcement').textContent = `Round complete. ${runner.score} points, ${runner.passed} obstacles cleared.`;
-    } else if (running) $('announcement').textContent = 'Run started. Jump to lift your marker over the cacti.';
+    } else if (running) $('announcement').textContent = 'Run started. Jump to lift your dinosaur over the cacti.';
   }
   if (runner.passed > lastPassed) clearedAt = performance.now();
   lastPassed = runner.passed;
-  $('arena').classList.toggle('floor-lane', !!anchor && anchor.y > .65);
   $('arena').classList.toggle('show-debug', $('debug').checked);
   $('score').textContent = String(runner.score).padStart(5, '0');
   $('cleared').textContent = runner.passed;
@@ -143,7 +139,7 @@ function paint() {
 $('primary').addEventListener('click', start);
 $('stop').addEventListener('click', () => { pause('Camera is off. Enable the camera again when ready.', true); paint(); });
 $('recalibrate').addEventListener('click', () => {
-  pause(''); recognizer.recalibrate(); bestLift = 0; action = null; groundPose = null; anchor = null; awaiting = true; paint();
+  pause(''); recognizer.recalibrate(); bestLift = 0; action = null; awaiting = true; paint();
 });
 $('debug').addEventListener('change', () => { $('skeleton').hidden = !$('debug').checked; drawSkeleton($('skeleton'), pose); });
 window.addEventListener('blur', () => { if (camera.active) pause('Window focus changed. Enable the camera and stand in view to continue.', true); });
@@ -157,8 +153,13 @@ window.dinoAR = Object.freeze({ getState: () => ({ ...runner.snapshot(),
   camera: { state: cameraState, stage: action?.stage ?? 'standing', calibrated: action?.calibrated ?? false,
     bestHeightRatio: bestLift, trackingMode: action?.trackingMode ?? null, heightRatio: action?.heightRatio ?? 0, cue: action?.cue ?? null,
     quality: action?.quality ?? null, frameAgeMs: lastPoseAt ? Math.round(performance.now() - lastPoseAt) : null },
-  debug: $('debug').checked, anchored: !!anchor,
-  anchorMode: anchor?.mode ?? null,
+  debug: $('debug').checked,
+  playfield: (() => {
+    const {width,height} = $('world').getBoundingClientRect();
+    const g = sceneGeometry(width,height);
+    return { width, height, groundY: g.origin.y, player: g.player(runner.y),
+      obstacles: runner.obstacles.map(o => g.obstacle(o)) };
+  })(),
   nextObstacleDistance: runner.obstacles[0] ? runner.obstacles[0].x - 116 : null,
 }) });
 
@@ -168,7 +169,7 @@ function frame(now) {
     if (runner.status === 'running' && !fresh) pause('Tracking is delayed. Stand steady, then resume.');
   }
   if (runner.status === 'running') runner.step(lastFrame ? (now - lastFrame) / 1000 : 0);
-  drawWorld($('world'), runner, anchor);
+  drawWorld($('world'), runner, $('debug').checked);
   drawSkeleton($('skeleton'), fresh ? pose : null);
   if (now - lastPaint > 50) { paint(); lastPaint = now; }
   lastFrame = now; requestAnimationFrame(frame);

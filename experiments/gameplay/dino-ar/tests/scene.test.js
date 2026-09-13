@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { videoProjection, sceneGeometry, anchorFromPose } from '../src/scene.js';
+import { videoProjection, sceneGeometry } from '../src/scene.js';
 import { intersects } from '../../../../apps/dino-run/src/engine.js';
 
 test('mirrored cover projection matches cropped landscape and portrait video without changing input', () => {
@@ -13,9 +13,13 @@ test('mirrored cover projection matches cropped landscape and portrait video wit
 
 test('visible collision boxes and engine collisions agree across viewports and jump heights', () => {
   for (const [width, height] of [[1440,960],[390,844],[844,390]]) {
-    const anchor = { image: { width: 640, height: 480 }, x: .5, y: .88, peakRise: .14 };
-    const g = sceneGeometry(anchor, width, height);
-    assert.ok(Math.abs(g.player(0).y - g.player(165).y - .14 * videoProjection(anchor.image,width,height).height) < 1e-8);
+    const g = sceneGeometry(width, height);
+    assert.equal(g.sx,g.sy);
+    assert.ok(g.player(165).y >= 99);
+    assert.ok(g.player(0).x > 0);
+    assert.ok(g.player(0).y + g.player(0).h < height);
+    if (height > 600) assert.ok(g.player(0).h >= 75, 'Dinosaur should be readable at a distance');
+    assert.ok(g.obstacle({x:g.worldWidth+30,w:18,h:58}).x > width);
     for (const rise of [0,20,80,165]) for (const x of [60,90,105,120,200]) {
       const o = { x, w:18, h:58 };
       assert.equal(intersects(g.player(rise), g.obstacle(o)),
@@ -24,20 +28,12 @@ test('visible collision boxes and engine collisions agree across viewports and j
   }
 });
 
-test('anchor uses feet or torso explicitly and rejects unknown confidence', () => {
-  const frame = { image: {width:640,height:480}, joints: {
-    leftAnkle: {x:.4,y:.88,confidence:.9}, rightAnkle:{x:.6,y:.88,confidence:.9},
-    leftHip:{x:.4,y:.48,confidence:.9}, rightHip:{x:.6,y:.48,confidence:.9},
-  } };
-  assert.equal(anchorFromPose(frame,{trackingMode:'full-body',peakRise:.14}).y,.88);
-  assert.equal(anchorFromPose(frame,{trackingMode:'upper-body',peakRise:.14}).y,.88);
-  frame.joints.leftAnkle.confidence = null;
-  assert.equal(anchorFromPose(frame,{trackingMode:'upper-body',peakRise:.14}).y,.48);
-  frame.joints.leftHip.confidence = null;
-  assert.equal(anchorFromPose(frame,{trackingMode:'full-body',peakRise:.14}),null);
-  frame.joints.leftShoulder={x:.4,y:.25,confidence:.55}; frame.joints.rightShoulder={x:.6,y:.25,confidence:.55};
-  const chest=anchorFromPose(frame,{trackingMode:'shoulders',peakRise:.14});
-  assert.equal(chest.mode,'shoulders'); assert.equal(chest.y,.33);
-  frame.joints.leftShoulder.y=.94; frame.joints.rightShoulder.y=.94;
-  assert.equal(anchorFromPose(frame,{trackingMode:'shoulders',peakRise:.14}).y,.95);
+test('camera-independent playfield scales with the viewport and uses the full horizontal lane', () => {
+  const desktop=sceneGeometry(1440,960), mobile=sceneGeometry(390,844);
+  assert.ok(desktop.player(0).h>100);
+  assert.ok(mobile.player(0).h>75);
+  assert.equal(desktop.origin.y,960*.8);
+  assert.equal(mobile.origin.y,844*.73);
+  assert.ok(desktop.origin.x<1440*.3);
+  assert.ok(mobile.origin.x<390*.3);
 });

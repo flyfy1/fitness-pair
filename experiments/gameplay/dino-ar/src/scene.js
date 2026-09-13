@@ -7,34 +7,16 @@ export function videoProjection(image, width, height) {
   return { height: h, point: ({ x, y }) => ({ x: (width - w) / 2 + (1 - x) * w, y: (height - h) / 2 + y * h }) };
 }
 
-export function anchorFromPose(frame, action) {
-  // Visual anchoring is independent of detection: unreliable feet must never
-  // block shoulder controls. Fall back from feet to waist to upper chest.
-  const feetVisible = ['leftAnkle', 'rightAnkle'].every(name => {
-    const p = frame.joints[name];
-    return p && p.confidence !== null && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y > .015 && p.y < .985;
-  });
-  const hipsVisible = ['leftHip', 'rightHip'].every(name => {
-    const p = frame.joints[name];
-    return p && p.confidence !== null && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y > .015 && p.y < .985;
-  });
-  const mode = feetVisible ? 'full-body' : hipsVisible ? 'upper-body' : 'shoulders';
-  const names = feetVisible ? ['leftAnkle', 'rightAnkle'] : hipsVisible ? ['leftHip', 'rightHip'] : ['leftShoulder', 'rightShoulder'];
-  const points = names.map(name => frame.joints[name]);
-  if (points.some(p => !p || p.confidence === null || p.confidence < (mode === 'shoulders' ? .5 : .6)) || !(action.peakRise > 0)) return null;
-  return { image: { ...frame.image }, x: (points[0].x + points[1].x) / 2,
-    // The chest offset is a game-placement choice, not an inferred body joint.
-    y: Math.min(.95, (points[0].y + points[1].y) / 2 + (mode === 'shoulders' ? .08 : 0)), peakRise: action.peakRise, mode };
-}
-
-export function sceneGeometry(anchor, width, height) {
-  const projection = videoProjection(anchor.image, width, height);
-  const origin = projection.point(anchor);
-  const sx = Math.max(.65, Math.min(1.4, width / 900));
-  const sy = anchor.peakRise * projection.height / MOTION_MAX_HEIGHT;
-  return { origin, sx, sy, worldWidth: 100 + (width - origin.x) / sx,
-    player: rise => ({ x: origin.x - 16 * sx, y: origin.y - (rise + 47) * sy, w: 32 * sx, h: 44 * sy }),
-    obstacle: o => ({ x: origin.x + (o.x + 4 - 100) * sx, y: origin.y + (-o.h + 4) * sy, w: (o.w - 8) * sx, h: (o.h - 4) * sy }) };
+/** One uniform transform keeps visible hitboxes identical to the game rules.
+ * Size depends on the viewport, never on a camera crop or shoulder span. */
+export function sceneGeometry(width, height) {
+  const portrait = width < 700 && height >= 600;
+  const origin = { x: width * .22, y: height * (portrait ? .73 : .80) };
+  const top = height < 600 ? 100 : height * .28;
+  const scale = Math.min((origin.y - top) / (MOTION_MAX_HEIGHT + 47), width / 180);
+  return { origin, sx: scale, sy: scale, worldWidth: 100 + (width - origin.x) / scale,
+    player: rise => ({ x: origin.x - 16 * scale, y: origin.y - (rise + 47) * scale, w: 32 * scale, h: 44 * scale }),
+    obstacle: o => ({ x: origin.x + (o.x + 4 - 100) * scale, y: origin.y + (-o.h + 4) * scale, w: (o.w - 8) * scale, h: (o.h - 4) * scale }) };
 }
 
 const bones = [
@@ -68,29 +50,55 @@ export function drawSkeleton(canvas, frame) {
   }
 }
 
-export function drawWorld(canvas, runner, anchor) {
+function drawDino(c, player, runner, debug) {
+  const scale = player.h / 44;
+  c.save(); c.translate(player.x, player.y); c.scale(scale, scale);
+  c.fillStyle = runner.status === 'over' ? '#ffb788' : '#d8ff81';
+  c.strokeStyle = '#173827'; c.lineWidth = 1.6; c.lineJoin = 'round';
+  // Tail and cactus arms are decorative; debug exposes the rectangular hitboxes.
+  c.beginPath(); c.moveTo(14,0); c.lineTo(32,0); c.lineTo(32,16);
+  c.lineTo(22,16); c.lineTo(22,20); c.lineTo(27,20); c.lineTo(27,24);
+  c.lineTo(19,24); c.lineTo(16,34); c.lineTo(4,34); c.lineTo(3,30);
+  c.lineTo(-10,21); c.lineTo(-10,10); c.lineTo(3,21); c.lineTo(9,21);
+  c.lineTo(9,15); c.lineTo(14,15); c.closePath(); c.fill(); c.stroke();
+  const stride = runner.status === 'running' && runner.y === 0 ? Math.floor(runner.elapsed * 9) % 2 : 0;
+  for (const [x, lift] of [[4,stride * 4],[13,(1-stride) * 4]]) {
+    c.fillRect(x,31,5,11-lift); c.fillRect(x,39-lift,9,5); c.strokeRect(x,39-lift,9,5);
+  }
+  c.fillStyle = '#173827'; c.fillRect(25,4,3,4); c.fillRect(25,12,7,2);
+  c.fillStyle = '#f6ffdf'; c.fillRect(16,3,5,2); c.fillRect(7,25,6,2);
+  c.restore();
+  if (debug) {
+    c.strokeStyle = '#fff'; c.lineWidth = 2; c.setLineDash([5,4]);
+    c.strokeRect(player.x,player.y,player.w,player.h); c.setLineDash([]);
+  }
+}
+
+export function drawWorld(canvas, runner, debug = false) {
   const { c, width, height } = context(canvas);
-  if (!anchor) return null;
-  const g = sceneGeometry(anchor, width, height);
+  const g = sceneGeometry(width, height);
   runner.width = g.worldWidth;
-  c.strokeStyle = '#d8ff8180'; c.lineWidth = 2;
-  c.setLineDash([6, 12]); c.beginPath(); c.moveTo(0, g.origin.y); c.lineTo(width, g.origin.y); c.stroke(); c.setLineDash([]);
+  const ground = c.createLinearGradient(0,g.origin.y,0,height);
+  ground.addColorStop(0,'#10241ed9'); ground.addColorStop(1,'#10241ef5');
+  c.fillStyle = ground; c.fillRect(0,g.origin.y,width,height-g.origin.y);
+  c.strokeStyle = '#d8ff81'; c.lineWidth = Math.max(3,g.sx * 2);
+  c.beginPath(); c.moveTo(0,g.origin.y); c.lineTo(width,g.origin.y); c.stroke();
+  c.fillStyle = '#96b46c';
+  const spacing = 60 * g.sx, offset = (runner.distance * 20 * g.sx) % spacing;
+  for (let x = -offset; x < width; x += spacing) c.fillRect(x,g.origin.y+10*g.sy,18*g.sx,2*g.sy);
   for (const o of runner.obstacles) {
     const box = g.obstacle(o);
-    c.fillStyle = '#ffb788'; c.shadowColor = '#ff7b3e'; c.shadowBlur = 16;
-    c.fillRect(box.x, box.y, box.w, box.h);
-    // Cactus arms are decorative; the solid central trunk is the collision area.
-    c.shadowBlur = 0; c.strokeStyle = '#ffd2a3'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(box.x, box.y + box.h * .6); c.lineTo(box.x - 7, box.y + box.h * .6); c.lineTo(box.x - 7, box.y + box.h * .25);
-    c.moveTo(box.x + box.w, box.y + box.h * .4); c.lineTo(box.x + box.w + 7, box.y + box.h * .4); c.lineTo(box.x + box.w + 7, box.y); c.stroke();
+    c.fillStyle = '#ffb788'; c.strokeStyle = '#573322'; c.lineWidth = Math.max(2,g.sx);
+    c.fillRect(box.x,box.y,box.w,box.h); c.strokeRect(box.x,box.y,box.w,box.h);
+    c.strokeStyle = '#ffb788'; c.lineWidth = 4 * g.sx; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(box.x,box.y+box.h*.65); c.lineTo(box.x-7*g.sx,box.y+box.h*.65); c.lineTo(box.x-7*g.sx,box.y+box.h*.25);
+    c.moveTo(box.x+box.w,box.y+box.h*.45); c.lineTo(box.x+box.w+7*g.sx,box.y+box.h*.45); c.lineTo(box.x+box.w+7*g.sx,box.y+box.h*.1); c.stroke();
+    c.fillStyle = '#ffe6b9'; c.fillRect(box.x+box.w*.25,box.y+3*g.sy,Math.max(2,g.sx),box.h*.65);
+    if (debug) { c.strokeStyle='#fff'; c.lineWidth=2; c.strokeRect(box.x,box.y,box.w,box.h); }
   }
   const player = g.player(runner.y);
-  c.fillStyle = runner.status === 'over' ? '#ffb78880' : '#d8ff8150';
-  c.strokeStyle = runner.status === 'over' ? '#ffb788' : '#d8ff81'; c.lineWidth = 2;
-  c.fillRect(player.x, player.y, player.w, player.h); c.strokeRect(player.x, player.y, player.w, player.h);
-  c.shadowColor = '#d8ff81'; c.shadowBlur = 16;
-  c.beginPath(); c.ellipse(g.origin.x, player.y + player.h, player.w * .8, 5, 0, 0, Math.PI * 2); c.stroke(); c.shadowBlur = 0;
-  c.font = 'bold 11px system-ui'; c.textAlign = 'center'; c.fillStyle = '#f6ffef';
-  c.fillText(anchor.mode === 'shoulders' ? 'YOU · UPPER BODY' : anchor.mode === 'upper-body' ? 'YOU · TORSO MARKER' : 'YOU', g.origin.x, player.y - 12);
+  c.fillStyle = '#d8ff8130'; c.beginPath();
+  c.ellipse(g.origin.x,g.origin.y-3*g.sy,player.w*.65,5*g.sy,0,0,Math.PI*2); c.fill();
+  drawDino(c,player,runner,debug);
   return g;
 }
