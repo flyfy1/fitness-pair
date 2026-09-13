@@ -107,3 +107,8 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
   .guidance .status { font-size: 16px; }
   .guidance .feedback { font-size: 15px; margin-top: 8px; }
 }
+
+#jump-results { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 20px; }
+#jump-count { color: #c2fc67; font-size: 32px; }
+#setup[data-stage="testing"] .guidance { padding-top: 12px; }
+@media (max-width: 700px), (max-height: 650px) { #jump-results { font-size: 16px; margin: 4px 0; } #jump-count { font-size: 24px; } }

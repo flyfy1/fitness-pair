@@ -15,4 +15,6 @@ Direction confirmed by the user on 2026-09-13. The finished composition uses a c
 
 Lead with “Games that get you moving” and explain the controls with concrete verbs: squat, stand, jump, tap. The audience is kids and adults taking an active break. Keep game selection direct. Recording and gallery copy names the current state and next action. Avoid fitness guarantees, vague slogans, and playful error metaphors.
 
-Naming and logo exploration is in `design/README.md`; the proposed Hopmodo identity is not yet applied to the live interface. The repository remains `fitness-pair`.
+Hopmodo is the public-facing platform identity, using the jumping figure developed in `design/`. Its static cobalt wordmark appears in navigation and footer, with the mark as favicon. The repository and Sites app identity remain unchanged.
+
+The replay flow is an Operate surface: play, review, then share or download. Recording starts with the game; show a clear on-device recording notice and live status. At completion, focus the replay heading. Burn the name, mark, game score, and actual public website into the file so the identity survives a download. Native file sharing and gallery publication are distinct actions.

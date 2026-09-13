@@ -116,3 +116,8 @@ do not rewrite the same announcement. Recognition thresholds and game rules stay
 unchanged. Browser checks exercise phase transitions, missing tracking, hits,
 victory and desktop/portrait text size. Actual distance readability needs a player
 trial with their screen and camera placement.
+
+
+## Arcade replay integration
+
+When embedded in Hopmodo, the arcade host automatically composites and stores a local replay after game start. The standalone game does not create recordings. The host shows a notice before play; enabled camera imagery stays device-local until the player chooses to share. A round identifier lets replays distinguish a restart from pause/resume without changing movement-event semantics.

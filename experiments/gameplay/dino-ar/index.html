@@ -2,29 +2,35 @@
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#10241e"><title>Dino AR — Step into the game</title></head>
 <body>
-  <main id="arena">
+  <main id="arena" tabindex="-1">
     <video id="camera" autoplay muted playsinline aria-label="Mirrored local camera"></video>
     <div class="shade"></div>
-    <canvas id="world" aria-label="Augmented runner: clear the cacti with your player marker"></canvas>
+    <canvas id="world" aria-label="Augmented runner: clear the cacti with your dinosaur"></canvas>
     <canvas id="skeleton" aria-hidden="true" hidden></canvas>
     <header>
       <div class="brand"><span class="brand-icon">↗</span><div>DINO <b>AR</b><small>STEP INTO THE GAME</small></div></div>
       <div class="scores"><div><small>SCORE</small><strong id="score">00000</strong></div><div><small>CLEARED</small><strong id="cleared">0</strong></div></div>
       <button id="fullscreen" class="icon" aria-label="Enter fullscreen">⛶</button>
     </header>
-    <aside id="settings">
-      <span class="eyebrow">GAMEPLAY 02 / AR POC</span>
-      <label><input id="debug" type="checkbox"> Debug · show body skeleton</label>
-      <span id="tracking">Camera off · local processing</span>
-      <output id="tracking-detail" hidden></output>
-    </aside>
+    <div id="input-controls">
+      <label for="control-mode">Controls</label>
+      <select id="control-mode"><option value="keyboard">Keyboard preview</option><option value="camera">Camera</option></select>
+      <span id="input-note">SIMULATED INPUT</span>
+      <label id="keyboard-options">Jump height <input id="jump-range" aria-label="Simulated jump height" type="range" min="25" max="100" step="5" value="100"><output id="jump-range-value">100%</output></label>
+    </div>
     <section id="instruction" class="status">
       <span class="eyebrow" id="phase">YOU ARE THE PLAYER</span>
       <h1 id="cue">Jump over the cacti.</h1>
       <p id="detail">Keep both shoulders visible. Your waist and feet can stay outside the frame.</p>
     </section>
     <footer>
-      <div class="actions"><button id="primary">Enable camera</button><button id="recalibrate" class="secondary" hidden>Reset position</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>
+    <aside id="settings">
+      <span class="eyebrow">GAMEPLAY 02 / AR POC</span>
+      <label><input id="debug" type="checkbox"> <span id="debug-label">Debug · show hitboxes</span></label>
+      <span id="tracking">Camera off · local processing</span>
+      <output id="tracking-detail" hidden></output>
+    </aside>
+      <div class="actions"><button id="primary">Play</button><button id="jump" hidden>Jump · Space</button><button id="recalibrate" class="secondary" hidden>Reset position</button><button id="stop" class="secondary" hidden>Turn camera off</button></div>
       <div class="meter"><span id="height-label">LIFT</span><div><i id="height-bar"></i></div><strong id="height">—</strong><strong id="best-height">BEST LIFT 0%</strong></div>
       <small class="privacy">Video stays on this device · No recording · Lift is relative movement · Not centimeters</small>
     </footer>

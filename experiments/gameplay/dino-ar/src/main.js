@@ -3,12 +3,13 @@ import { Runner } from '../../../../apps/dino-run/src/engine.js';
 import { PoseCamera } from '../../../../apps/dino-run/src/camera.js';
 import { setupFullscreen } from '../../../../apps/dino-run/src/fullscreen.js';
 import { ShoulderMotionRecognizer } from './shoulder-motion.js';
-import { anchorFromPose, drawSkeleton, drawWorld } from './scene.js';
+import { KeyboardInput } from './keyboard-input.js';
+import { sceneGeometry, drawSkeleton, drawWorld } from './scene.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner(); runner.setControlMode('motion');
-const recognizer = new ShoulderMotionRecognizer();
-let action = null, pose = null, groundPose = null, anchor = null, cameraState = 'off';
+const recognizer = new ShoulderMotionRecognizer(), keyboard = new KeyboardInput();
+let inputMode = 'keyboard', action = null, pose = null, cameraState = 'off';
 let awaiting = false, lastPoseAt = 0, lastFrame = 0, lastPaint = 0;
 let message = '', error = '', previousStatus = 'ready';
 let lastPassed = 0, clearedAt = -Infinity, bestLift = 0;
@@ -16,45 +17,50 @@ setupFullscreen($('arena'), $('fullscreen'), text => { $('announcement').textCon
 
 function pause(reason, release = false) {
   runner.command('pause'); awaiting = false; message = reason;
-  if (release) camera.stop('paused');
+  if (release && camera.active) camera.stop('paused');
+}
+
+// Both inputs feed this boundary. The game never interprets keys or landmarks.
+function consumeAction(next) {
+  if (!next) return;
+  const justReady = !action?.calibrated && next.calibrated;
+  action = next; bestLift = action.bestHeightRatio;
+  if (action.phase === 'missing' || !action.calibrated) {
+    if (runner.status === 'running') pause('Tracking changed. Stand steady, then choose Resume run.');
+  } else {
+    if (awaiting && (runner.status === 'ready' || justReady || action.heightRatio < .03)) {
+      runner.command(runner.status === 'paused' ? 'resume' : 'start'); awaiting = false;
+    }
+    runner.applyMotion(action);
+  }
 }
 const camera = new PoseCamera({
   video: $('camera'),
   onStatus(status) {
+    if (inputMode !== 'camera') return;
     cameraState = status.state;
     if (status.state === 'requesting') {
       recognizer.reset(status); runner.bindMotionSession(status);
-      action = null; pose = null; groundPose = null; anchor = null; lastPoseAt = 0; bestLift = 0;
+      action = null; pose = null; lastPoseAt = 0; bestLift = 0;
     }
     paint();
   },
   onPose(frame) {
+    if (inputMode !== 'camera') return;
     lastPoseAt = frame.tMs;
     const fresh = performance.now() - frame.tMs < 250;
     pose = fresh ? frame : null;
-    const next = recognizer.update(fresh ? frame : { ...frame, joints: {} });
-    if (!next) return;
-    const justReady = !action?.calibrated && next.calibrated;
-    action = next; bestLift = action.bestHeightRatio;
-    if (!action.calibrated) { anchor = null; groundPose = null; }
-    if (justReady) groundPose = frame;
-    if (!fresh || action.phase === 'missing' || !action.calibrated) {
-      if (runner.status === 'running') pause('Tracking changed. Stand steady, then choose Resume run.');
-    } else {
-      if (!anchor && groundPose) anchor = anchorFromPose(groundPose, action);
-      if (awaiting && anchor && (runner.status === 'ready' || justReady || action.heightRatio < .03)) {
-        runner.command(runner.status === 'paused' ? 'resume' : 'start'); awaiting = false;
-      }
-      runner.applyMotion(action);
-    }
+    consumeAction(recognizer.update(fresh ? frame : { ...frame, joints: {} }));
   },
   onStop() {
-    cameraState = 'off'; action = null; pose = null; groundPose = null; anchor = null;
-    awaiting = false;
+    cameraState = 'off';
+    if (inputMode !== 'camera') return;
+    action = null; pose = null; awaiting = false;
     if (runner.status === 'running') pause('Camera stopped. Enable the camera again to continue.');
     paint();
   },
   onError(cause) {
+    if (inputMode !== 'camera') return;
     error = ({ NotAllowedError: 'Camera permission denied. Allow access and retry.',
       NotFoundError: 'No camera found. Connect a camera and retry.',
       NotReadableError: 'Camera unavailable. Close other apps using it and retry.' })[cause.name]
@@ -64,67 +70,82 @@ const camera = new PoseCamera({
 });
 
 function start() {
-  if (runner.status === 'running') { pause('Paused. Enable the camera and stand in view to continue.', true); paint(); return; }
-  if (runner.status === 'over') { runner.setControlMode('motion'); previousStatus = 'ready'; clearedAt = -Infinity; lastPassed = 0; }
+  if (runner.status === 'running') {
+    pause(inputMode === 'keyboard' ? 'Press Space or Resume run to continue.' : 'Enable the camera and stand in view to continue.', true);
+    paint(); return;
+  }
+  if (runner.status === 'over') {
+    runner.setControlMode('motion'); previousStatus = 'ready'; clearedAt = -Infinity; lastPassed = 0;
+  }
   error = ''; message = ''; awaiting = true;
-  if (!camera.active) void camera.start();
+  if (inputMode === 'keyboard') {
+    if (runner.status === 'ready') {
+      keyboard.reset(`keyboard-${crypto.randomUUID()}`); runner.bindMotionSession(keyboard.session);
+      action = null; bestLift = 0;
+      consumeAction(keyboard.update(performance.now()));
+    } else { runner.command('resume'); awaiting = false; }
+    $('arena').focus({ preventScroll: true });
+  } else if (!camera.active) void camera.start();
   paint();
+}
+function jump() {
+  if (inputMode !== 'keyboard') return;
+  if (runner.status !== 'running') start();
+  if (runner.status === 'running') keyboard.jump(Number($('jump-range').value) / 100);
+  $('arena').focus({ preventScroll: true });
 }
 
 function paint() {
-  const running = runner.status === 'running';
+  const running = runner.status === 'running', simulated = inputMode === 'keyboard';
   if (runner.status !== previousStatus) {
     previousStatus = runner.status;
     if (runner.status === 'over') {
-      camera.stop('round-complete');
+      if (camera.active) camera.stop('round-complete');
       $('announcement').textContent = `Round complete. ${runner.score} points, ${runner.passed} obstacles cleared.`;
-    } else if (running) $('announcement').textContent = 'Run started. Jump to lift your marker over the cacti.';
+    } else if (running) $('announcement').textContent = simulated
+      ? 'Keyboard preview started. Space or Arrow Up to jump. Input is simulated.'
+      : 'Run started. Jump to lift your dinosaur over the cacti.';
   }
   if (runner.passed > lastPassed) clearedAt = performance.now();
   lastPassed = runner.passed;
-  $('arena').classList.toggle('floor-lane', !!anchor && anchor.y > .65);
-  $('arena').classList.toggle('show-debug', $('debug').checked);
-  $('score').textContent = String(runner.score).padStart(5, '0');
-  $('cleared').textContent = runner.passed;
+  $('score').textContent = String(runner.score).padStart(5, '0'); $('cleared').textContent = runner.passed;
   $('stop').hidden = !camera.active; $('recalibrate').hidden = !camera.running;
-  $('tracking').textContent = cameraState === 'ready'
-    ? 'Local · shoulder movement mode'
-    : `Camera ${cameraState} · local processing`;
+  $('jump').hidden = !simulated || !running; $('keyboard-options').hidden = !simulated;
+  $('input-note').textContent = simulated ? 'SIMULATED INPUT' : 'LOCAL CAMERA INPUT';
+  $('debug-label').textContent = simulated ? 'Debug · show hitboxes' : 'Debug · show body skeleton';
+  $('tracking').textContent = simulated ? 'Keyboard preview · simulated movement · camera off'
+    : cameraState === 'ready' ? 'Local · shoulder movement mode' : `Camera ${cameraState} · local processing`;
   $('tracking-detail').hidden = !$('debug').checked;
-  $('tracking-detail').textContent = camera.running
-    ? `Stage: ${action?.stage ?? 'standing'} · ${action?.visibleShoulders ?? 0}/2 shoulders · ${action?.quality ?? 'waiting-for-pose'} · Input age: ${lastPoseAt ? Math.round(performance.now() - lastPoseAt) + ' ms' : 'waiting'}`
-    : 'Camera off';
+  $('tracking-detail').textContent = simulated
+    ? `Source: synthetic · ${action?.phase ?? 'ready'} · ${runner.jumps} completed jumps`
+    : camera.running ? `Stage: ${action?.stage ?? 'standing'} · ${action?.visibleShoulders ?? 0}/2 shoulders · ${action?.quality ?? 'waiting-for-pose'} · Input age: ${lastPoseAt ? Math.round(performance.now() - lastPoseAt) + ' ms' : 'waiting'}` : 'Camera off';
   let phase = 'YOU ARE THE PLAYER', cue = 'Jump over the cacti.';
-  let detail = message || 'Keep both shoulders visible. Your waist and feet can stay outside the frame.';
-  let button = 'Enable camera', disabled = false;
+  let detail = message || (simulated ? 'Space or ↑ to jump. P to pause. No camera needed.' : 'Keep both shoulders visible. Your waist and feet can stay outside the frame.');
+  let button = simulated ? 'Play' : 'Enable camera', disabled = false;
   if (error) { phase = 'CAMERA NEEDS ATTENTION'; cue = 'Let’s get you connected.'; detail = error; button = 'Retry camera'; }
   else if (runner.status === 'over') {
     phase = 'ROUND COMPLETE'; cue = 'Catch your breath. Go again.';
-    detail = `${runner.score} points · ${runner.passed} cacti cleared. Camera is off.`; button = 'Play again';
+    detail = `${runner.score} points · ${runner.passed} cacti cleared.${simulated ? ' Space to play again.' : ' Camera is off.'}`; button = 'Play again';
   } else if (running) {
     const approaching = runner.obstacles.some(o => o.x > 70 && o.x - 116 < runner.speed * .8);
-    phase = `LIVE · ${runner.passed} CLEARED`;
+    phase = `${simulated ? 'KEYBOARD PREVIEW' : 'LIVE'} · ${runner.passed} CLEARED`;
     cue = approaching ? 'Jump!' : performance.now() - clearedAt < 1200 ? 'Cleared!' : 'Keep going!';
-    detail = '';
-    button = 'Pause';
+    detail = ''; button = 'Pause';
+  } else if (simulated && runner.status === 'paused') {
+    phase = 'PAUSED'; cue = 'Ready to step back in?'; button = 'Resume run';
   } else if (camera.active) {
     phase = 'CONNECTING TO PLAY'; disabled = true; button = 'Getting ready…';
     if (cameraState === 'requesting') { cue = 'Allow camera access.'; detail = 'Your video stays on this device.'; }
     else if (cameraState === 'loading') { cue = 'Loading local tracking…'; detail = 'Keep the camera fixed and leave space above your head.'; }
     else if (lastPoseAt && performance.now() - lastPoseAt >= 250) {
-      phase = 'WAITING FOR TRACKING'; cue = 'Tracking is catching up.';
-      detail = 'Waiting for a fresh camera result before continuing the run.';
-    }
-    else if (action?.phase === 'missing') {
+      phase = 'WAITING FOR TRACKING'; cue = 'Tracking is catching up.'; detail = 'Waiting for a fresh camera result before continuing the run.';
+    } else if (action?.phase === 'missing') {
       cue = action.cue === 'return-to-starting-height' ? 'Return to your starting height.' : 'Keep both shoulders in view.';
       detail = action.cue === 'face-the-camera' ? 'Face the camera so both shoulders can be seen.' : 'Your waist and feet do not need to be visible.';
-    }
-    else if (!action || action.stage === 'standing') {
+    } else if (!action || action.stage === 'standing') {
       phase = 'FINDING YOUR POSITION'; cue = 'Stand comfortably for a moment.';
-      detail = 'Keep both shoulders visible. The run starts automatically.';
-      button = 'Finding your position…';
-    }
-    else if (awaiting) {
+      detail = 'Keep both shoulders visible. The run starts automatically.'; button = 'Finding your position…';
+    } else if (awaiting) {
       cue = 'Return to your starting position.'; detail = 'The run resumes when tracking is steady.';
     } else {
       phase = 'PAUSED'; cue = 'Ready to step back in?'; detail = message || 'Stand in your starting position.';
@@ -135,41 +156,64 @@ function paint() {
   $('primary').textContent = button; $('primary').disabled = disabled;
   const fraction = action?.calibrated ? action.heightRatio : action?.calibrationProgress ?? 0;
   $('height-bar').style.width = `${fraction * 100}%`;
-  $('height').textContent = camera.active ? `${Math.round(fraction * 100)}%` : '—';
+  $('height').textContent = simulated || camera.active ? `${Math.round(fraction * 100)}%` : '—';
   $('best-height').textContent = `BEST LIFT ${Math.round(bestLift * 100)}%`;
-  $('height-label').textContent = action?.calibrated ? 'LIFT' : 'FINDING POSITION';
+  $('height-label').textContent = simulated || action?.calibrated ? 'LIFT' : 'FINDING POSITION';
+  $('jump-range-value').textContent = `${$('jump-range').value}%`;
 }
 
-$('primary').addEventListener('click', start);
+$('control-mode').addEventListener('change', () => {
+  inputMode = $('control-mode').value;
+  if (camera.active) camera.stop('input-changed');
+  runner.setControlMode('motion'); previousStatus = 'ready';
+  action = null; pose = null; cameraState = 'off'; awaiting = false; lastPoseAt = 0;
+  bestLift = 0; lastPassed = 0; clearedAt = -Infinity; message = ''; error = ''; paint();
+});
+$('primary').addEventListener('click', start); $('jump').addEventListener('click', jump);
+$('jump-range').addEventListener('input', paint);
 $('stop').addEventListener('click', () => { pause('Camera is off. Enable the camera again when ready.', true); paint(); });
 $('recalibrate').addEventListener('click', () => {
-  pause(''); recognizer.recalibrate(); bestLift = 0; action = null; groundPose = null; anchor = null; awaiting = true; paint();
+  pause(''); recognizer.recalibrate(); bestLift = 0; action = null; awaiting = true; paint();
 });
 $('debug').addEventListener('change', () => { $('skeleton').hidden = !$('debug').checked; drawSkeleton($('skeleton'), pose); });
-window.addEventListener('blur', () => { if (camera.active) pause('Window focus changed. Enable the camera and stand in view to continue.', true); });
-window.addEventListener('pagehide', () => camera.stop('pagehide'));
+window.addEventListener('blur', () => {
+  if (runner.status === 'running' || camera.active) pause('Window focus changed. Resume when ready.', true);
+});
+window.addEventListener('pagehide', () => { pause('Page closed.', true); });
 window.addEventListener('keydown', event => {
   if (event.target.closest('button,input,a,textarea,select') || event.repeat) return;
-  if (event.code === 'KeyP' || event.code === 'Escape') { event.preventDefault(); if (camera.active) pause('Paused. Enable the camera and stand in view to continue.', true); }
+  if (inputMode === 'keyboard' && ['Space','ArrowUp'].includes(event.code)) { event.preventDefault(); jump(); }
+  else if (event.code === 'KeyP' || event.code === 'Escape') {
+    event.preventDefault();
+    if (runner.status === 'running' || camera.active) pause('Paused. Resume when ready.', true);
+    else if (inputMode === 'keyboard' && runner.status === 'paused' && event.code === 'KeyP') start();
+  }
 });
-// Compact observability only: no raw camera frames or identifiable landmarks.
-window.dinoAR = Object.freeze({ getState: () => ({ ...runner.snapshot(),
-  camera: { state: cameraState, stage: action?.stage ?? 'standing', calibrated: action?.calibrated ?? false,
+// Compact observability: no raw camera frames or identifiable landmarks.
+window.dinoAR = Object.freeze({ getState: () => ({ ...runner.snapshot(), inputMode,
+  input: { source: action?.source ?? null, phase: action?.phase ?? null,
+    heightRatio: action?.heightRatio ?? 0, bestHeightRatio: bestLift },
+  camera: { state: cameraState, stage: inputMode === 'camera' ? action?.stage ?? 'standing' : 'off',
+    calibrated: inputMode === 'camera' && (action?.calibrated ?? false),
     bestHeightRatio: bestLift, trackingMode: action?.trackingMode ?? null, heightRatio: action?.heightRatio ?? 0, cue: action?.cue ?? null,
     quality: action?.quality ?? null, frameAgeMs: lastPoseAt ? Math.round(performance.now() - lastPoseAt) : null },
-  debug: $('debug').checked, anchored: !!anchor,
-  anchorMode: anchor?.mode ?? null,
+  debug: $('debug').checked,
+  playfield: (() => {
+    const {width,height} = $('world').getBoundingClientRect(), g = sceneGeometry(width,height);
+    return { width, height, groundY: g.origin.y, player: g.player(runner.y), obstacles: runner.obstacles.map(o => g.obstacle(o)) };
+  })(),
   nextObstacleDistance: runner.obstacles[0] ? runner.obstacles[0].x - 116 : null,
 }) });
 
 function frame(now) {
-  const fresh = lastPoseAt && now - lastPoseAt < 250;
-  if (camera.running) {
-    if (runner.status === 'running' && !fresh) pause('Tracking is delayed. Stand steady, then resume.');
+  const dt = lastFrame ? (now - lastFrame) / 1000 : 0, fresh = lastPoseAt && now - lastPoseAt < 250;
+  if (inputMode === 'camera' && camera.running && runner.status === 'running' && !fresh) pause('Tracking is delayed. Stand steady, then resume.');
+  if (runner.status === 'running') {
+    if (inputMode === 'keyboard') consumeAction(keyboard.update(now,dt));
+    runner.step(dt);
   }
-  if (runner.status === 'running') runner.step(lastFrame ? (now - lastFrame) / 1000 : 0);
-  drawWorld($('world'), runner, anchor);
-  drawSkeleton($('skeleton'), fresh ? pose : null);
+  drawWorld($('world'),runner,$('debug').checked);
+  drawSkeleton($('skeleton'),inputMode === 'camera' && fresh ? pose : null);
   if (now - lastPaint > 50) { paint(); lastPaint = now; }
   lastFrame = now; requestAnimationFrame(frame);
 }

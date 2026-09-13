@@ -1,3 +1,5 @@
+import {BRAND_NAME,SITE_URL} from './brand.js';
+import {CLIP_WIDTH,CLIP_HEIGHT,loadRecordingLogo,drawClipFrame,drawClipEnding} from './clip-compositor.js';
 import {saveClip,listClips,deleteClip,updateClip,MAX_BYTES} from './local-clips.js';
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const urls=new Set();function objectURL(blob){const u=URL.createObjectURL(blob);urls.add(u);return u;}function releaseURL(u){URL.revokeObjectURL(u);urls.delete(u);}
@@ -5,54 +7,155 @@ window.addEventListener('pagehide',()=>{urls.forEach(u=>URL.revokeObjectURL(u));
 async function api(path,options){const r=await fetch(path,options);const data=await r.json();if(!r.ok)throw new Error(data.error||'Please try again.');return data;}
 export function mountRecording(game,frame){
  const panel=document.querySelector('#record-panel');
- panel.innerHTML=`<div><strong>Optional recording</strong><p id="record-status" role="status">Recording is off. Record up to 60 seconds of the game and your camera if already enabled. No audio. Nothing uploads.</p></div><button id="record" class="button outline" disabled>Record game + camera</button><a href="/library">My clips →</a>`;
- const button=document.querySelector('#record'),status=document.querySelector('#record-status');
- let recorder=null,capture=null,raf=0,timer=0,startAt=0,bytes=0,chunks=[],hadCamera=false,exceeded=false,unloading=false;
+ panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. It stays on this device.</p><p class="record-note">Game + enabled camera · no audio · nothing shared automatically</p></div><a href="/library">My clips →</a>';
+ const status=panel.querySelector('#record-status');
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';
- if(!supported){status.textContent='Recording is unavailable in this browser. You can still play.';button.hidden=true;}
- frame.addEventListener('load',()=>{button.disabled=!supported;try{const note=frame.contentDocument.querySelector('.camera-note');if(note)note.textContent='On-device tracking · optional recording controlled above · relative jump height';}catch{status.textContent='The game could not be connected for recording.';button.disabled=true;}});
- function stop(reason='Clip finished. Saving on this device…'){if(!recorder||recorder.state==='inactive')return;clearTimeout(timer);cancelAnimationFrame(raf);status.textContent=reason;button.disabled=true;recorder.stop();capture?.getTracks().forEach(t=>t.stop());}
- async function start(){
-  try{
-   const doc=frame.contentDocument,gameCanvas=doc?.querySelector('#game'),camera=doc?.querySelector('#camera');if(!gameCanvas?.width)throw new Error('Wait for the game to load, then try again.');
-   if(game.id==='motion-quest'&&doc.querySelector('#rep-count')?.textContent==='5')throw new Error('Start a new round before recording.');
-   hadCamera=!!camera?.srcObject;const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));if(!mime)throw new Error('This browser cannot create a supported clip.');
-   const canvas=document.createElement('canvas');canvas.width=960;canvas.height=600;const c=canvas.getContext('2d');chunks=[];bytes=0;exceeded=false;startAt=performance.now();capture=canvas.captureStream(24);recorder=new MediaRecorder(capture,{mimeType:mime,videoBitsPerSecond:1800000});
-   recorder.ondataavailable=e=>{if(e.data.size){bytes+=e.data.size;if(bytes>MAX_BYTES){exceeded=true;stop('Recording reached the file limit.');}else chunks.push(e.data);}};
-   recorder.onerror=()=>{exceeded=true;stop('Recording failed. Please try a shorter clip.');};
-   recorder.onstop=async()=>{
-    clearTimeout(timer);cancelAnimationFrame(raf);capture?.getTracks().forEach(t=>t.stop());capture=null;button.disabled=false;button.textContent='Record game + camera';
-    if(exceeded){chunks=[];status.textContent='This clip could not be saved. Try a shorter recording.';return;}
-    const blob=new Blob(chunks,{type:mime.split(';')[0]});chunks=[];const clip={id:crypto.randomUUID(),title:`${game.title} · my move`,game:game.id,createdAt:Date.now(),duration:Math.min(60,(performance.now()-startAt)/1000),source:hadCamera?'replay':'synthetic',includesCamera:hadCamera,blob};
-    try{await saveClip(clip);status.textContent='Saved on this device. Preview your clip below or open My clips.';}catch(error){status.textContent=`${error.message||'Could not save on this device.'} Download your clip below before leaving.`;clip.unsaved=true;}
-    if(!unloading){const result=document.querySelector('#local-result');result.hidden=false;result.innerHTML='<h2>Your recording</h2><p>Watch your clip, download it, or delete it. Nothing has been uploaded.</p><div class="clip-grid"></div>';mountClipCard(result.querySelector('.clip-grid'),clip);}
-   };
-   function paint(){
-    try{const doc=frame.contentDocument,source=doc?.querySelector('#game'),video=doc?.querySelector('#camera');if(!source)throw new Error('Game closed');const cameraNow=!!video?.srcObject;if(cameraNow!==hadCamera){stop('Camera state changed. Saving this clip; start a new recording to continue.');return;}
-    c.fillStyle='#182346';c.fillRect(0,0,960,600);const ratio=Math.min(960/source.width,540/source.height);c.drawImage(source,(960-source.width*ratio)/2,(540-source.height*ratio)/2,source.width*ratio,source.height*ratio);
-    if(hadCamera&&video.readyState>=2){c.save();c.translate(940,350);c.scale(-1,1);c.drawImage(video,0,0,220,165);c.restore();}
-    c.fillStyle='#eeff41';c.fillRect(0,540,960,60);c.fillStyle='#182346';c.font='bold 21px Arial';c.fillText('fitness pair  /  '+game.title,25,578);c.font='15px Arial';c.fillText(hadCamera?'Player recording':'Synthetic gameplay preview',660,577);
-    const done=game.id==='motion-quest'?doc.querySelector('#rep-count')?.textContent==='5':frame.contentWindow.dinoGame?.getState()?.status==='over';
-    if(done){stop();return;}status.textContent=`Recording ${Math.floor((performance.now()-startAt)/1000)} / 60 seconds · ${hadCamera?'game + camera':'game only, synthetic preview'} · stays on this device`;raf=requestAnimationFrame(paint);
-    }catch{stop('Game closed. Saving your clip…');}
-   }
-   recorder.start(500);button.textContent='Stop & save clip';button.disabled=false;timer=setTimeout(()=>stop(),60000);paint();
-  }catch(error){capture?.getTracks().forEach(t=>t.stop());status.textContent=error.message;button.disabled=false;}
+ let logo=null,active=null,handledRound=null,watcher=0,unloading=false;
+ const sessions=new Set();
+ function setState(next,message){panel.dataset.state=next;if(message&&status.textContent!==message)status.textContent=message;}
+ function readGame(){
+  const doc=frame.contentDocument,canvas=doc?.querySelector('#game'),video=doc?.querySelector('#camera');
+  if(!canvas?.width)return null;
+  if(game.id==='motion-quest'){
+   const reps=Number(doc.querySelector('#rep-count')?.textContent||0),demo=doc.querySelector('#demo-action');
+   return {canvas,video,skeleton:doc.querySelector('#skeleton'),isAR:!!doc.querySelector('.camera-stage'),round:doc.documentElement.dataset.roundId||'initial',done:reps>=5,ready:!!(demo&&!demo.hidden||video?.srcObject&&doc.querySelector('#start')?.hidden),score:`${reps} / 5 squats`};
+  }
+  const snapshot=frame.contentWindow.dinoGame?.getState();
+  return {canvas,video,isAR:false,round:snapshot?.roundId,done:snapshot?.status==='over',ready:snapshot?.status==='running',score:`${snapshot?.score||0} points`};
  }
- button.onclick=()=>recorder?.state==='recording'?stop():start();
- document.addEventListener('visibilitychange',()=>{if(document.hidden)stop('Paused. Saving your clip…');});
- window.addEventListener('pagehide',()=>{unloading=true;stop();capture?.getTracks().forEach(t=>t.stop());});
+ function showResult(clip){
+  if(unloading)return;
+  const result=document.querySelector('#local-result');
+  if(result.hidden){result.hidden=false;result.innerHTML='<h2 tabindex="-1">Your replay is ready.</h2><p>Watch it, then send it to a friend or keep it for yourself. Nothing has been uploaded.</p><div class="clip-grid"></div>';}
+  // Keep every in-memory fallback until the player deletes it or leaves this page.
+  mountClipCard(result.querySelector('.clip-grid'),clip);
+  const now=readGame();
+  if(!document.hidden&&!active&&!(now?.ready&&!now.done)){
+   if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+   result.querySelector('h2').focus({preventScroll:true});result.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+  }
+ }
+ function start(snapshot){
+  const session={round:snapshot.round,phase:'recording',hadCamera:!!snapshot.video?.srcObject,startAt:performance.now(),raf:0,endTimer:0,bytes:0,chunks:[],capture:null,recorder:null,failed:false};
+  sessions.add(session);active=session;handledRound=snapshot.round;
+  function stopTracks(){cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
+  function saveNow(){
+   if(session.phase==='saving')return;
+   cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';
+   if(active===session)active=null;
+   if(!active)setState('saving','Saving your clip on this device…');
+   if(session.recorder?.state!=='inactive')session.recorder?.stop();
+   stopTracks();
+  }
+  function finish(score){
+   if(session.phase!=='recording')return;
+   session.phase='finishing';if(active===session)active=null;cancelAnimationFrame(session.raf);
+   if(!active)setState('finishing','Round complete. Saving your replay…');
+   drawClipEnding(session.context,game.title,score,logo,session.hadCamera);
+   function hold(){if(session.phase!=='finishing')return;session.context.fillRect(0,0,1,1);session.capture?.getVideoTracks()[0]?.requestFrame?.();session.raf=requestAnimationFrame(hold);}
+   session.raf=requestAnimationFrame(hold);session.endTimer=setTimeout(saveNow,3000);
+  }
+  session.saveNow=saveNow;session.finish=finish;
+  try{
+   const mime=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
+   if(!mime)throw new Error('This browser cannot record a supported video. You can still play.');
+   const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
+   session.recorder=new MediaRecorder(session.capture,{mimeType:mime,videoBitsPerSecond:2200000});
+   session.recorder.ondataavailable=e=>{
+    if(!e.data.size)return;
+    session.bytes+=e.data.size;
+    if(session.bytes>MAX_BYTES){session.failed=true;session.chunks=[];saveNow();return;}
+    session.chunks.push(e.data);
+    if(session.bytes>=MAX_BYTES-2*1024*1024&&session.phase==='recording'){
+     session.limited=true;finish('Recording file limit reached');
+     if(!active)setState('finishing','Recording reached the device file limit. Saving what you played so far…');
+    }
+   };
+   session.recorder.onerror=()=>{session.failed=true;saveNow();};
+   session.recorder.onstop=async()=>{
+    stopTracks();sessions.delete(session);
+    if(session.failed){session.chunks=[];if(!active)setState('idle','This replay could not be saved. Your next round will record automatically.');return;}
+    const blob=new Blob(session.chunks,{type:mime.split(';')[0]});session.chunks=[];
+    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,createdAt:Date.now(),duration:(performance.now()-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,brand:BRAND_NAME,website:SITE_URL,blob};
+    let message=session.limited?'File limit reached. The replay up to that point is saved below.':'Saved on this device. Your replay is ready below.';
+    try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
+    if(!active)setState(sessions.size?'finishing':'idle',message);
+    showResult(clip);
+   };
+   drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,logo});
+   session.recorder.start(500);setState('recording','Recording your game · stays on this device');
+   function paint(){
+    if(session.phase!=='recording')return;
+    try{
+     const now=readGame();
+     if(!now){finish('Game closed');return;}
+     if(now.round!==session.round){finish(snapshot.score);return;}
+     // Completion can turn off the game's camera in the same frame.
+     if(now.done){finish(now.score);return;}
+     if(!!now.video?.srcObject!==session.hadCamera){handledRound=null;finish(now.score);return;}
+     drawClipFrame(session.context,{...now,includesCamera:session.hadCamera,title:game.title,logo});snapshot=now;
+     setState('recording',`Recording ${Math.floor((performance.now()-session.startAt)/1000)} seconds · ${session.hadCamera?'game + camera':'synthetic game preview'} · stays on this device`);
+     session.raf=requestAnimationFrame(paint);
+    }catch{finish('Game closed');}
+   }
+   session.raf=requestAnimationFrame(paint);
+  }catch(error){stopTracks();sessions.delete(session);if(active===session)active=null;setState('idle',error.message);}
+ }
+ function watchForStart(){
+  if(unloading||document.hidden)return;
+  try{
+   const snapshot=readGame();
+   if(active&&snapshot&&snapshot.round!==active.round)active.finish('Round restarted');
+   if(!active&&logo&&snapshot?.ready&&!snapshot.done&&snapshot.round!==handledRound)start(snapshot);
+  }catch{/* Wait for the same-origin game to finish loading. */}
+ }
+ if(!supported)setState('unavailable','Recording is unavailable in this browser. You can still play.');
+ else loadRecordingLogo().then(img=>{logo=img;watcher=setInterval(watchForStart,100);watchForStart();}).catch(()=>setState('unavailable','The replay logo could not load. Reload to try again; you can still play.'));
+ document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){handledRound=null;for(const session of sessions)session.saveNow();}
+  else watchForStart();
+ });
+ window.addEventListener('pagehide',()=>{unloading=true;clearInterval(watcher);for(const session of sessions)session.saveNow();});
+ function connectGame(){
+  if(active)active.finish('Game reloaded');handledRound=null;
+  try{const note=frame.contentDocument?.querySelector('#privacy-note, .camera-note');if(note)note.textContent='Your game and camera view record automatically on this device. Nothing is uploaded unless you choose to share.';}catch{/* A failed frame still leaves arcade navigation available. */}
+ }
+ frame.addEventListener('load',connectGame);if(frame.contentDocument?.readyState==='complete')connectGame();
 }
 function mountClipCard(container,clip){
  const card=document.createElement('article');card.className='clip-card';const url=objectURL(clip.blob);
- card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p><div class="clip-actions"><a href="${url}" download="fitness-pair-${clip.game}.${clip.blob.type==='video/mp4'?'mp4':'webm'}">Download</a><button data-share>Share to gallery</button><button data-delete>Delete local clip</button></div><div data-publish></div>`;
+ card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p><div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${clip.blob.type==='video/mp4'?'mp4':'webm'}">Download</a><button data-link>Copy game link</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
  card.querySelector('[data-delete]').onclick=async()=>{try{if(!clip.unsaved)await deleteClip(clip.id);releaseURL(url);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
+ mountFriendSharing(card,clip);
  card.querySelector('[data-share]').onclick=()=>publishForm(card.querySelector('[data-publish]'),clip);
  container.append(card);
+}
+function mountFriendSharing(card,clip){
+ const status=card.querySelector('[data-share-status]'),button=card.querySelector('[data-friend]');
+ const gameURL=`${SITE_URL}/play/${encodeURIComponent(clip.game)}`;
+ const file=new File([clip.blob],`hopmodo-${clip.game}.${clip.blob.type==='video/mp4'?'mp4':'webm'}`,{type:clip.blob.type});
+ button.onclick=async()=>{
+  try{
+   if(!navigator.share||!navigator.canShare?.({files:[file]})){
+    status.textContent='This browser cannot share video files directly. Download your clip, then attach it in your messaging app. Copy game link invites friends to play.';
+    card.querySelector('[download]').focus();return;
+   }
+   button.disabled=true;
+   // Keep this call in the click event, before any await, to retain user activation.
+   await navigator.share({files:[file],title:clip.title,text:`I played ${BRAND_NAME}. Try this game: ${gameURL}`});
+   status.textContent='Share dialog completed. Your clip is still saved here.';
+  }catch(error){status.textContent=error.name==='AbortError'?'Sharing cancelled. Your clip is still here.':'Could not share this file. Download your clip and attach it in your messaging app.';}
+  finally{button.disabled=false;}
+ };
+ card.querySelector('[data-link]').onclick=async()=>{
+  try{await navigator.clipboard.writeText(gameURL);status.textContent='Game link copied. This invites friends to play; it does not include your private clip.';}
+  catch{status.textContent='Copy this game link. Your clip stays on this device.';const input=document.createElement('input');input.className='copy-fallback';input.readOnly=true;input.value=gameURL;input.setAttribute('aria-label','Game link');status.append(input);input.select();}
+ };
 }
 async function publishForm(container,clip){
  container.innerHTML='<p role="status">Checking gallery availability…</p>';
  try{const config=await api('/api/config');if(!config.sharingEnabled){container.innerHTML='<p class="notice">Gallery sharing isn’t available yet. Your clip stays on this device. You can download it now.</p>';return;}
+ if(clip.blob.size>20*1024*1024||clip.duration>60){container.innerHTML='<p class="notice">This replay is longer than the gallery’s current 60-second / 20 MB limit. Use Share with a friend or Download to keep the full replay.</p>';return;}
  if(clip.shared){container.innerHTML=`<p>Already shared. <a class="text-link" href="/clips/${clip.id}">Open your gallery page →</a></p>`;return;}
  container.innerHTML=`<form class="publish-form"><h3>Share this clip in the gallery?</h3><label>Clip title<input name="title" maxlength="90" required value="${escape(clip.title)}"></label><label>Early-access upload code<input name="code" type="password" autocomplete="off" required minlength="12"></label><label><input type="checkbox" name="consent" required>I agree to publish this clip in the gallery and have permission from everyone shown.</label><p>People who can access this site can view and copy shared clips. You can remove yours using this device’s management key. Clips expire after 7 days.</p><button class="button primary" type="submit">Publish this clip ↗</button><p data-status role="status"></p></form>`;
  const form=container.querySelector('form');form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[data-status]');button.disabled=true;status.textContent='Publishing your clip…';
@@ -64,7 +167,7 @@ async function publishForm(container,clip){
 }
 export async function renderLibrary(container){
  container.innerHTML='<div class="utility-head"><div><p class="kicker">Saved on this device</p><h1>MY CLIPS.</h1><p>Saved on this device. Nothing is shared automatically.</p></div><a class="button primary" href="/#arcade">Choose a game ↗</a></div><div class="clip-grid" role="status">Loading your clips…</div>';
- const grid=container.querySelector('.clip-grid');try{const clips=await listClips();grid.innerHTML='';if(!clips.length){grid.className='empty-state';grid.innerHTML='<span class="empty-icon" aria-hidden="true">↻</span><h2>NO CLIPS YET.</h2><p>Open a game and choose “Record game + camera” when you’re ready. Your recordings will appear here.</p><a class="text-link" href="/#arcade">Choose a game →</a>';}else clips.forEach(c=>mountClipCard(grid,c));}catch{grid.innerHTML='<p>Local storage is unavailable. Allow site storage in your browser and reload. You can still play games.</p>';}
+ const grid=container.querySelector('.clip-grid');try{const clips=await listClips();grid.innerHTML='';if(!clips.length){grid.className='empty-state';grid.innerHTML='<span class="empty-icon" aria-hidden="true">↻</span><h2>NO CLIPS YET.</h2><p>Start a game. Your replay saves here automatically when the round ends.</p><a class="text-link" href="/#arcade">Choose a game →</a>';}else clips.forEach(c=>mountClipCard(grid,c));}catch{grid.innerHTML='<p>Local storage is unavailable. Allow site storage in your browser and reload. You can still play games.</p>';}
 }
 export async function renderGallery(container){
  container.innerHTML='<div class="utility-head"><div><p class="kicker">Player recordings</p><h1>THE GALLERY.</h1><p class="lead">Watch shared game clips, then try a game yourself.</p></div><a class="button outline" href="/library">My local clips ↗</a></div><div id="gallery-body" role="status">Loading the gallery…</div>';
@@ -76,7 +179,7 @@ export async function renderGallery(container){
 export async function renderClip(container,id){
  container.innerHTML='<p role="status">Loading clip…</p>';
  try{const clip=await api('/api/clips/'+encodeURIComponent(id));container.innerHTML=`<article class="clip-view"><a href="/gallery" class="back">← The gallery</a><h1>${escape(clip.title)}</h1><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · Shared until ${new Date(clip.expiresAt).toLocaleDateString()}</p><video controls playsinline src="/api/media/${clip.id}" aria-label="${escape(clip.title)}"></video><div class="clip-actions"><button id="copy-link">Copy link</button><button id="native-share">Share</button><button id="remove-shared" hidden>Remove shared clip</button></div><p id="share-status" role="status"></p><a class="button primary" href="/play/${encodeURIComponent(clip.game)}">Try this game ↗</a></article>`;
- const url=location.origin+'/clips/'+clip.id,status=container.querySelector('#share-status');document.title=clip.title+' · Fitness Pair';
+ const url=location.origin+'/clips/'+clip.id,status=container.querySelector('#share-status');document.title=clip.title+' · '+BRAND_NAME;
  container.querySelector('#copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(url);status.textContent='Link copied.';}catch{status.textContent='Copy this link: '+url;}};
  const share=container.querySelector('#native-share');share.hidden=!navigator.share;share.onclick=async()=>{try{await navigator.share({title:clip.title,url});}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable. Use Copy link.';}};
  try{const local=(await listClips()).find(c=>c.id===clip.id&&c.manageToken);if(local){const remove=container.querySelector('#remove-shared');remove.hidden=false;remove.onclick=async()=>{remove.disabled=true;try{await api('/api/clips/'+clip.id,{method:'DELETE',headers:{Authorization:'Bearer '+local.manageToken}});local.shared=false;await updateClip(local);container.innerHTML='<h1>SHARED CLIP REMOVED.</h1><p>The shared clip has been removed. Your local copy is still in My clips.</p><a class="button primary" href="/library">My clips →</a>';}catch(error){status.textContent=error.message;remove.disabled=false;}};}}catch{/* Viewing a shared clip does not require local storage. */}

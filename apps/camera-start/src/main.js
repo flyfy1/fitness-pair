@@ -14,6 +14,8 @@ const gestures = new BodyGestures();
 const diagnostics = createDiagnostics();
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
 let trackingHoldAt = null, signalState = null, candidateKey = '', candidateSince = 0;
+let testing = false, jumpCount = 0, jumpPeak = 0, returning = false, detectedAt = null, lastJumpPeak = 0;
+const countedJumps = new Set();
 let complete = false, error = '', view = {}, lastViewKey = '', previousStage = null;
 const log = (event, detail = {}) => { diagnostics.append(event, detail); paintLog(); };
 log('app-opened');
@@ -47,6 +49,7 @@ const camera = new PoseCamera({
     const next = recognizer.update(frame);
     if (!next) return;
     action = next; hands = gestures.update(frame);
+    observeJump(input);
     const signal = stale ? 'stale-frame' : action.quality;
     if (signal !== signalState) {
       if (signal === 'tracking-grace' || signalState === 'tracking-grace'
@@ -67,6 +70,7 @@ const camera = new PoseCamera({
   },
   onStop({ reason }) {
     bodyFrame = null; drawBody($('body-overlay'), null);
+    testing = false;
     cameraState = 'off'; action = null; hands = null; countdownAt = null; lastPoseAt = 0;
     log('camera-stopped', { reason }); paint();
   },
@@ -80,7 +84,51 @@ const camera = new PoseCamera({
 
 function start() {
   complete = false; error = ''; countdownAt = null;
+  testing = false; jumpCount = 0; jumpPeak = 0; returning = false; detectedAt = null; lastJumpPeak = 0; countedJumps.clear();
   log('setup-start-requested'); void camera.start();
+}
+function observeJump(input) {
+  if (!testing) return;
+  if (!action.calibrated) {
+    testing = false; jumpPeak = 0; returning = false; detectedAt = null;
+    log('jump-test-paused', { reason: 'baseline-lost', count: jumpCount });
+    return;
+  }
+  if (action.phase === 'missing') return;
+  if (action.completion && !countedJumps.has(action.completion.id)) {
+    countedJumps.add(action.completion.id); jumpCount++;
+    detectedAt = performance.now(); lastJumpPeak = Math.round(jumpPeak * 100);
+    log('jump-detected', { id: action.completion.id, count: jumpCount,
+      peakPercent: lastJumpPeak, inputSeq: input.seq, inputTMs: input.tMs });
+    jumpPeak = 0; returning = false;
+  } else if (action.phase === 'active') {
+    if (jumpPeak === 0 && action.heightRatio > 0) log('jump-started', { inputSeq: input.seq });
+    jumpPeak = Math.max(jumpPeak, action.heightRatio);
+    if (!returning && jumpPeak - action.heightRatio > .04) {
+      returning = true; log('jump-returning', { inputSeq: input.seq });
+    }
+  } else if (jumpPeak > 0) {
+    log('jump-cancelled', { reason: 'no-confirmed-return', inputSeq: input.seq });
+    jumpPeak = 0; returning = false;
+  }
+}
+function finish() {
+  log('jump-test-finished', { count: jumpCount });
+  complete = true; camera.stop('test-complete'); paint();
+}
+function jumpPresentation(now) {
+  const base = { stage: 'testing', step: 'ready', button: 'Finish test',
+    feedback: 'Skeleton stays live. Half-body tracking uses torso rise and return.' };
+  if (action.phase === 'active') return { ...base, status: returning ? 'JUMP · RETURNING' : 'JUMP · RISING',
+    title: returning ? 'Coming back down.' : 'Moving up!',
+    detail: 'Return to your starting height to confirm this jump.', reason: returning ? 'jump-returning' : 'jump-rising' };
+  if (detectedAt !== null && now - detectedAt < 1800) return { ...base,
+    status: `JUMP ${jumpCount} · CONFIRMED`, title: 'Jump detected!',
+    detail: `Peak response ${lastJumpPeak}%. You can try another jump.`, reason: 'jump-detected' };
+  if (action.cue === 'prepare-jump') return { ...base, status: 'JUMP · PREPARATION',
+    title: 'Ready when you are.', detail: 'A small crouch is OK. Rise above your standing height.', reason: 'prepare-jump' };
+  return { ...base, status: `JUMP DETECTION · ${jumpCount} CONFIRMED`, title: 'Try a small jump.',
+    detail: 'Rise, then return to your starting height.', reason: 'awaiting-jump' };
 }
 function confirm(via) {
   if (!lastPoseAt || performance.now() - lastPoseAt >= 250 || !recognizer.confirmMaximum()) {
@@ -90,7 +138,7 @@ function confirm(via) {
   log('height-confirmed', { via, rangeSource: 'slider', torsoPercent: Number($('jump-range').value) }); paint(); return true;
 }
 function presentation(now) {
-  if (complete) return { stage: 'complete', status: 'SETUP COMPLETE', title: 'Ready to play!', detail: 'You finished every step.', feedback: 'POC complete · camera is now off', button: 'Try again', step: 'ready' };
+  if (complete) return { stage: 'complete', status: 'JUMP TEST COMPLETE', title: `${jumpCount} jump${jumpCount === 1 ? '' : 's'} detected.`, detail: 'Your results are in the local log.', feedback: 'POC complete · camera is now off', button: 'Try again', step: 'ready' };
   if (error) return { stage: 'error', status: 'CAMERA NEEDS ATTENTION', title: 'Let’s try again.', detail: error, feedback: 'Your progress log is available below.', button: 'Retry camera' };
   if (cameraState === 'off') return { stage: 'off', status: 'LET’S GET YOU READY', title: 'Stand back.\nWe’ll guide you.', detail: 'One step at a time. Follow the big words.', feedback: 'Camera stays on your device. No recording.', button: 'Enable camera' };
   if (cameraState === 'requesting') return { stage: 'loading', status: 'CAMERA PERMISSION', title: 'Allow your camera.', detail: 'Choose Allow in the browser prompt.', feedback: 'Then step back where you can see the screen.' };
@@ -101,7 +149,7 @@ function presentation(now) {
       trackingHoldAt = now;
       log('tracking-hold-started', { reason: now - lastPoseAt >= 250 ? 'stale-tracking' : action?.quality });
     }
-    if (now - trackingHoldAt < 350 && ['standing', 'maximum', 'confirm', 'ready', 'countdown'].includes(view.stage)) {
+    if (now - trackingHoldAt < 350 && ['standing', 'maximum', 'confirm', 'ready', 'countdown', 'testing'].includes(view.stage)) {
       return { ...view, button: undefined, paused: true, reason: 'tracking-grace',
         feedback: 'Brief tracking interruption. Your progress is saved.' };
     }
@@ -112,6 +160,7 @@ function presentation(now) {
   }
   if (!lastPoseAt || now - lastPoseAt >= 250) return { stage: 'missing', status: 'WAITING FOR LIVE TRACKING', title: 'Tracking paused.', detail: 'Stay in view. We’re waiting for a fresh frame.', feedback: 'Nothing will start until tracking returns.', reason: 'stale-tracking' };
   if (!action || action.phase === 'missing') return { stage: 'missing', status: 'WE NEED TO SEE YOU', title: action?.quality === 'position-changed' ? 'Return to your spot.' : 'Step into view.', detail: 'Show both shoulders and hips. Face the camera.', feedback: 'Your legs can stay outside the picture.', reason: action?.quality ?? 'missing-body' };
+  if (testing && action.calibrated) return jumpPresentation(now);
   if (action.stage === 'standing') return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand tall.\nHold still.', detail: 'Stay where you are for two seconds.', feedback: action.quality === 'unstable-stance' ? 'Keep your shoulders and hips steady.' : 'We can see you. Keep holding…', progress: (action.calibrationProgress ?? 0) * 2, step: 'standing', reason: action.quality };
   if (action.cue === 'prepare-jump') return { stage: action.calibrated ? 'ready' : 'maximum', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'Try a small movement, or stand up to confirm.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'ready' : 'maximum', reason: 'prepare-jump' };
   if (action.stage === 'maximum') {
@@ -148,6 +197,8 @@ function paint() {
     lastViewKey = key; log('screen-state', { stage: next.stage, instruction: next.title, reason: next.reason ?? null });
     $('announcement').textContent = `${next.status}. ${next.title}. ${next.detail}`;
   }
+  $('jump-count').textContent = String(jumpCount);
+  $('jump-results').hidden = !testing && jumpCount === 0 && !complete;
   $('jump-range').disabled = action?.calibrated || complete;
   const fresh = camera.running && bodyFrame && now - bodyFrame.tMs < 250 && action?.phase !== 'missing';
   const response = fresh ? Math.round((action?.previewHeightRatio ?? 0) * 100) : 0;
@@ -169,7 +220,7 @@ function paintLog() {
   const target = $('log-entries');
   if (target && !$('diagnostics').hidden) target.textContent = diagnostics.entries().slice(-40).reverse().map(e => JSON.stringify(e)).join('\n');
 }
-$('primary').addEventListener('click', () => { if (camera.running && action?.canConfirmMaximum) confirm('button'); else if (!camera.active) start(); });
+$('primary').addEventListener('click', () => { if (camera.running && testing) finish(); else if (camera.running && action?.canConfirmMaximum) confirm('button'); else if (!camera.active) start(); });
 $('show-body').addEventListener('change', () => {
   $('body-overlay').hidden = !$('show-body').checked;
   drawBody($('body-overlay'), null);
@@ -189,13 +240,14 @@ $('export-log').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([diagnostics.export()], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = 'camera-start-log.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-window.cameraSetup = Object.freeze({ getState: () => ({ stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false }), getLog: () => diagnostics.entries() });
+window.cameraSetup = Object.freeze({ getState: () => ({ stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false, testing, jumpCount }), getLog: () => diagnostics.entries() });
 function tick() {
   drawBody($('body-overlay'), camera.running && bodyFrame && performance.now() - bodyFrame.tMs < 250 ? bodyFrame : null);
   if (camera.running) {
     paint();
     if (trackingHoldAt === null && countdownAt !== null && performance.now() - countdownAt >= 3000) {
-      complete = true; log('setup-completed'); camera.stop('setup-complete'); paint();
+      countdownAt = null; testing = true; jumpPeak = 0; returning = false; detectedAt = null;
+      log('setup-completed'); log('jump-test-started', { count: jumpCount }); paint();
     }
   }
   requestAnimationFrame(tick);
