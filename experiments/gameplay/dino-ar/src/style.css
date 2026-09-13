@@ -35,3 +35,20 @@ input{accent-color:#d8ff81;width:17px;height:17px}#tracking{font-size:11px;color
   #instruction{top:60px}#instruction h1{font-size:44px;margin:6px 0}#instruction .eyebrow{font-size:10px}#instruction p{font-size:14px}
   footer{bottom:10px;left:24px;right:24px;grid-template-areas:"settings actions";gap:8px}footer .meter,footer .privacy,#tracking{display:none}.actions button{min-height:40px;padding:9px 12px}
 }
+
+#arena:focus{outline:none}
+#input-controls{position:absolute;z-index:4;top:110px;left:36px;display:grid;grid-template-columns:auto auto;gap:8px 10px;align-items:center;font-size:12px;max-width:290px}
+#control-mode{font:inherit;color:#f6ffef;background:#153127;border:1px solid #ffffff50;border-radius:8px;padding:8px}
+#input-note{grid-column:1/-1;color:#d8ff81;font-size:10px;letter-spacing:1px}
+#keyboard-options{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:11px}
+#jump-range{width:85px;height:18px}#jump-range-value{min-width:34px;font-variant-numeric:tabular-nums}
+@media(max-width:700px){
+  #input-controls{top:82px;left:18px;right:18px;max-width:none;grid-template-columns:auto 1fr auto;gap:4px 7px;font-size:10px}
+  #control-mode{padding:5px;font-size:11px}#input-note{grid-column:auto;font-size:8px}
+  #keyboard-options{grid-column:1/-1;justify-content:center;font-size:10px;height:24px}
+  #input-controls:has(#keyboard-options:not([hidden]))~#instruction{top:17.5%}
+}
+@media(max-height:600px) and (min-width:701px){
+  #input-controls{top:68px;left:24px;font-size:10px;gap:3px 6px;max-width:230px}#control-mode{padding:5px}
+  #input-note{font-size:8px}#keyboard-options{font-size:9px}#jump-range{width:70px}
+}

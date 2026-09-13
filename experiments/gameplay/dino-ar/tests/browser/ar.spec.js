@@ -64,7 +64,7 @@ async function expectStopped(page) {
 
 test('AR camera loop: large dinosaur, optional skeleton, proportional height, clear, collision and retry', async({page})=>{
   await syntheticCamera(page); const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/'); await page.screenshot({path:'test-results/ar-ready.png'});
+  await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera'); await page.screenshot({path:'test-results/ar-ready.png'});
   await expect(page.locator('#skeleton')).toBeHidden();
   await enterPlay(page); expect((await state(page)).playfield.player.h).toBeGreaterThan(100);
   expect((await state(page)).playfield).toMatchObject({width:1440,height:960});
@@ -95,7 +95,7 @@ test('AR camera loop: large dinosaur, optional skeleton, proportional height, cl
 });
 
 test('mobile upper-body view, fullscreen, debug toggling and manual pause clean up',async({page})=>{
-  await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/');
+  await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera');
   await page.evaluate(()=>{window.testUpper=true;}); await enterPlay(page);
   expect((await state(page)).camera.trackingMode).toBe('shoulders');
   await page.getByLabel('Debug · show body skeleton').check();
@@ -112,7 +112,7 @@ test('mobile upper-body view, fullscreen, debug toggling and manual pause clean 
 });
 
 test('stale/missing tracking freezes the round and requires explicit resume; recalibration resets controls',async({page})=>{
-  await syntheticCamera(page); await page.goto('/'); await enterPlay(page);
+  await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera'); await enterPlay(page);
   await page.evaluate(()=>{window.testDelay=400;window.testRise=.14;});
   await expect.poll(async()=>(await state(page)).status).toBe('paused');
   const score=(await state(page)).score; await page.waitForTimeout(500); expect((await state(page)).score).toBe(score);
@@ -131,7 +131,7 @@ test('stale/missing tracking freezes the round and requires explicit resume; rec
 });
 
 test('portrait full-body runway stays clear of HUD controls and missing tracking clears debug bones',async({page})=>{
-  await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/');
+  await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera');
   await enterPlay(page); await page.getByLabel('Debug · show body skeleton').check();
   const controls=await page.locator('footer').boundingBox();
   expect(controls.y).toBeGreaterThan((await state(page)).playfield.groundY);
@@ -143,7 +143,7 @@ test('portrait full-body runway stays clear of HUD controls and missing tracking
 });
 
 test('stable shoulders enter play directly despite bent knees, stuck feet and lateral joint noise',async({page})=>{
-  await syntheticCamera(page); await page.goto('/');
+  await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera');
   await page.evaluate(()=>{window.testUnstable=true;window.testFeetStill=true;window.testWidthNoise=true;});
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
   await expect.poll(async()=>(await state(page)).camera.state).toBe('ready');
@@ -160,7 +160,7 @@ test('stable shoulders enter play directly despite bent knees, stuck feet and la
 });
 
 test('shoulders alone start the real game with missing or unreliable waist landmarks and a large dinosaur',async({page})=>{
-  await syntheticCamera(page); await page.goto('/');
+  await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera');
   for (const missing of [true,false]) {
     await page.evaluate(missing=>{window.testShouldersOnly=missing;window.testWeakHips=!missing;window.testRise=0;},missing);
     await enterPlay(page);
@@ -177,7 +177,7 @@ test('shoulders alone start the real game with missing or unreliable waist landm
 
 test('permission denial and cancellation of a late camera grant recover safely',async({page})=>{
   await page.addInitScript(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError');};});
-  await page.goto('/'); await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera'); await page.getByRole('button',{name:'Enable camera',exact:true}).click();
   await expect(page.locator('#detail')).toContainText('Camera permission denied');
   await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{window.grant=()=>{const c=document.createElement('canvas');window.testStream=c.captureStream(0);resolve(window.testStream);};});});
   await page.getByRole('button',{name:'Retry camera',exact:true}).click();
@@ -199,7 +199,7 @@ test('real local model on a public fixture produces pose output without external
   const external=[],errors=[];
   page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:5197')&&!r.url().startsWith('data:'))external.push(r.url());});
   page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/'); await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera'); await page.getByRole('button',{name:'Enable camera',exact:true}).click();
   await expect.poll(async()=>(await state(page)).camera.cue,{timeout:35000}).not.toBe(null);
   await page.getByRole('button',{name:'Turn camera off'}).click();
   await expectStopped(page); await expect.poll(()=>page.workers().length).toBe(0);
@@ -207,7 +207,7 @@ test('real local model on a public fixture produces pose output without external
 });
 
 test('full-window playfield remains readable across portrait, landscape and resize',async({page})=>{
-  await syntheticCamera(page); await page.goto('/');
+  await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera');
   await page.evaluate(()=>{window.testShouldersOnly=true;}); await enterPlay(page);
   for (const [width,height] of [[390,844],[844,390],[1440,960]]) {
     await page.setViewportSize({width,height});
@@ -221,4 +221,17 @@ test('full-window playfield remains readable across portrait, landscape and resi
     await page.screenshot({path:`test-results/ar-playfield-${width}.png`});
   }
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
+});
+
+test('switching an active camera to keyboard releases tracks and worker before a separate synthetic round',async({page})=>{
+  await syntheticCamera(page); await page.goto('/');
+  await page.getByLabel('Controls',{exact:true}).selectOption('camera'); await enterPlay(page);
+  await page.getByLabel('Controls',{exact:true}).selectOption('keyboard');
+  await expectStopped(page);
+  expect((await state(page)).status).toBe('ready'); expect((await state(page)).camera.state).toBe('off');
+  expect((await state(page)).input.source).toBe(null);
+  await page.getByRole('button',{name:'Play',exact:true}).click();
+  await page.keyboard.press('Space');
+  await expect.poll(async()=>(await state(page)).height).toBeGreaterThan(100);
+  expect((await state(page)).input.source).toEqual({kind:'synthetic',id:'keyboard-preview'});
 });
