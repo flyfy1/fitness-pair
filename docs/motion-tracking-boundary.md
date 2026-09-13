@@ -2,8 +2,8 @@
 
 The source prototype is `second-brain/projects/260913-motion-quest`. Its extracted
 pose and action packages can be used without the forest game's DOM or renderer.
-Motion Quest remains the reference camera host. Camera controls for Dino Run are
-a later integration step.
+Motion Quest remains the squat reference host. Dino Run now has a separate
+calibrated jump-height camera host; see [its POC guide](../apps/dino-run/README.md).
 
 ## Current package responsibilities
 
@@ -13,6 +13,7 @@ a later integration step.
 | Pose provider | `@fitness-pair/pose-mediapipe` | `fromMediaPipe(...)` adapts model output to a validated `PoseFrame` |
 | Model worker | `@fitness-pair/pose-mediapipe/worker` | Runs the pinned MediaPipe model locally in a dedicated worker |
 | Squat recognition | `@fitness-pair/action-squat` | `SquatRecognizer` calibrates standing posture and emits full squat completion events |
+| Jump-height recognition | `@fitness-pair/action-jump-height` | `JumpHeightRecognizer` measures standing/max-jump baseline and emits proportional height plus landing events |
 | Reference game rules | `@fitness-pair/game-forest` | `createGameState(...)` and `consumeAction(state, frame)` apply each completion once |
 | Reference host | `apps/motion-quest/src/main.js` | Owns camera permission, input sampling, worker lifetime, preview drawing, and UI wiring |
 
@@ -52,10 +53,11 @@ sessions, provenance, and stale input. `progress` and `cue` are feedback; neithe
 awards a jump, attack, or score by itself. Recalibration must not make an old
 completion ID reusable. See [the contract](../contracts/README.md) for exact rules.
 
-For a future Dino Run adapter, first define which completed movement maps to a
-game command and how movement timing interacts with obstacle spacing. Reusing a
-squat recognizer does not establish that running-game difficulty is appropriate
-for its cadence.
+The Dino Run POC uses the compatible `jump-height` action, with continuous
+`heightRatio` positioning the sprite and deduplicated completion IDs counting
+landings. It does not map squat completions onto fixed jumps. Its motion-mode
+obstacles run more slowly; appropriateness for physical jumping still needs human
+trials. See [the compatible action extension](../contracts/proposals/jump-height-poc.md).
 
 ## Camera host responsibilities
 

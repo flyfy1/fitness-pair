@@ -18,8 +18,12 @@ turn slightly sideways, and stand upright for about two seconds to calibrate.
 Squat to charge, then stand to attack. The button/Space preview is labeled synthetic.
 The first start downloads the official Lite model; later starts use local assets.
 
-The parallel Dino Run contribution owns `apps/dino-run/`. When present, start it
-independently with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>.
+Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
+with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,
+stand still, then make one maximum comfortable jump and land. After a three-second
+countdown, Dino follows your relative rise and descent. Height is a percentage of
+your own calibration, not centimeters. Keyboard mode remains available separately.
+See [Dino setup and evidence](apps/dino-run/README.md).
 
 ## Team map
 
@@ -28,6 +32,7 @@ apps/motion-quest/          Playable host, camera lifecycle, UI wiring
 contracts/                 v1 types, validators, semantics, fixtures
 packages/pose-mediapipe/    Local model and named-joint adapter
 packages/action-squat/      Temporal action recognition
+packages/action-jump-height/  Standing/max-jump calibration and continuous height
 packages/game-forest/       Pure game rules and separate canvas renderer
 experiments/pose-models/    Model/runtime alternatives
 experiments/action-recognition/  Counting and movement algorithms

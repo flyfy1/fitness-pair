@@ -4,6 +4,7 @@ test('a timed keyboard jump clears a spawned cactus; losing focus pauses', async
   await page.clock.install();
   await page.addInitScript(() => { Math.random = () => 0.25; });
   await page.goto('/');
+  await page.getByRole('button', {name: 'Keyboard mode'}).click();
   const width = await page.locator('#game').evaluate(canvas => Math.max(480, canvas.getBoundingClientRect().width));
   // The first cactus spawns at 1.6s. Jump with its leading edge at x=200,
   // using its travel distance and the game's initial acceleration (2.4px/s²).
@@ -22,7 +23,7 @@ test('a timed keyboard jump clears a spawned cactus; losing focus pauses', async
 
 test('keyboard run, jump, pause, collision, restart and best persistence', async ({ page }) => {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/'); await expect(page.getByRole('button',{name:'Let’s run'})).toBeVisible();
+  await page.goto('/'); await page.getByRole('button', {name: 'Keyboard mode'}).click(); await expect(page.getByRole('button',{name:'Let’s run'})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:'test-results/desktop-ready.png'});
   await page.keyboard.press('Space');
@@ -38,13 +39,14 @@ test('keyboard run, jump, pause, collision, restart and best persistence', async
   await page.screenshot({path:'test-results/desktop-over.png'});
   await page.getByRole('button',{name:'Run again'}).click();
   expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('running');
-  await page.reload();expect(await page.evaluate(()=>window.dinoGame.getState().best)).toBe(best);
+  await page.reload(); await page.getByRole('button', {name: 'Keyboard mode'}).click(); expect(await page.evaluate(()=>window.dinoGame.getState().best)).toBe(best);
   expect(errors).toEqual([]);
 });
 
 test('touch play on narrow screen and external motion command use same game', async ({ browser }) => {
   const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
   const page=await context.newPage();await page.goto('/');
+  await page.getByRole('button', {name: 'Keyboard mode'}).tap();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:'test-results/mobile-ready.png', fullPage:true});
   await page.getByRole('button',{name:'Let’s run'}).tap();

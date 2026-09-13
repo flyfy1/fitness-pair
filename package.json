@@ -9,7 +9,7 @@
     "dev": "npm run dev --workspace @fitness-pair/motion-quest",
     "build": "npm run build --workspace @fitness-pair/motion-quest",
     "preview": "npm run preview --workspace @fitness-pair/motion-quest",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.mjs packages/action-jump-height/tests/*.test.js",
     "test:browser": "npm run test:browser --workspace @fitness-pair/motion-quest",
     "check:contracts": "node --test tests/contracts.test.mjs",
     "explore:pose": "node experiments/pose-models/baseline.mjs",
