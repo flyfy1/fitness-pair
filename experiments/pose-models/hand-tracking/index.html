@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Hand Tracking POC · Fitness Pair</title></head>
+<body>
+  <main>
+    <header><span class="eyebrow">FITNESS PAIR / RECOGNITION EXPERIMENT</span><h1>See your hands in motion.</h1><p>Local camera tracking of your palms and all five fingers.</p></header>
+    <div class="layout">
+      <section aria-label="Camera preview">
+        <div class="stage"><video id="video" autoplay muted playsinline></video><canvas id="overlay" aria-label="Detected hand skeletons"></canvas><p id="placeholder">Your camera preview appears here.</p><span class="tag">MIRRORED PREVIEW · LOCAL ONLY</span></div>
+        <div class="controls"><button id="start">Enable camera</button><button id="stop" disabled>Stop camera</button></div>
+        <p class="privacy">No recording or uploads. Tracking stops when you leave this page or switch tabs.</p>
+      </section>
+      <aside aria-label="Recognition results">
+        <p class="eyebrow">TRACKING STATUS</p><h2 id="status" role="status" aria-live="polite">Camera off</h2>
+        <p id="hint">Bring one or two hands close enough to see each finger clearly.</p>
+        <div class="metrics"><div><strong id="count">0 / 2</strong><span>hands detected</span></div><div><strong id="timing">—</strong><span>model inference</span></div></div>
+        <ul id="hands" aria-label="Detected hands"></ul>
+        <p>21 landmarks per hand. White outline: palm. Colored lines: fingers.</p>
+        <div class="legend"><span>● Thumb</span><span>● Index</span><span>● Middle</span><span>● Ring</span><span>● Pinky</span></div>
+        <p class="note">Left/right labels are model estimates. This POC visualizes landmarks; it does not recognize gestures or assess movement quality.</p>
+      </aside>
+    </div>
+  </main>
+  <script type="module" src="/main.js"></script>
+</body></html>

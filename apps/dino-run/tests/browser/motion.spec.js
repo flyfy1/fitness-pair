@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 async function syntheticCamera(page) {
   // Synthetic landmarks test integration only, not actual camera recognition accuracy.
   await page.addInitScript(() => {
-    window.testRise = 0; window.testMissing = false; window.testDelay = 0;
+    window.testRise = 0; window.testMissing = false; window.testDelay = 0; window.testUpperBody = false;
     navigator.mediaDevices.getUserMedia = async () => {
       const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 480;
       const ctx = canvas.getContext('2d'); ctx.fillRect(0, 0, 640, 480);
@@ -23,7 +23,7 @@ async function syntheticCamera(page) {
         const points = [];
         if (!window.testMissing) {
           for (const [side, x] of [[[11,23,25,27], .44], [[12,24,26,28], .56]]) {
-            side.forEach((id, i) => { points[id] = { x, y: [.25,.48,.68,.88][i] - window.testRise, visibility: .99 }; });
+            side.forEach((id, i) => { if (window.testUpperBody && i >= 2) return; points[id] = { x, y: [.25,.48,.68,.88][i] - window.testRise, visibility: .99 }; });
           }
         }
         setTimeout(() => { if (!this.terminated) this.onmessage?.({ data: { type: 'pose', landmarks: points, time: data.time } }); }, window.testDelay);
@@ -32,8 +32,8 @@ async function syntheticCamera(page) {
     };
   });
 }
-async function calibrate(page) {
-  await page.getByRole('button', { name: 'Enable camera', exact: true }).click();
+async function calibrate(page, startName = 'Enable camera') {
+  await page.getByRole('button', { name: startName, exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.dinoGame.getState().camera.stage)).toBe('maximum');
   expect(await page.evaluate(() => window.dinoGame.getState().status)).toBe('ready');
   await page.evaluate(() => { window.testRise = .14; });
@@ -134,4 +134,57 @@ test('actual local model produces pose frames from a public image; camera stop r
   expect(await page.evaluate(()=>window.testStream.getTracks().every(track=>track.readyState==='ended'))).toBe(true);
   await expect.poll(()=>page.workers().length).toBe(0);
   expect(external).toEqual([]);expect(errors).toEqual([]);
+});
+
+
+test('upper-body-only camera calibrates and controls height in fullscreen without visible legs', async ({page}) => {
+  await syntheticCamera(page);await page.goto('/');
+  await page.evaluate(()=>{window.testUpperBody=true;});
+  await calibrate(page);
+  await page.getByRole('button',{name:'Enter fullscreen',exact:true}).click();
+  expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('running');
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.state)).toBe('ready');
+  await expect(page.locator('#tracking-mode')).toHaveText('UPPER BODY · TORSO MOVEMENT');
+  for (const ratio of [.5,1,.25,0]) {
+    await page.evaluate(rise=>{window.testRise=rise;},.14*ratio);
+    await expect.poll(async()=>Math.abs((await page.evaluate(()=>window.dinoGame.getState().height))-165*ratio)).toBeLessThan(7);
+  }
+  await page.evaluate(()=>{window.testUpperBody=false;});
+  await page.waitForTimeout(250);
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.trackingMode)).toBe('upper-body');
+  await page.screenshot({path:'test-results/fullscreen-halfbody.png'});
+  await page.getByRole('button',{name:'Turn camera off'}).click();
+  await page.getByRole('button',{name:'Exit fullscreen',exact:true}).click();
+});
+
+
+test('a camera run clears an obstacle, ends on collision, then recalibrates for a new run', async ({page}) => {
+  await syntheticCamera(page);await page.goto('/');await calibrate(page);
+  const width=await page.locator('#game').evaluate(c=>{const r=c.getBoundingClientRect();return r.width/Math.min(r.width/480,r.height/360);});
+  // First obstacle spawns at 2.5 s. Track actual game distance, independent of UI layout.
+  const targetDistance=180*2.5+.2*2.5**2+width+30-175;
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().distance*20),{timeout:15000,intervals:[30]}).toBeGreaterThan(targetDistance);
+  await page.evaluate(()=>{window.testRise=.14;});await page.waitForTimeout(650);
+  await page.evaluate(()=>{window.testRise=0;});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().passed)).toBeGreaterThan(0);
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status),{timeout:10000}).toBe('over');
+  expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
+  await calibrate(page,'Calibrate & run again');
+  expect(await page.evaluate(()=>window.dinoGame.getState().passed)).toBe(0);
+  await page.getByRole('button',{name:'Turn camera off'}).click();
+});
+
+test('full-body leg loss pauses, switches to upper-body calibration, and resumes only after explicit request', async ({page}) => {
+  await syntheticCamera(page);await page.goto('/');await calibrate(page);
+  expect(await page.evaluate(()=>window.dinoGame.getState().camera.trackingMode)).toBe('full-body');
+  await page.evaluate(()=>{window.testUpperBody=true;});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status)).toBe('paused');
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.trackingMode)).toBe('upper-body');
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.stage)).toBe('maximum');
+  await page.evaluate(()=>{window.testRise=.14;});await page.waitForTimeout(260);await page.evaluate(()=>{window.testRise=0;});
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().camera.calibrated)).toBe(true);
+  expect(await page.evaluate(()=>window.dinoGame.getState().status)).toBe('paused');
+  await page.getByRole('button',{name:'Resume run',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>window.dinoGame.getState().status),{timeout:6000}).toBe('running');
+  await page.getByRole('button',{name:'Turn camera off'}).click();
 });

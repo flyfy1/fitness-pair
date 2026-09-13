@@ -13,6 +13,7 @@ semantics. No forest consumer is changed. The new action identifier is `jump-hei
 | `heightRatio` | Current relative rise in `[0,1]`, zero during calibration/missing |
 | `peakRise` | Captured maximum displacement in normalized image y units, or null |
 | `quality` | Recognizer-specific tracking/calibration diagnostic |
+| `trackingMode` | `full-body`, `upper-body`, or null before usable framing |
 
 During calibration, `phase=calibrating`, `progress=0`, and completion is null.
 The standing and maximum phases have their own `calibrationProgress`. During live
@@ -37,3 +38,9 @@ The user-requested POC owns this compatible producer/consumer pair. If other gam
 adopt it, promote the subtype into shared TypeScript definitions after confirming
 its units and interpretation. Do not reinterpret the baseline forest fields or
 use relative camera displacement as physical height.
+
+Upper-body mode uses coherent shoulder/hip displacement when legs are unavailable.
+Its completed event denotes a return-to-baseline movement cycle, not proof that
+feet left the ground. Tracking mode is locked after baseline calibration; switching
+from full body after sustained leg loss invalidates both baseline and maximum.
+Consumers must retain the existing missing/calibration gates during that transition.

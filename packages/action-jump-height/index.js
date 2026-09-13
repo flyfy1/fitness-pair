@@ -8,14 +8,15 @@ const FLIGHT_TIMEOUT_MS = 2500;
 const MAXIMUM_WAIT_MS = 15000;
 const clamp = value => Math.max(0, Math.min(1, value));
 const average = values => values.reduce((sum, value) => sum + value, 0) / values.length;
-const required = ['leftShoulder', 'rightShoulder', 'leftHip', 'rightHip',
-  'leftKnee', 'rightKnee', 'leftAnkle', 'rightAnkle'];
+const upperJoints = ['leftShoulder', 'rightShoulder', 'leftHip', 'rightHip'];
+const lowerJoints = ['leftKnee', 'rightKnee', 'leftAnkle', 'rightAnkle'];
+const usable = (joints, names) => names.every(name => joints[name] && joints[name].confidence !== null
+  && joints[name].confidence >= .6 && joints[name].x >= .015 && joints[name].x <= .985
+  && joints[name].y >= .015 && joints[name].y <= .985);
 
-function geometry(frame) {
+function geometry(frame, mode) {
   const joints = frame.joints;
-  if (required.some(name => !joints[name] || joints[name].confidence === null
-    || joints[name].confidence < .6 || joints[name].x < .015 || joints[name].x > .985
-    || joints[name].y < .015 || joints[name].y > .985)) return null;
+  if (!usable(joints, upperJoints) || mode === 'full-body' && !usable(joints, lowerJoints)) return null;
   const aspect = frame.image.width / frame.image.height;
   const distance = (a, b) => Math.hypot((a.x - b.x) * aspect, a.y - b.y);
   const kneeAngle = (hip, knee, ankle) => {
@@ -26,13 +27,17 @@ function geometry(frame) {
   const upright = ['left', 'right'].every(side => {
     const shoulder = joints[`${side}Shoulder`], hip = joints[`${side}Hip`];
     const knee = joints[`${side}Knee`], ankle = joints[`${side}Ankle`];
-    return shoulder.y + .08 < hip.y && hip.y + .06 < knee.y && knee.y + .06 < ankle.y
-      && Math.abs(shoulder.x - hip.x) * aspect < (hip.y - shoulder.y) * .7
-      && kneeAngle(hip, knee, ankle) > 155;
+    const torsoUpright = shoulder.y + .08 < hip.y
+      && Math.abs(shoulder.x - hip.x) * aspect < (hip.y - shoulder.y) * .7;
+    return torsoUpright && (mode === 'upper-body' || hip.y + .06 < knee.y
+      && knee.y + .06 < ankle.y && kneeAngle(hip, knee, ankle) > 155);
   });
   return {
     hipY: average([joints.leftHip.y, joints.rightHip.y]),
-    leftAnkleY: joints.leftAnkle.y, rightAnkleY: joints.rightAnkle.y,
+    shoulderY: average([joints.leftShoulder.y, joints.rightShoulder.y]),
+    shoulderWidth: distance(joints.leftShoulder, joints.rightShoulder),
+    hipWidth: distance(joints.leftHip, joints.rightHip),
+    ...(mode === 'full-body' ? { leftAnkleY: joints.leftAnkle.y, rightAnkleY: joints.rightAnkle.y } : {}),
     torso: average(['left', 'right'].map(side => distance(joints[`${side}Shoulder`], joints[`${side}Hip`]))),
     centerX: average([joints.leftHip.x, joints.rightHip.x]), upright,
   };
@@ -50,6 +55,7 @@ export class JumpHeightRecognizer {
 
   recalibrate() {
     this.stage = 'standing'; this.baseline = null; this.peakRise = null;
+    this.trackingMode = null; this.lowerAbsentSince = null; this.fallbackAnchor = null;
     this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
     this.flight = null; this.landingSince = null; this.lastValidTMs = null;
     this.filteredRise = 0; this.filterTMs = null; this.driftSince = null;
@@ -63,7 +69,7 @@ export class JumpHeightRecognizer {
       version: 1, sessionId: frame.sessionId, inputSeq: frame.seq, tMs: frame.tMs,
       source: { ...frame.source }, recognizerId: RECOGNIZER_ID, action: 'jump-height',
       phase, progress: heightRatio, calibrationProgress, cue, completion,
-      stage: this.stage, calibrated, heightRatio, peakRise: this.peakRise, quality,
+      stage: this.stage, calibrated, heightRatio, peakRise: this.peakRise, quality, trackingMode: this.trackingMode,
     };
     assertActionFrame(result);
     return result;
@@ -80,8 +86,40 @@ export class JumpHeightRecognizer {
     const imageKey = `${frame.image.width}:${frame.image.height}`;
     if (this.imageKey && this.imageKey !== imageKey) this.recalibrate();
     this.imageKey = imageKey;
-    if (this.lastValidTMs !== null && frame.tMs - this.lastValidTMs > LOSS_MS) this.recalibrate();
-    const pose = geometry(frame);
+    const fullPose = geometry(frame, 'full-body');
+    const upperPose = geometry(frame, 'upper-body');
+    // A stable visible torso can recover cropped legs, but the signals need their
+    // own standing and maximum calibrations. Never carry flight/peak across modes.
+    if (this.trackingMode === 'full-body' && !fullPose && upperPose?.upright) {
+      const anchor = this.fallbackAnchor;
+      if (!anchor || Math.abs(upperPose.hipY - anchor.hipY) > .012
+        || Math.abs(upperPose.shoulderY - anchor.shoulderY) > .012
+        || Math.abs(upperPose.centerX - anchor.centerX) > .015
+        || Math.abs(upperPose.torso / anchor.torso - 1) > .08) {
+        this.lowerAbsentSince = frame.tMs; this.fallbackAnchor = upperPose;
+      }
+      if (frame.tMs - this.lowerAbsentSince >= LOSS_MS) {
+        this.recalibrate(); this.trackingMode = 'upper-body';
+      }
+    } else {
+      this.lowerAbsentSince = null; this.fallbackAnchor = null;
+    }
+    if (this.lastValidTMs !== null && frame.tMs - this.lastValidTMs > LOSS_MS) {
+      // Preserve a pending stable-torso hold instead of switching on a moving
+      // cropped pose merely because full-body tracking timed out.
+      if (this.lowerAbsentSince !== null) {
+        this.baseline = null; this.peakRise = null; this.stage = 'standing';
+      } else this.recalibrate();
+    }
+    if (this.trackingMode === null || this.stage === 'standing' && this.lowerAbsentSince === null
+      && this.trackingMode === 'upper-body' && fullPose) {
+      const mode = fullPose ? 'full-body' : upperPose ? 'upper-body' : null;
+      if (mode !== this.trackingMode) {
+        this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
+      }
+      this.trackingMode = mode;
+    }
+    const pose = this.trackingMode === 'full-body' ? fullPose : upperPose;
     if (!pose) {
       // A lost interval cannot provide evidence of a landing or stable standing.
       this.flight = null; this.landingSince = null; this.armed = false; this.rearmSince = null;
@@ -93,10 +131,15 @@ export class JumpHeightRecognizer {
     if (this.stage === 'standing') return this.stand(frame, pose);
 
     const baseline = this.baseline;
-    const scaleChanged = Math.abs(pose.torso / baseline.torso - 1) > .2;
+    const upperBody = this.trackingMode === 'upper-body';
+    const scaleChanged = Math.abs(pose.torso / baseline.torso - 1) > (upperBody ? .12 : .2)
+      || upperBody && (Math.abs(pose.shoulderWidth / baseline.shoulderWidth - 1) > .12
+        || Math.abs(pose.hipWidth / baseline.hipWidth - 1) > .12);
+    const bentTorso = upperBody && !pose.upright;
     const movedSideways = Math.abs(pose.centerX - baseline.centerX) > .12;
-    const movedDown = Math.min(pose.leftAnkleY - baseline.leftAnkleY, pose.rightAnkleY - baseline.rightAnkleY) > .045;
-    if (scaleChanged || movedSideways || movedDown) {
+    const movedDown = upperBody ? false
+      : Math.min(pose.leftAnkleY - baseline.leftAnkleY, pose.rightAnkleY - baseline.rightAnkleY) > .045;
+    if (scaleChanged || movedSideways || movedDown || bentTorso) {
       this.driftSince ??= frame.tMs;
       this.flight = null; this.landingSince = null; this.armed = false;
       this.filterTMs = null; this.filteredRise = 0;
@@ -105,9 +148,10 @@ export class JumpHeightRecognizer {
     }
     this.driftSince = null;
     const hipRise = baseline.hipY - pose.hipY;
-    const leftRise = baseline.leftAnkleY - pose.leftAnkleY;
-    const rightRise = baseline.rightAnkleY - pose.rightAnkleY;
-    // Both feet must rise; hip rise caps tucked feet and raised knees.
+    const leftRise = upperBody ? baseline.shoulderY - pose.shoulderY : baseline.leftAnkleY - pose.leftAnkleY;
+    const rightRise = upperBody ? hipRise : baseline.rightAnkleY - pose.rightAnkleY;
+    // Visible feet must both rise in full-body mode. With cropped legs, coherent
+    // shoulder and hip rise controls relative motion, without claiming takeoff.
     const rawRise = Math.max(0, Math.min(hipRise, leftRise, rightRise));
     const alpha = this.filterTMs === null ? 1 : 1 - Math.exp(-(frame.tMs - this.filterTMs) / 35);
     this.filteredRise += alpha * (rawRise - this.filteredRise);
@@ -179,8 +223,11 @@ export class JumpHeightRecognizer {
   stand(frame, pose) {
     const anchor = this.standingAnchor;
     const stable = pose.upright && (!anchor || Math.abs(pose.hipY - anchor.hipY) < .012
-      && Math.abs(pose.leftAnkleY - anchor.leftAnkleY) < .01
-      && Math.abs(pose.rightAnkleY - anchor.rightAnkleY) < .01
+      && Math.abs(pose.shoulderY - anchor.shoulderY) < .012
+      && Math.abs(pose.shoulderWidth / anchor.shoulderWidth - 1) < .08
+      && Math.abs(pose.hipWidth / anchor.hipWidth - 1) < .08
+      && (this.trackingMode === 'upper-body' || Math.abs(pose.leftAnkleY - anchor.leftAnkleY) < .01
+        && Math.abs(pose.rightAnkleY - anchor.rightAnkleY) < .01)
       && Math.abs(pose.centerX - anchor.centerX) < .015
       && Math.abs(pose.torso / anchor.torso - 1) < .08);
     if (!stable) {
@@ -192,7 +239,9 @@ export class JumpHeightRecognizer {
     this.standingSamples.push(pose);
     const elapsed = frame.tMs - this.standingSince;
     if (elapsed >= STANDING_MS) {
-      this.baseline = Object.fromEntries(['hipY', 'leftAnkleY', 'rightAnkleY', 'torso', 'centerX']
+      const keys = ['hipY', 'shoulderY', 'shoulderWidth', 'hipWidth', 'torso', 'centerX'];
+      if (this.trackingMode === 'full-body') keys.push('leftAnkleY', 'rightAnkleY');
+      this.baseline = Object.fromEntries(keys
         .map(key => [key, average(this.standingSamples.map(sample => sample[key]))]));
       this.standingSamples = []; this.stage = 'maximum'; this.armed = true;
       this.maximumSince = frame.tMs;

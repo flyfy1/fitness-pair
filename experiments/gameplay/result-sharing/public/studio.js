@@ -57,7 +57,7 @@ $('demo').addEventListener('click',async()=>{
     });
     if(cancelled){status('Demo cancelled. Nothing was uploaded.');return;}
     select(new Blob(chunks,{type:mime.split(';')[0]}),'synthetic');$('title').value='Five hits. One good moment.';
-  }catch(error){status(error.message);}
+  }catch{status('Could not create the demo. Retry or choose a local MP4 or WebM file.');}
   finally{cancelAnimationFrame(frame);clearTimeout(watchdog);if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());generating=false;cancelDemo=null;$('fields').disabled=false;}
 });
 $('code-file').addEventListener('change',async()=>{

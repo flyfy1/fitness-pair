@@ -1,12 +1,17 @@
 # Dino Run — calibrated jump-height POC
 
+The game fills the window by default: gameplay dominates the left, the camera is
+upper right, and scores, instructions and current status are below it. The fullscreen
+button enters browser fullscreen where supported; embedded browsers use an expanded
+window view. Escape or the exit button restores the same game-first layout.
+
 Jump in front of a fixed camera and Dino follows your relative height. A keyboard
 and touch mode remains available separately. Camera mode is the default.
 
 ## POC boundary
 
 - **Player / job:** a player controlling a runner with small and large physical jumps.
-- **Assumption:** a fixed, full-body camera can estimate relative jump height with
+- **Assumption:** a fixed camera can estimate full-body jump height or upper-body movement with
   enough responsiveness to control this game. Human trials must validate that assumption.
 - **Loop:** enable camera → stand still → one maximum comfortable jump and landing
   → three-second countdown → proportional live Dino height → obstacles → retry.
@@ -31,9 +36,10 @@ an exact checksum check. Generated assets are ignored by Git. No runtime camera
 frames are recorded or uploaded. Use localhost or HTTPS for camera access.
 
 1. Choose **Camera mode**, then **Enable camera**.
-2. Keep the camera fixed, with shoulders, hips, knees and ankles in view. Leave
-   space above your head for the jump. Stand upright and still for about two seconds.
-3. At **Jump once to set your maximum**, perform one maximum comfortable jump,
+2. Keep the camera fixed, with both shoulders and hips in view. Full-body tracking
+   is preferred when knees and ankles are also visible; otherwise upper-body tracking
+   is selected automatically. Leave space above your head for the jump. Stand upright and still for about two seconds.
+3. Check the **FULL BODY** or **UPPER BODY** label. At **Jump once to set your maximum**, perform one maximum comfortable jump,
    land in the same spot and stand steady. An unclear/too-small jump asks for a retry.
 4. After calibration, remain grounded for the three-second countdown. The run
    starts automatically so you do not have to return to the keyboard.
@@ -55,10 +61,20 @@ Keyboard and external jump commands cannot override camera height.
 ## Height model and limits
 
 `@fitness-pair/action-jump-height` receives named, unmirrored `PoseFrame` joints.
-The standing baseline records hip and ankle positions. Live displacement is the
-minimum upward movement of the hips and both ankles, normalized by the captured
-maximum. A short smoothing filter and grounded thresholds suppress jitter; requiring
-both ankles and hip rise rejects ordinary squats and isolated knee/foot lifts.
+The standing baseline records the selected body geometry. Full-body displacement
+is the minimum upward movement of the hips and both ankles. Upper-body displacement
+is the minimum coherent rise of shoulders and hips. Both normalize by their own
+captured maximum; the on-screen tracking label identifies the current mode. A short smoothing filter and grounded thresholds suppress jitter; requiring
+both ankles and hip rise in full-body mode rejects ordinary squats and isolated
+knee/foot lifts. Upper-body mode cannot confirm feet leaving the ground: it controls
+the game using torso movement and records return-to-baseline cycles, not verified
+physical jumps. Both shoulders and hips must remain visible; head-only framing is
+not sufficient. Shrugging alone and torso bending do not provide coherent rise.
+
+After a full-body baseline, short leg occlusions pause. If the legs remain unseen
+and the torso is stable for about 750 ms, the recognizer switches to upper-body
+tracking and requires a new standing and maximum calibration. Reappearing legs do
+not change a calibrated upper-body session. Choose Recalibrate to select again.
 
 This is **relative 2D image displacement, not physical height or a biomechanics
 measurement**. Perspective, tracking confidence, tiptoe movement, camera movement,
@@ -92,7 +108,7 @@ completion IDs increment the motion jump counter. Runner score remains distance,
 with slower motion-mode obstacles and separate best-score storage.
 
 The existing `window.dinoGame.getState()` exposes game state and a compact camera
-status (`state`, `stage`, `calibrated`, `heightRatio`, `cue`, `awaitingStart`), without
+status (`state`, `stage`, `calibrated`, `heightRatio`, `cue`, `trackingMode`, `awaitingStart`), without
 video or raw landmarks. `window.dinoGame.command()` remains a host control boundary.
 The legacy `fitness:action` jump event is accepted only in Keyboard mode.
 
@@ -108,10 +124,13 @@ npm run test:browser --workspace dino-run
 
 Browser checks use the production build in installed Chrome on isolated port 5181,
 so the user's development preview can remain on 5180. Test screenshots and runtime
-assets are ignored. On 2026-09-13, 30 shared/recognizer checks, 15 Dino engine/camera
-checks and 8 production Chrome checks passed, with both app builds successful.
-Browser checks include capture-time delay rejection as well as calibration,
-proportional height, loss pause, mobile, permission errors and resource cleanup.
+assets are ignored. The 2026-09-13 fullscreen and upper-body update passed 38
+shared/recognizer checks, 15 Dino engine/camera checks and 13 production Chrome
+checks. Browser checks cover default game-left/camera-right geometry, desktop and
+mobile fullscreen, capture-time delay rejection, full- and upper-body calibration,
+proportional height, mode-switch recalibration, loss pause, permission errors and
+resource cleanup. A synthetic camera round clears an obstacle, collides, then
+recalibrates and starts a new round.
 Synthetic integration and public-image inference are distinct
 from a real person's jump: **human camera-to-Dino responsiveness and calibration
 accuracy are not yet verified**. No public deployment is configured.
