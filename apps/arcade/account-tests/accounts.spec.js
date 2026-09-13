@@ -1,3 +1,4 @@
+import {decodeUpload} from '../server/testing/gcs-upload.mjs';
 import {test, expect} from '@playwright/test';
 import http from 'node:http';
 import {readFile, mkdtemp, rm} from 'node:fs/promises';
@@ -35,7 +36,7 @@ test.beforeAll(async()=>{
  });identity.listen(5194,'127.0.0.1');await once(identity,'listening');
  const cloud=async(raw,options)=>{
   const url=new URL(raw),name=url.searchParams.get('name')||decodeURIComponent(url.pathname.split('/o/')[1]||'');
-  if(options.method==='POST'){
+  if(options.method==='POST'){const decoded=await decodeUpload(raw,options);options={...options,body:decoded.body};
    if(failMarker&&name.startsWith('gallery/')){failMarker=false;return new Response('',{status:503});}
    if(objects.has(name))return new Response('',{status:412});
    objects.set(name,typeof options.body==='string'?new TextEncoder().encode(options.body):options.body);return Response.json({name});
@@ -75,7 +76,7 @@ async function localClip(page){
 test('login returns to the clip, publishes with consent, isolates accounts, and lets a second device revoke it',async({page,browser})=>{
  await page.goto('/library');const clip=await localClip(page);await page.reload();
  await page.getByRole('button',{name:'Upload & share'}).click();
- await expect(page.getByText('Upload without an account: public videos only. Anonymous uploads share a 10 GB pool across all visitors.')).toBeVisible();
+ await expect(page.getByText('Upload without an account:',{exact:false})).toBeVisible();
  await page.getByRole('link',{name:'Log in with Integ.Life'}).click();await page.getByRole('link',{name:'Continue as alice'}).click();
  await expect(page.getByRole('heading',{name:'Upload and share this clip?'})).toBeVisible();
  await expect(page.locator('input[name="code"]')).toHaveCount(0);
@@ -153,10 +154,13 @@ test('anonymous player publishes public video, a friend watches, and the origina
 test('private video stays out of the gallery and plays for a friend only with the full copied link',async({page,browser})=>{
  await login(page);await page.goto('/library');const clip=await localClip(page);await page.reload();
  await page.getByRole('button',{name:'Upload & share'}).click();
- await page.getByRole('combobox').selectOption('private');
+ await page.locator('select[name=visibility]').selectOption('private');
  await page.setViewportSize({width:390,height:844});await page.locator('.publish-form').scrollIntoViewIfNeeded();await page.screenshot({path:'.local/private-upload-mobile.png',fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await expect(page.getByText('Private: hidden from the public gallery.',{exact:false})).toBeVisible();
+ await expect(page.locator('select[name=retention]')).toHaveValue('never');
  await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
+ await expect(page.getByText('Never expires',{exact:false})).toBeVisible();
+ expect(JSON.parse(new TextDecoder().decode(objects.get('gallery/'+clip.id+'.json'))).expiresAt).toBeNull();
  await expect(page.getByText('Private link ready.',{exact:false})).toBeVisible();
  const shared=await page.getByRole('link',{name:'Open shared video'}).getAttribute('href');expect(shared).toContain('?share=');
  await page.goto('/shared');await expect(page.getByText('Private · Link access',{exact:false})).toBeVisible();
@@ -174,18 +178,36 @@ test('private video stays out of the gallery and plays for a friend only with th
  await viewer.reload();await expect(viewer.getByRole('heading',{name:'CLIP UNAVAILABLE.'})).toBeVisible();await friend.close();
 });
 
-test('anonymous full pool explains login recovery and an interrupted upload can be removed from the form',async({page})=>{
+test('anonymous full pool replaces its oldest reservation and an interrupted upload can be removed from the form',async({page})=>{
  await page.setViewportSize({width:320,height:740});await page.goto('/library');const clip=await localClip(page),filler=randomUUID();
  await store.reserve(null,{id:filler,bytes:ANONYMOUS_LIMIT_BYTES,expiresAt:Date.now()+60000});
  await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
- await expect(page.getByRole('button',{name:'Upload this clip'})).toBeDisabled();
- await expect(page.locator('[data-status]')).toContainText('10 GB anonymous storage is full');
+ await expect(page.getByRole('button',{name:'Upload this clip'})).toBeEnabled();
+ await expect(page.locator('[data-status]')).toContainText('oldest anonymous videos');
  await page.locator('.publish-form').scrollIntoViewIfNeeded();await page.screenshot({path:'.local/anonymous-full-mobile.png',fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await store.release(null,filler);await page.reload();await page.getByRole('button',{name:'Upload & share'}).click();
  failMarker=true;await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
  await expect(page.getByRole('button',{name:'Remove unfinished upload'})).toBeVisible();
  expect((await store.list(null)).usedBytes).toBe(clip.bytes);
+ expect((await store.list(null)).clips.some(item=>item.id===filler)).toBe(false);
  await page.getByRole('button',{name:'Remove unfinished upload'}).click();await page.getByRole('button',{name:'Remove shared clip',exact:true}).click();
  await expect.poll(async()=>(await store.list(null)).usedBytes).toBe(0);await expect(page.getByRole('button',{name:'Upload this clip'})).toBeEnabled();
+});
+
+
+test('account expiry choices require renewed consent and persist the chosen thirty days',async({page})=>{
+ await login(page);await page.goto('/library');const clip=await localClip(page);await page.reload();
+ await page.getByRole('button',{name:'Upload & share'}).click();
+ const retention=page.locator('select[name=retention]');
+ await expect(retention.locator('option')).toHaveCount(5);
+ await expect(retention).toHaveValue('never');
+ await page.getByRole('checkbox').check();await retention.selectOption('30');
+ await expect(page.getByRole('checkbox')).not.toBeChecked();
+ await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Upload this clip'}).click();
+ await expect(page.getByText('Uploaded.',{exact:false})).toBeVisible();
+ const record=JSON.parse(new TextDecoder().decode(objects.get('gallery/'+clip.id+'.json')));
+ expect(record.expiresAt-record.createdAt).toBe(30*86400000);
+ await page.goto('/shared');await expect(page.getByText('Expires ',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'Remove',exact:true}).click();await page.getByRole('button',{name:'Remove shared clip',exact:true}).click();
+ await expect(page.locator('meter')).toHaveAttribute('value','0');
 });

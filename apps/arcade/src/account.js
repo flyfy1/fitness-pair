@@ -10,6 +10,7 @@ export async function accountAPI(path, options) {
 }
 export const getSession = () => accountAPI('/api/auth/session');
 export const loginURL = (returnTo = '/shared') => '/api/auth/start?returnTo=' + encodeURIComponent(returnTo);
+export const expiryLabel = expiresAt => expiresAt === null ? 'Never expires' : 'Expires ' + new Date(expiresAt).toLocaleDateString();
 export function storageLabel(bytes) {
   if (bytes < 1000) return `${bytes} B`;
   if (bytes < 1_000_000) return `${(bytes / 1000).toFixed(1)} KB`;
@@ -69,12 +70,12 @@ export async function renderShared(container, notice = '') {
     };
     const account = await accountAPI('/api/account/clips');
     const content = body.querySelector('[data-shared-body]');
-    content.innerHTML = `<section class="storage-summary" aria-label="Shared storage"><div><strong>${storageLabel(account.usedBytes)} of 2 GB used</strong><span>${storageLabel(Math.max(0, account.limitBytes - account.usedBytes))} available</span></div><meter min="0" max="${account.limitBytes}" value="${account.usedBytes}" aria-label="Shared storage used"></meter><p>Deleting clips frees space. Shared clips expire after 7 days. Each clip can be up to 90 seconds / 20 MiB.</p></section><div class="clip-grid" data-owned-clips></div>`;
+    content.innerHTML = `<section class="storage-summary" aria-label="Shared storage"><div><strong>${storageLabel(account.usedBytes)} of 2 GB used</strong><span>${storageLabel(Math.max(0, account.limitBytes - account.usedBytes))} available</span></div><meter min="0" max="${account.limitBytes}" value="${account.usedBytes}" aria-label="Shared storage used"></meter><p>Deleting clips frees space. Each video keeps the expiry selected when sharing. Permanent videos use storage until you remove them. Each clip can be up to 90 seconds / 20 MiB.</p></section><div class="clip-grid" data-owned-clips></div>`;
     const grid = content.querySelector('[data-owned-clips]');
     if (!account.clips.length) { grid.innerHTML = '<div class="empty-state"><h2>NO SHARED CLIPS YET.</h2><p>Choose a video from My local clips to publish it here.</p><a class="text-link" href="/library">Open My local clips →</a></div>'; return; }
     for (const clip of account.clips) {
       const card = document.createElement('article'); card.className = 'clip-card';
-      card.innerHTML = `${clip.unavailable ? '<p class="notice">This upload did not finish or is being removed. Remove it to release its reserved storage.</p>' : ''}<h3>${escapeHTML(clip.title)}</h3><p>${clip.visibility === 'private' ? 'Private · Link access' : 'Public'} · ${storageLabel(clip.bytes)} · Expires ${new Date(clip.expiresAt).toLocaleDateString()}</p><div class="clip-actions">${clip.unavailable ? '' : `<a href="${escapeHTML(clip.url || '/clips/' + clip.id)}">Open shared link ↗</a>`}<button data-remove>Remove</button></div><div data-confirmation></div>`;
+      card.innerHTML = `${clip.unavailable ? '<p class="notice">This upload did not finish or is being removed. Remove it to release its reserved storage.</p>' : ''}<h3>${escapeHTML(clip.title)}</h3><p>${clip.visibility === 'private' ? 'Private · Link access' : 'Public'} · ${storageLabel(clip.bytes)} · ${expiryLabel(clip.expiresAt)}</p><div class="clip-actions">${clip.unavailable ? '' : `<a href="${escapeHTML(clip.url || '/clips/' + clip.id)}">Open shared link ↗</a>`}<button data-remove>Remove</button></div><div data-confirmation></div>`;
       card.querySelector('[data-remove]').onclick = () => confirmRemoval(card.querySelector('[data-confirmation]'), async () => {
         await removeSharedClip(clip.id); await renderShared(container, 'Shared clip removed. Your storage has been updated.');
       });

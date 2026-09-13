@@ -1,3 +1,4 @@
+import {decodeUpload} from './testing/gcs-upload.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createWorker,validateUpload} from './worker.js';
@@ -22,7 +23,7 @@ for(const identity of ['private-key','metadata'])test(`mock GCP ${identity} publ
   const u=new URL(raw);if(u.hostname==='oauth2.googleapis.com'){assert.equal(identity,'private-key');return Response.json({access_token:'test-token',expires_in:3600});}
   assert.equal(options.headers.Authorization,'Bearer test-token');
   const name=u.searchParams.get('name')||decodeURIComponent(u.pathname.split('/o/')[1]||'');
-  if(options.method==='POST'){if(objects.has(name))return new Response('',{status:412});objects.set(name,typeof options.body==='string'?new TextEncoder().encode(options.body):options.body);writes++;return Response.json({name});}
+  if(options.method==='POST'){const decoded=await decodeUpload(raw,options);options={...options,body:decoded.body};if(objects.has(name))return new Response('',{status:412});objects.set(name,typeof options.body==='string'?new TextEncoder().encode(options.body):options.body);writes++;return Response.json({name});}
   if(!name)return Response.json({items:[...objects.keys()].filter(x=>x.startsWith('gallery/')).map(name=>({name}))});
   if(!objects.has(name))return new Response('',{status:404});
   if(options.method==='DELETE'){objects.delete(name);return new Response(null,{status:204});}

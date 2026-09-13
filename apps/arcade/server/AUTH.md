@@ -33,13 +33,15 @@ See the central `integ-auth/README.md` contract and
 ## Ownership and quota
 
 Each account has **2 GB = 2,000,000,000 bytes** of active published-video storage.
-The existing 90-second / 20 MiB per-clip limits and seven-day expiry remain.
+The existing 90-second / 20 MiB per-clip limits remain. Account owners choose
+1, 7, 30, or 90 days, or Never (the new interface default). `expiresAt: null` means
+permanent and counts toward quota until removed. Existing shares retain their original expiry.
 Quota measures actual uploaded body bytes, never a client-declared size.
 Deleting or expiring clips frees logical quota. Cloud Storage soft-delete retention
 and lifecycle timing can retain billable bytes after logical removal.
 
 An atomic, fsynced ledger in `/var/lib/fitness-arcade/accounts/` reserves bytes and
-the globally unique clip ID before cloud writes. A process-local queue serializes
+the globally unique clip ID before account cloud writes. Anonymous staging is described below. A process-local queue serializes
 reservations for all accounts, so overlapping requests cannot exceed quota or
 claim the same ID. **Exactly one gateway process may write this directory.**
 The systemd service is the sole production writer. Sessions are separate files
@@ -103,14 +105,23 @@ not represented as passing tests or as human recording evidence.
 
 Anonymous players explicitly publish public videos against one global **10 GB =
 10,000,000,000 bytes** pool. Signed-in players use their own 2 GB quota for both
-public and private videos. An upload is rejected if its actual bytes would cross
-the applicable limit; deleting older videos releases space. Expiry still applies
-at seven days, and quotas describe active logical storage rather than GCS billing.
+public and private videos. Account uploads exceeding 2 GB are rejected with a
+suggestion to remove older shares. Anonymous videos always expire after seven days.
+If an anonymous upload would exceed 10 GB, the oldest active anonymous videos
+are removed until it fits. Account videos are never eviction candidates. Quotas
+describe active logical storage rather than GCS billing.
 
 The same atomic ledger accepts `ownerId: null` for anonymous reservations. Before
 anonymous usage is reported or a new upload is admitted, the gateway imports
 active ownerless Gallery records, across all storage listing pages. Initialization
-fails closed on an incomplete inventory. Partial uploads retain reservations.
+fails closed on an incomplete inventory. One upload lock covers staging, eviction,
+reservation and publication. New anonymous bytes and their expiry are stored before
+older publications are revoked. Failed staging preserves the old clips. Eviction
+revokes each marker before deleting its media/poster, then releases its reservation;
+failed deletions retain that reservation for retry. Partial eviction can revoke an
+old link even if publication later fails. Unpublished staging is removed on failure
+and still has its seven-day storage expiry if cleanup fails. Partial publications
+retain reservations. This is not a multi-object cloud transaction.
 Anonymous device management keys are saved locally before upload; only their hashes
 are stored server-side. They authorize thumbnail uploads, idempotent retries and
 removal, including cleanup after a partial upload. They do not assign ownership to
@@ -133,11 +144,12 @@ legacy inventory, failed writes/deletion retries, account isolation, private med
 and poster access, link forwarding, and owner revocation.
 
 
-Browser evidence for this slice: six Chrome tests use a real local gateway,
+Browser evidence for this slice: seven Chrome tests use a real local gateway,
 durable quota files, mock identity/storage, and browser-encoded synthetic WebM.
-They cover anonymous upload/playback/device removal, both full-quota notices,
+They cover anonymous upload/playback/device removal, account quota blocking and anonymous full-pool replacement,
 private upload/owner listing/copied-link playback/revocation, missing-token denial,
-interrupted anonymous cleanup, and 320/390px layout. These are local integration
+interrupted anonymous cleanup, permanent and thirty-day choices, consent reset,
+and 320/390px layout. These are local integration
 checks; they do not establish a deployed release or participant recording evidence.
 
 Rollback boundary: after private publications exist, never restore a gateway that
@@ -145,3 +157,23 @@ predates visibility checks: it would expose private records through the Gallery.
 Older account stores also cannot read anonymous reservations. Preserve the current
 ledger and use a compatible release or disable the Gallery API while recovering.
 Do not reset the ledger or restore stale account state to make old code start.
+
+
+## Expiry protocol and storage
+
+`retention` accepts `1`, `7`, `30`, `90`, or `never`; omission keeps seven days for
+older clients. Anonymous values other than `7` are rejected server-side. The
+interface enables account choices only when `/api/config` advertises
+`retentionOptions`; `anonymous.replacement: "oldest"` enables full-pool uploads.
+Changing a selection clears consent. Login returns to the saved local clip's
+sharing form and requires explicit consent again; it never starts an upload.
+
+Finite videos, publication records and posters set GCS `customTime` to `expiresAt`.
+New objects save this metadata atomically with their bytes. Permanent objects omit
+it. The dedicated lifecycle rule uses `daysSinceCustomTime: 0`; the application
+still denies access immediately at the exact expiry. Cleanup is asynchronous.
+See [migration and rollback](../deploy/gcp/README.md#sharing-expiry-migration).
+
+After permanent records exist, do not roll back to code that rejects null expiry,
+or restore an age-based seven-day bucket rule: that would remove permanent videos.
+Keep the compatible ledger and storage policy when rolling back UI changes.
