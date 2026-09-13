@@ -532,3 +532,30 @@ test('recovery after a silent gap beyond grace discards flight and requires an o
   assert.equal(h.update(.05, undefined, 400).phase, 'missing');
   assert.ok(h.hold(10).every(f => !f.completion));
 });
+
+
+test('configured jump range skips maximum measurement but requires a fresh upright baseline', () => {
+  const h = harness(() => {}, robustOptions);
+  assert.equal(h.recognizer.setJumpRange(.25), true);
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(); assert.equal(h.recognizer.measuredRise, 0);
+  assert.equal(h.recognizer.canConfirmMaximum, true);
+  h.update(0, f => { f.joints = {}; });
+  assert.equal(h.recognizer.confirmMaximum(), false);
+  h.hold(10);
+  assert.equal(h.recognizer.confirmMaximum(), true);
+  assert.ok(Math.abs(h.recognizer.peakRise - .23 * .25) < .0001);
+  assert.equal(h.recognizer.setJumpRange(.5), false, 'confirmed range stays fixed');
+  assert.ok(h.hold(6, .025).at(-1).heightRatio > .4);
+  for (const bad of [NaN, Infinity, -.1, 0, .09, .81, '0.25']) assert.throws(()=>h.recognizer.setJumpRange(bad), RangeError);
+});
+
+test('range preview changes with the slider without charging or pretending a measured maximum', () => {
+  const h = harness(() => {}, robustOptions); h.recognizer.setJumpRange(.1); h.hold();
+  const small = h.hold(6, .02).at(-1);
+  assert.ok(small.previewHeightRatio > .8); assert.equal(small.progress, 0); assert.equal(small.completion, null);
+  h.recognizer.setJumpRange(.8);
+  const large = h.update(.02); assert.ok(large.previewHeightRatio < .12);
+  h.recognizer.recalibrate(); assert.equal(h.recognizer.canConfirmMaximum, false);
+  assert.equal(h.recognizer.configuredRange, .8, 'preference survives recalibration, the old baseline does not');
+});

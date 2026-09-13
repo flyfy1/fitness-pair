@@ -1,4 +1,5 @@
 import './style.css';
+import { drawBody } from './body-overlay.js';
 import { PoseCamera } from '../../dino-run/src/camera.js';
 import { BodyGestures } from '../../dino-run/src/gestures.js';
 import { setupFullscreen } from '../../dino-run/src/fullscreen.js';
@@ -7,6 +8,8 @@ import { createDiagnostics } from './diagnostics.js';
 
 const $ = id => document.getElementById(id);
 const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true, robustTracking: true });
+recognizer.setJumpRange(Number($('jump-range').value) / 100);
+let bodyFrame = null;
 const gestures = new BodyGestures();
 const diagnostics = createDiagnostics();
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
@@ -31,7 +34,7 @@ const camera = new PoseCamera({
   onStatus(status) {
     cameraState = status.state; log('camera-state', { state: cameraState });
     if (cameraState === 'requesting') {
-      recognizer.reset(status); gestures.reset(status); action = null; hands = null;
+      recognizer.reset(status); recognizer.setJumpRange(Number($('jump-range').value) / 100); gestures.reset(status); action = null; hands = null;
       lastPoseAt = 0; countdownAt = null; previousStage = null; trackingHoldAt = null; signalState = null;
     }
     paint();
@@ -40,6 +43,7 @@ const camera = new PoseCamera({
     lastPoseAt = input.tMs;
     const stale = performance.now() - input.tMs >= 250;
     const frame = stale ? { ...input, joints: {} } : visibleFrame(input);
+    bodyFrame = stale ? null : frame;
     const next = recognizer.update(frame);
     if (!next) return;
     action = next; hands = gestures.update(frame);
@@ -62,6 +66,7 @@ const camera = new PoseCamera({
     paint();
   },
   onStop({ reason }) {
+    bodyFrame = null; drawBody($('body-overlay'), null);
     cameraState = 'off'; action = null; hands = null; countdownAt = null; lastPoseAt = 0;
     log('camera-stopped', { reason }); paint();
   },
@@ -82,7 +87,7 @@ function confirm(via) {
     log('confirmation-rejected', { via, reason: !lastPoseAt || performance.now() - lastPoseAt >= 250 ? 'stale-tracking' : 'height-not-ready', stage: action?.stage ?? null, cue: action?.cue ?? null });
     return false;
   }
-  log('height-confirmed', { via }); paint(); return true;
+  log('height-confirmed', { via, rangeSource: 'slider', torsoPercent: Number($('jump-range').value) }); paint(); return true;
 }
 function presentation(now) {
   if (complete) return { stage: 'complete', status: 'SETUP COMPLETE', title: 'Ready to play!', detail: 'You finished every step.', feedback: 'POC complete · camera is now off', button: 'Try again', step: 'ready' };
@@ -108,20 +113,19 @@ function presentation(now) {
   if (!lastPoseAt || now - lastPoseAt >= 250) return { stage: 'missing', status: 'WAITING FOR LIVE TRACKING', title: 'Tracking paused.', detail: 'Stay in view. We’re waiting for a fresh frame.', feedback: 'Nothing will start until tracking returns.', reason: 'stale-tracking' };
   if (!action || action.phase === 'missing') return { stage: 'missing', status: 'WE NEED TO SEE YOU', title: action?.quality === 'position-changed' ? 'Return to your spot.' : 'Step into view.', detail: 'Show both shoulders and hips. Face the camera.', feedback: 'Your legs can stay outside the picture.', reason: action?.quality ?? 'missing-body' };
   if (action.stage === 'standing') return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand tall.\nHold still.', detail: 'Stay where you are for two seconds.', feedback: action.quality === 'unstable-stance' ? 'Keep your shoulders and hips steady.' : 'We can see you. Keep holding…', progress: (action.calibrationProgress ?? 0) * 2, step: 'standing', reason: action.quality };
-  if (action.cue === 'prepare-jump') return { stage: action.calibrated ? 'ready' : 'maximum', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'A small crouch is OK. Jump when ready.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'ready' : 'maximum', reason: 'prepare-jump' };
+  if (action.cue === 'prepare-jump') return { stage: action.calibrated ? 'ready' : 'maximum', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'Try a small movement, or stand up to confirm.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'ready' : 'maximum', reason: 'prepare-jump' };
   if (action.stage === 'maximum') {
     if (action.canConfirmMaximum) {
       const holding = hands?.kind === 'one-hand' && !hands.latched;
-      return { stage: 'confirm', status: 'HEIGHT CAPTURED', title: holding ? 'Keep your hand up.' : 'Raise ONE hand.', detail: holding ? 'Hold it above your shoulder for one second.' : 'Keep your other hand down. Hold for one second.', feedback: !hands?.tracked ? 'Show both hands — or use the button.' : 'This confirms your height and starts the countdown.', progress: holding ? hands.progress : 0, button: 'Confirm & continue', step: 'confirm', reason: hands?.tracked ? 'awaiting-confirmation' : 'missing-hands' };
+      return { stage: 'confirm', status: 'JUMP RANGE READY', title: holding ? 'Keep your hand up.' : 'Raise ONE hand.', detail: holding ? 'Hold it above your shoulder for one second.' : 'Keep your other hand down. Hold for one second.', feedback: !hands?.tracked ? 'Show both hands — or use the button.' : 'Your slider setting is ready. No jump required.', progress: holding ? hands.progress : 0, button: 'Confirm & continue', step: 'confirm', reason: hands?.tracked ? 'awaiting-confirmation' : 'missing-hands' };
     }
-    const moving = action.measuredRise > 0 && action.cue !== 'jump-higher-and-retry';
-    return { stage: 'maximum', status: 'STEP 2 OF 3 · SET YOUR JUMP', title: moving ? 'Back to your spot.' : action.cue === 'jump-higher-and-retry' ? 'A little higher.' : 'Jump once.', detail: moving ? 'Return to your starting height. Hold steady.' : 'Make your highest comfortable jump.', feedback: moving ? 'Movement captured. Waiting for your return…' : 'Then land in the same place. Take your time.', step: 'maximum', reason: action.cue };
+    return { stage: 'maximum', status: 'STEP 2 OF 3 · SET YOUR RANGE', title: 'Stand steady.', detail: 'Set the slider to a comfortable movement.', feedback: 'No jump required. Stand upright to confirm.', step: 'maximum', reason: action.cue };
   }
   const steady = action.calibrated && action.heightRatio < .03;
-  if (!steady) return { stage: 'ready', status: 'HEIGHT CONFIRMED', title: 'Stand steady.', detail: 'Return to your starting height to begin.', feedback: 'Your height is saved. Waiting for a steady pose.', step: 'ready', reason: 'not-grounded' };
+  if (!steady) return { stage: 'ready', status: 'RANGE CONFIRMED', title: 'Stand steady.', detail: 'Return to your starting height to begin.', feedback: 'Your range is saved. Waiting for a steady pose.', step: 'ready', reason: 'not-grounded' };
   if (countdownAt === null) { countdownAt = now; log('countdown-started'); }
   const remaining = Math.max(1, Math.ceil((3000 - (now - countdownAt)) / 1000));
-  return { stage: 'countdown', status: 'HEIGHT CONFIRMED · GET READY', title: String(remaining), detail: 'Stand steady. You’re ready to go.', feedback: 'No extra hand gesture needed.', progress: (now - countdownAt) / 3000, step: 'ready' };
+  return { stage: 'countdown', status: 'RANGE CONFIRMED · GET READY', title: String(remaining), detail: 'Stand steady. You’re ready to go.', feedback: 'No extra hand gesture needed.', progress: (now - countdownAt) / 3000, step: 'ready' };
 }
 function paint() {
   const now = performance.now();
@@ -144,6 +148,12 @@ function paint() {
     lastViewKey = key; log('screen-state', { stage: next.stage, instruction: next.title, reason: next.reason ?? null });
     $('announcement').textContent = `${next.status}. ${next.title}. ${next.detail}`;
   }
+  $('jump-range').disabled = action?.calibrated || complete;
+  const fresh = camera.running && bodyFrame && now - bodyFrame.tMs < 250 && action?.phase !== 'missing';
+  const response = fresh ? Math.round((action?.previewHeightRatio ?? 0) * 100) : 0;
+  $('movement-meter').value = response;
+  $('movement-label').textContent = !camera.running ? 'Live movement · enable camera'
+    : !fresh ? 'Live movement · tracking paused' : `Live jump response · ${response}%`;
   $('setup').dataset.stage = next.stage;
   $('status').textContent = next.status; $('instruction').textContent = next.title;
   $('detail').textContent = next.detail; $('feedback').textContent = next.feedback;
@@ -160,6 +170,17 @@ function paintLog() {
   if (target && !$('diagnostics').hidden) target.textContent = diagnostics.entries().slice(-40).reverse().map(e => JSON.stringify(e)).join('\n');
 }
 $('primary').addEventListener('click', () => { if (camera.running && action?.canConfirmMaximum) confirm('button'); else if (!camera.active) start(); });
+$('show-body').addEventListener('change', () => {
+  $('body-overlay').hidden = !$('show-body').checked;
+  drawBody($('body-overlay'), null);
+  log('body-overlay-changed', { enabled: $('show-body').checked });
+});
+$('jump-range').addEventListener('input', () => {
+  const value = Number($('jump-range').value);
+  if (!camera.active || recognizer.setJumpRange(value / 100)) $('range-value').textContent = `${value}%`;
+  paint();
+});
+$('jump-range').addEventListener('change', () => log('jump-range-changed', { torsoPercent: Number($('jump-range').value) }));
 $('stop').addEventListener('click', () => { complete = false; camera.stop('user-stop'); });
 $('show-log').addEventListener('click', () => { $('diagnostics').hidden = !$('diagnostics').hidden; $('show-log').setAttribute('aria-expanded', String(!$('diagnostics').hidden)); paintLog(); });
 $('close-log').addEventListener('click', () => { $('diagnostics').hidden = true; $('show-log').setAttribute('aria-expanded', 'false'); });
@@ -170,6 +191,7 @@ $('export-log').addEventListener('click', () => {
 });
 window.cameraSetup = Object.freeze({ getState: () => ({ stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false }), getLog: () => diagnostics.entries() });
 function tick() {
+  drawBody($('body-overlay'), camera.running && bodyFrame && performance.now() - bodyFrame.tMs < 250 ? bodyFrame : null);
   if (camera.running) {
     paint();
     if (trackingHoldAt === null && countdownAt !== null && performance.now() - countdownAt >= 3000) {

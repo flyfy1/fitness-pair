@@ -49,16 +49,26 @@ export class JumpHeightRecognizer {
   constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false, robustTracking = false } = {}) {
     this.manualMaximum = manualMaximum; this.preferUpperBody = preferUpperBody;
     this.quickStart = quickStart; this.robustTracking = robustTracking;
+    this.configuredRange = null;
   }
 
   get canConfirmMaximum() {
-    return this.stage === 'maximum' && this.measuredRise >= Math.max(.015, (this.baseline?.torso ?? 0) * .06)
+    return this.stage === 'maximum' && (this.configuredRange !== null || this.measuredRise >= Math.max(.015, (this.baseline?.torso ?? 0) * .06))
       && this.confirmGroundedSince !== null && this.lastTMs - this.confirmGroundedSince >= LANDING_MS;
+  }
+
+  setJumpRange(torsoRatio) {
+    if (!Number.isFinite(torsoRatio) || torsoRatio < .1 || torsoRatio > .8) {
+      throw new RangeError('Jump range must be between 0.1 and 0.8 torso lengths');
+    }
+    if (!this.manualMaximum || this.stage === 'ready') return false;
+    this.configuredRange = torsoRatio;
+    return true;
   }
 
   confirmMaximum() {
     if (!this.manualMaximum || !this.canConfirmMaximum) return false;
-    this.peakRise = this.measuredRise; this.stage = 'ready';
+    this.peakRise = this.configuredRange === null ? this.measuredRise : this.baseline.torso * this.configuredRange; this.stage = 'ready';
     this.flight = null; this.landingSince = null; this.filteredRise = 0;
     this.armed = true; return true;
   }
@@ -91,6 +101,9 @@ export class JumpHeightRecognizer {
       phase, progress: heightRatio, calibrationProgress, cue, completion,
       stage: this.stage, calibrated, heightRatio, peakRise: this.peakRise, quality, trackingMode: this.trackingMode,
       measuredRise: this.measuredRise, canConfirmMaximum: this.canConfirmMaximum,
+      ...(this.configuredRange !== null ? { rangeSource: 'slider',
+        previewHeightRatio: phase === 'missing' || !this.baseline ? 0
+          : clamp(this.filteredRise / (this.baseline.torso * this.configuredRange)) } : {}),
       ...(this.robustTracking ? { trackingReason: quality === 'tracking-grace' ? this.rejectionReason : null } : {}),
     };
     assertActionFrame(result);
