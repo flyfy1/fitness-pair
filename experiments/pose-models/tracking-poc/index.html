@@ -25,6 +25,12 @@
         <div class="status-box"><strong id="status" role="status" aria-live="polite">Ready when you are</strong><p id="detail">No recording. No uploads. No calibration needed.</p></div>
         <div class="metrics"><div><span>Visible points</span><strong id="points">—</strong></div><div><span>Inference</span><strong id="timing">—</strong></div><div><span>Result rate</span><strong id="rate">—</strong></div></div>
         <p id="movement">Live movement feedback appears here.</p>
+        <section id="hand-observation" aria-label="Hand recognition details">
+          <ul id="hand-details" aria-label="Detected hands"></ul>
+          <div class="finger-legend"><span>● Thumb</span><span>● Index</span><span>● Middle</span><span>● Ring</span><span>● Pinky</span></div>
+          <p>White outline: palm. White ring: estimated palm center. Yellow ring: index fingertip.</p>
+          <p>Left/right labels are model estimates, not stable hand identities. Side confidence is not joint accuracy.</p>
+        </section>
       </aside>
     </div>
     <footer>Tracking experiment, not an exercise assessment. <span>Mode changes stop the camera. Enable it again to continue.</span></footer>

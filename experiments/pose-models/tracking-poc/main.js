@@ -1,5 +1,6 @@
 import './style.css';
-import { adaptResult, bodyEdges, handEdges, usable, pinchRatio } from './adapter.js';
+import { adaptResult, bodyEdges, usable, pinchRatio } from './adapter.js';
+import { drawHand } from './hand-overlay.js';
 const $ = id => document.getElementById(id);
 const video = $('camera'), canvas = $('overlay'), ctx = canvas.getContext('2d');
 let mode = 'hands', generation = 0, stream, worker, timer, watchdog, animation;
@@ -21,6 +22,7 @@ function stop(title = 'Camera is off', detail = 'Enable your camera to start a f
   $('start').hidden = false; $('start').disabled = false; $('start').textContent = 'Enable camera'; $('stop').hidden = true;
   for (const id of ['points','timing','rate']) $(id).textContent = '—';
   $('movement').textContent = 'Live movement feedback appears here.';
+  $('hand-details').replaceChildren();
   status(title, detail);
 }
 function fail(error) {
@@ -90,25 +92,29 @@ function render(frame) {
   canvas.width = frame.image.width; canvas.height = frame.image.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const sets = mode === 'hands' ? frame.hands.map(hand => hand.joints) : [frame.joints];
-  const edges = mode === 'hands' ? handEdges : bodyEdges;
   const total = sets.reduce((n, joints) => n + Object.values(joints).filter(usable).length, 0);
   const expected = mode === 'hands' ? Math.max(1, sets.length) * 21 : mode === 'upper' ? 6 : 12;
   $('points').textContent = `${total} / ${expected}`;
   const colors = ['#d2f793', '#8de3ef'];
   sets.forEach((joints, i) => {
+    if (mode === 'hands') { drawHand(ctx, joints, frame.image); return; }
     ctx.strokeStyle = ctx.fillStyle = colors[i % colors.length]; ctx.lineWidth = Math.max(2, canvas.width / 280);
-    for (const [a, b] of edges) if (usable(joints[a]) && usable(joints[b])) {
+    for (const [a, b] of bodyEdges) if (usable(joints[a]) && usable(joints[b])) {
       ctx.beginPath(); ctx.moveTo(joints[a].x * canvas.width, joints[a].y * canvas.height);
       ctx.lineTo(joints[b].x * canvas.width, joints[b].y * canvas.height); ctx.stroke();
     }
     for (const p of Object.values(joints).filter(usable)) {
       ctx.beginPath(); ctx.arc(p.x * canvas.width, p.y * canvas.height, canvas.width / 180, 0, Math.PI * 2); ctx.fill();
     }
-    if (mode === 'hands' && usable(joints.indexTip)) {
-      ctx.beginPath(); ctx.arc(joints.indexTip.x * canvas.width, joints.indexTip.y * canvas.height, canvas.width / 45, 0, Math.PI * 2); ctx.stroke();
-    }
   });
   if (mode === 'hands') {
+    $('hand-details').replaceChildren(...frame.hands.map((hand, i) => {
+      const item = document.createElement('li');
+      const count = Object.values(hand.joints).filter(usable).length;
+      const score = Number.isFinite(hand.sideConfidence) ? ` · ${Math.round(hand.sideConfidence * 100)}% side confidence` : '';
+      item.textContent = `Hand ${i + 1}: ${hand.side} · ${count} landmarks${score}`;
+      return item;
+    }));
     status(total ? `${frame.hands.length} hand${frame.hands.length === 1 ? '' : 's'} detected` : 'No hands detected', total ? 'The ring follows your index fingertip.' : guides.hands);
     $('movement').textContent = frame.hands.map((hand, i) => {
       const ratio = pinchRatio(hand.joints, frame.image);
@@ -127,6 +133,7 @@ document.querySelectorAll('[data-mode]').forEach(button => button.addEventListen
   stop('Mode selected · camera off', 'Enable your camera to try this mode.'); mode = button.dataset.mode;
   document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
   $('guide').textContent = guides[mode];
+  $('hand-observation').hidden = mode !== 'hands';
 }));
 document.addEventListener('visibilitychange', () => { if (document.hidden && (active || pending)) stop('Paused · camera off', 'Enable your camera again when you return.'); });
 window.addEventListener('pagehide', () => stop());

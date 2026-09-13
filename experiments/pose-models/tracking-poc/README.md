@@ -30,15 +30,20 @@ No new library is required. Asset preparation copies the installed runtime and
 downloads official model files with checksum validation; all generated assets are ignored.
 The first preparation needs internet. Browser inference and assets are same-origin.
 
-The isolated `codex/tracking-poc` branch is based on the repository baseline. Its
-changes contain only this experiment, ready for the user's later combined merge.
-No other agent's files are included. Browser tests use installed Google Chrome.
+Tracking Lab is the common observation entry point for hand, full-body and upper-body
+tracking. The earlier standalone hand POC is consolidated into its Hands mode;
+there is one camera lifecycle, model worker, asset preparation path and named-joint
+adapter. Browser tests use installed Google Chrome and the production build; build
+before running them. If port 5186 is occupied, use `TRACKING_PORT=5187 npm run test:browser`
+to validate a separate preview without stopping someone else's server.
 
 ## What the modes mean
 
 - **Hands:** up to two hands, 21 named points each. A live index-finger cursor and
   thumb–index distance relative to palm width make motion visible. The pinch cue is
   an experimental geometric threshold, not a trained gesture classifier.
+  Each finger has its own color; a white outline and center ring show the palm.
+  Result rows show the model's left/right label, visible point count and side score.
 - **Full body:** the existing 12-joint `PoseFrame` covering shoulders through ankles.
 - **Upper body:** the same Pose Lite model and valid `PoseFrame`, filtered for six
   shoulder/elbow/wrist joints. Legs are not required by the UI. This is not a new
@@ -49,6 +54,9 @@ Hands use an experiment-local envelope with named joints, unknown per-joint conf
 and a separate model handedness label/score. It is not a shared `PoseFrame` extension.
 Hand array positions and model side labels are not stable identity across crossings.
 Mirroring changes only the preview. No body/hand simultaneous mode is included.
+`hand-overlay.js` consumes the existing named hand joints. Its palm center is the
+mean of wrist and four finger bases, for visualization only; it does not add a new
+tracking provider, camera loop, gesture event, or shared contract field.
 
 ## Privacy and lifecycle
 
@@ -96,3 +104,15 @@ model family. Upper-body cropping worked for one public image; seated users, cha
 lighting, hands crossing, fast movement, occlusions, and pinch threshold stability
 remain unvalidated. No human trial or private recording was collected. Try the three
 modes live without recording before adopting gesture thresholds for game scoring.
+
+### Hand POC consolidation
+
+The recognition overlay and hand detail view from `codex/hand-tracking-poc` now use
+this lab's existing Hands provider and envelope. The old standalone branch is a
+historical snapshot; use this page for further tracking work. The prior full-body,
+upper-body and experimental movement cues remain available.
+
+The integration is validated with named-joint geometry checks, real single-hand and
+two-hand public-fixture inference, no-hand clearing, mode switching, and camera/Worker
+cleanup on cancellation, timeouts, errors, hiding and exit. See
+[integration evidence](HAND-INTEGRATION.md) for the recorded results and limits.

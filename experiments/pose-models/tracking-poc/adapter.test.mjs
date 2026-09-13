@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assertPoseFrame } from '../../../contracts/index.js';
 import { adaptResult, pinchRatio, usable } from './adapter.js';
+import { palmCenter } from './hand-overlay.js';
 const meta = { sessionId: 'fixture', seq: 1, tMs: 123, source: { kind: 'synthetic', id: 'adapter-test' }, width: 1280, height: 720 };
 test('body modes preserve the shared contract, input provenance and unmirrored x', () => {
   const result = { landmarks: [Array.from({ length: 33 }, () => ({ x: .2, y: .4, visibility: .9 }))] };
@@ -26,4 +27,14 @@ test('pinch ratio accounts for image aspect and rejects missing or unusable geom
   assert.ok(Math.abs(pinchRatio(joints, { width: 1000, height: 500 }) - .25) < 1e-8);
   assert.equal(pinchRatio({}, meta), null);
   assert.equal(usable(point(1.2,.5)), false); assert.equal(usable({ x:.5,y:.5,confidence:.1 }),false);
+});
+test('palm visualization uses named unmirrored joints and rejects incomplete geometry', () => {
+  const joints = Object.fromEntries(['wrist', 'indexMCP', 'middleMCP', 'ringMCP', 'pinkyMCP']
+    .map((name, i) => [name, { x: .1 + i * .1, y: .4, confidence: null }]));
+  const original = structuredClone(joints);
+  const center = palmCenter(joints);
+  assert.ok(Math.abs(center.x - .3) < 1e-8); assert.equal(center.y, .4);
+  assert.deepEqual(joints, original);
+  assert.equal(palmCenter({ ...joints, wrist: undefined }), null);
+  assert.equal(palmCenter({ ...joints, wrist: { x: .3, y: .4, confidence: .1 } }), null);
 });
