@@ -57,6 +57,11 @@ Full replays can produce a short local copy for website sharing. GCP publication
 remains disabled until a usable runtime identity and upload code are configured.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
+The complete arcade also has an independent GCP deployment at
+[fitness.integ.life](https://fitness.integ.life). See the
+[GCP deployment workflow](apps/arcade/deploy/gcp/README.md). It keeps the GPT Sites
+deployment separate and preserves the original sharing studio at `/highlights`.
+
 ## Team map
 
 ```text

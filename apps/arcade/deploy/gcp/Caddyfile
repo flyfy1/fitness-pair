@@ -1,0 +1,46 @@
+{
+    admin off
+}
+fitness.integ.life {
+    root * /opt/fitness-arcade/current/client
+    encode zstd gzip
+    request_body {
+        max_size 20971520
+    }
+    # Keep existing unlisted clips, their management API and original studio.
+    @legacyMedia path_regexp legacyMedia ^/(s|media|poster)/[0-9a-f]{32}$
+    handle @legacyMedia {
+        reverse_proxy 127.0.0.1:8410
+    }
+    @legacyAPI path_regexp legacyAPI ^/api/clips/[0-9a-f]{32}$
+    handle @legacyAPI {
+        reverse_proxy 127.0.0.1:8410
+    }
+    @legacyUpload {
+        method POST
+        path /api/clips
+    }
+    handle @legacyUpload {
+        reverse_proxy 127.0.0.1:8410
+    }
+    handle /highlights {
+        rewrite * /
+        reverse_proxy 127.0.0.1:8410
+    }
+    @legacyAssets path /studio.js /view.js /style.css
+    handle @legacyAssets {
+        reverse_proxy 127.0.0.1:8410
+    }
+    @gateway path /api/* /healthz
+    handle @gateway {
+        reverse_proxy 127.0.0.1:8411
+    }
+    handle {
+        @runtime path_regexp runtime ^/games/(motion-quest|dino-run|dino-ar|plank-flight|camera-start)/runtime/(.+)$
+        rewrite @runtime /runtime/{re.runtime.2}
+        @pages path_regexp pages ^/(play/[^/]+|gallery|library|clips/[^/]+)/?$
+        rewrite @pages /index.html
+        header Cache-Control "no-cache"
+        file_server
+    }
+}

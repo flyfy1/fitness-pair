@@ -3,6 +3,12 @@
 Explicit user destination: `https://fitness.integ.life` on the existing GCP server.
 This exploration does not use Sites hosting or the Raspberry Pi.
 
+The full arcade now owns the domain root. Use the
+[arcade GCP deployment workflow](../../../../apps/arcade/deploy/gcp/README.md)
+for updates to that deployment. The original studio remains at `/highlights`,
+and existing clip links and data retain this service. Do not rerun this experiment's
+installer on that host: its old proxy configuration would replace the arcade root.
+
 - Project: `project-e8ef2daf-0520-4018-b9f`
 - VM: `integ-prod`, zone `asia-southeast1-b`, external IP `35.198.216.126`
 - DNS: new DNS-only A record `fitness.integ.life` → `35.198.216.126`.
