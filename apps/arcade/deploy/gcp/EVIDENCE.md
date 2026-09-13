@@ -287,3 +287,20 @@ pushed `main` as `20260913T124851Z-c339e6c7e53b`.
   GPT Sites still serves `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; no Sites
   publication was performed. A direct Python fetch there was denied with HTTP 403,
   so the asset check used a normal browser page instead.
+
+
+## English default after user feedback
+
+Source `55b6ed627365ad7ca26268894fdf97ea2a5107f5` was deployed from clean,
+pushed `main` as `20260913T130806Z-55b6ed627365`.
+
+- Fresh visits now start in English regardless of browser language. Only an
+  explicit saved selection can enable Chinese by default. The prior automatic
+  browser-language selection never wrote a preference, so it needs no migration.
+- All 77 repository tests, the full arcade build and two local browser regressions
+  passed. The same two checks passed against GCP in 15.5 seconds: a Chinese browser
+  starts in English, explicit Chinese and English choices survive reload, a language
+  change preserves the game session, and Chinese speech remains in the local replay.
+- Public health reports the exact source above. GPT Sites still serves its original
+  `index-D8n_qfSb.js` and `index-BuqiS9ra.css`, verified in a browser. No Sites
+  publication, participant recording or clip upload was performed.

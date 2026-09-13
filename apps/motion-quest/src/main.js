@@ -183,7 +183,7 @@ async function startCamera() {
           const action = detector.update(frame);
           if (action) {
             const canStart = startGate.update(frame, action.phase === 'ready');
-            if (canStart || action.phase === 'calibrating') handlePose(action);
+            if (canStart || action.phase === 'missing' || action.phase === 'calibrating') handlePose(action);
           }
         } catch (error) { failCamera(error); }
       } else if (data.type === 'error') failCamera(Object.assign(new Error(data.message), { name: data.name || 'Error' }));

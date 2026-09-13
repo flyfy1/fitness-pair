@@ -39,6 +39,31 @@ test('narrow layout and pointer control fit without horizontal overflow', async 
   await page.screenshot({ path: 'test-results/mobile.png', fullPage: true });
 });
 
+test('status guidance is a large in-scene line and controls have no panel chrome', async ({ page }) => {
+  await page.goto('/');
+  const layout = await page.evaluate(() => {
+    const panel = document.querySelector('.tracking-panel');
+    const detail = document.querySelector('#status-detail');
+    const message = document.querySelector('.arena-message');
+    const panelStyle = getComputedStyle(panel);
+    const detailStyle = getComputedStyle(detail);
+    return {
+      detailInsideMessage: message.contains(detail),
+      detailFontSize: parseFloat(detailStyle.fontSize),
+      panelBackground: panelStyle.backgroundColor,
+      panelBorderWidth: panelStyle.borderWidth,
+      panelBoxShadow: panelStyle.boxShadow,
+    };
+  });
+  expect(layout.detailInsideMessage).toBe(true);
+  expect(layout.detailFontSize).toBeGreaterThanOrEqual(18);
+  expect(layout.panelBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(layout.panelBorderWidth).toBe('0px');
+  expect(layout.panelBoxShadow).toBe('none');
+  await expect(page.locator('#start')).toBeInViewport();
+  await expect(page.locator('#demo')).toBeInViewport();
+});
+
 test('denied camera permission has a useful error and preview still works', async ({ page }) => {
   await page.addInitScript(() => {
     navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('denied', 'NotAllowedError'); };
@@ -130,7 +155,7 @@ test('synthetic landmark sequence runs through actual detector and wins; complet
       postMessage(data) {
         if (data.type === 'init') { setTimeout(() => this.onmessage({ data: { type: 'ready' } }), 0); return; }
         data.bitmap.close();
-        const frame = this.frame++; const down = frame >= 30 && (frame - 30) % 24 < 12;
+        const frame = this.frame++; const down = window.testStarted && frame % 24 < 12;
         const points = Array.from({ length: 33 }, () => ({ x: .5, y: .3, visibility: 1 }));
         for (const ids of [[11,23,25,27], [12,24,26,28]]) {
           points[ids[0]].y = down ? .28 : .2;
@@ -138,6 +163,7 @@ test('synthetic landmark sequence runs through actual detector and wins; complet
           points[ids[2]].y = .65; points[ids[2]].x = down ? .68 : .5;
           points[ids[3]].y = .9;
         }
+        points[15].y = points[16].y = window.testRaiseHands ? .05 : .3;
         setTimeout(() => { if (!this.terminated) this.onmessage({ data: { type: 'pose', landmarks: window.testMissing ? [] : points, time: data.time, inferenceMs: 1 } }); }, 0);
       }
       terminate() { this.terminated = true; }
@@ -148,6 +174,12 @@ test('synthetic landmark sequence runs through actual detector and wins; complet
   await page.evaluate(() => { window.testMissing = true; });
   await expect(page.locator('#arena-title')).toHaveText('Step into view');
   await page.evaluate(() => { window.testMissing = false; });
+  await expect(page.locator('.hands-start-title')).toHaveText('Raise BOTH hands to start.');
+  await page.evaluate(() => { window.testRaiseHands = true; });
+  await expect(page.locator('.hands-start-title')).toHaveText('Now lower both hands.');
+  await page.evaluate(() => { window.testRaiseHands = false; });
+  await expect(page.locator('.hands-start')).toBeHidden();
+  await page.evaluate(() => { window.testStarted = true; });
   await expect(page.locator('#arena-title')).toHaveText('Stand to attack', { timeout: 10_000 });
   await page.screenshot({ path: 'test-results/large-action-cue.png' });
   await expect(page.locator('#rep-count')).toHaveText('5', { timeout: 25_000 });
