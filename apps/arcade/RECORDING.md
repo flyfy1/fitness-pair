@@ -7,7 +7,7 @@
 - Risk: asynchronous encoding must not steal focus from a new round, resurrect an
   evicted clip, change the gallery source, or lose synchronized game audio.
 - Loop: play → native Replay or Share → unbranded preview/upload; Download alone
-  makes a temporary branded copy with a footer and three-second invitation.
+  makes a temporary copy with only the existing three-second invitation appended.
 - Recordings keep up to the latest 90 seconds at original speed. New footage
   replaces old footage while play continues. This also bounds optional voice
   capture, whose offset is adjusted to the retained video window.
@@ -16,6 +16,39 @@
 - Boundary: no camera/recognition changes, no remote conversion, and no automatic
   upload. Historical checks below describe earlier releases; their branding and
   unlimited-retention expectations are superseded by this policy.
+
+## Download ending
+
+`src/download-ending.js` reuses `drawClipEnding` for the existing portrait or
+landscape invitation. The fast export demuxes the saved clip, encodes only the
+three-second ending with WebCodecs, then remuxes the original compressed video
+and audio with that ending. Gameplay is never drawn, decoded or played during
+this path. Original dimensions, timestamps relative to the common track origin,
+and compressed picture/audio data are retained. No footer is added to gameplay.
+
+AVC MP4 uses AVC3 with in-band parameter sets at keyframes so the independent
+ending encoder can have its own SPS/PPS and seeking back into gameplay remains
+valid. Picture NAL units are retained without re-encoding. VP8/VP9 WebM keeps its
+original codec and audio. MP4 can hold a single encoded ending picture for three
+seconds; WebM uses 72 timed frames for native-player duration compatibility.
+The existing audio ends with gameplay; the invitation is silent.
+
+Fast preparation has a 20-second deadline, bounded packet copying, and releases
+the encoder/input/output on cancellation, failure, hidden tab or page exit.
+Unsupported WebCodecs, codecs or transformed legacy media use the existing
+playback-length export with explicit progress text; this fallback also appends
+only the invitation. A prepared download is reused by its clip card. Neither
+path changes the stored replay, thumbnail, gallery source, native file-sharing
+source or two-clip retention budget. Conversation mixing remains a separate,
+explicit operation before the selected video is exported.
+
+Synthetic browser checks in `tests/download-ending.spec.js` repeat actual
+browser-encoded segments into roughly 60-second inputs. They verify MP4 portrait
+with audio, MP4 landscape without audio, and WebM with audio: original compressed
+pictures/audio, timestamps, no footer, a playable three-second ending, seeking
+back across the join, cancellation, and audible game sound. The fast path is
+also exercised with playback and VideoDecoder blocked. These are desktop Chrome
+checks, not physical-phone or messaging-app compatibility evidence.
 
 ## Rolling capture
 

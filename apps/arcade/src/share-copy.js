@@ -1,5 +1,5 @@
 import {captureClipThumbnail} from './clip-thumbnail.js';
-import {loadRecordingLogo,drawClipEnding,drawDownloadFrame} from './clip-compositor.js';
+import {loadRecordingLogo,drawClipEnding} from './clip-compositor.js';
 import {startVideoRecorder,recordedBlob} from './video-format.js';
 import {MAX_BYTES} from './local-clips.js';
 
@@ -59,7 +59,7 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{},includeConv
   if(range.start>0)await waitMedia(video,'seeked',()=>{video.currentTime=range.start;},localSignal);
   const logo=brandedDownload?await abortable(loadRecordingLogo(),localSignal):null;localSignal.throwIfAborted();
   const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;const ctx=canvas.getContext('2d');
-  const draw=()=>brandedDownload?drawDownloadFrame(ctx,video,clip,logo):ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const draw=()=>ctx.drawImage(video,0,0,canvas.width,canvas.height);
   draw();const thumbnail=captureClipThumbnail(canvas);stream=canvas.captureStream(24);
   for(const track of audioOutput?.stream.getAudioTracks()||[])stream.addTrack(track);
   let chunks=[],bytes=0,startedAt=0,stoppedAt=0,finishing=false,lastTime=video.currentTime,lastFrameAt=performance.now();
