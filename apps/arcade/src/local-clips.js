@@ -1,6 +1,6 @@
-export const MAX_BYTES=100*1024*1024;
+export const MAX_BYTES=200_000_000;
 export const MAX_CLIPS=2;
-const LIBRARY_BYTES=150*1024*1024;
+const LIBRARY_BYTES=400_000_000;
 function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open('fitness-pair-clips',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Close other arcade tabs and retry.'));});}
 export const clipBytes=clip=>clip.blob.size+(clip.conversation?.blob?.size||0)+(clip.thumbnail?.size||0);
 // Selection and eviction share one transaction, including concurrent round saves.

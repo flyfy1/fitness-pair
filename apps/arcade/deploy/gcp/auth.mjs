@@ -46,7 +46,7 @@ export function createAuth({origin, issuer, clientId, clientSecret, store, fetch
     if (!session) throw fail(401, 'Log in with Integ.Life to manage your shared clips.');
     return session;
   }
-  return {user, requireUser, ...Object.fromEntries(['list', 'reserve', 'release', 'syncAnonymous'].map(key => [key, store[key]])),
+  return {user, requireUser, ...Object.fromEntries(['list', 'reserve', 'release', 'syncAnonymous', 'anonymousEvictions'].map(key => [key, store[key]])),
     async handle(request) {
       const url = new URL(request.url), path = url.pathname;
       if (!path.startsWith('/api/auth/')) return null;

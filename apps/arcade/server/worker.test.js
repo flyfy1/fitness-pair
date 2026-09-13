@@ -1,3 +1,4 @@
+import {decodeUpload} from './testing/gcs-upload.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createWorker,validateUpload} from './worker.js';
@@ -10,7 +11,7 @@ function accountFixture(){
 }
 const headers={'Content-Type':'video/webm','X-Sharing-Consent':'gallery-v1','X-Management-Key':'a'.repeat(40)};
 test('unconfigured gallery has no fake clips and never calls storage',async()=>{const worker=createWorker({fetcher:()=>{throw Error('Unexpected network');}});const res=await worker.fetch(new Request('https://arcade.test/api/clips'),{});assert.deepEqual(await res.json(),{enabled:false,clips:[]});const put=await worker.fetch(new Request(url,{method:'PUT',headers,body:'clip'}),{});assert.equal(put.status,503);});
-test('consent, type, duration, game and size are checked before reading video',()=>{assert.equal(validateUpload(new Request(url,{headers}),url).source,'synthetic');for(const changes of [{'X-Sharing-Consent':''},{'Content-Type':'text/html'},{'Content-Length':String(21*1024*1024)}])assert.throws(()=>validateUpload(new Request(url,{headers:{...headers,...changes}}),url));for(const [key,value] of [['duration','91'],['game','unknown'],['source','camera'],['title','']]){const changed=new URL(url);changed.searchParams.set(key,value);assert.throws(()=>validateUpload(new Request(changed,{headers}),changed));}});
+test('consent, type, duration, game and size are checked before reading video',()=>{assert.equal(validateUpload(new Request(url,{headers}),url).source,'synthetic');for(const changes of [{'X-Sharing-Consent':''},{'Content-Type':'text/html'},{'Content-Length':String(200_000_001)}])assert.throws(()=>validateUpload(new Request(url,{headers:{...headers,...changes}}),url));for(const [key,value] of [['duration','91'],['game','unknown'],['source','camera'],['title','']]){const changed=new URL(url);changed.searchParams.set(key,value);assert.throws(()=>validateUpload(new Request(changed,{headers}),changed));}});
 test('upload authorization and same-origin checks precede GCP access',async()=>{const worker=createWorker({fetcher:()=>{throw Error('Unexpected network');}}),env={GCP_BUCKET:'private',GCP_SERVICE_ACCOUNT_JSON:'{}',ACCOUNTS:accountFixture()};assert.equal((await worker.fetch(new Request(url,{method:'PUT',headers,body:'x'}),env)).status,403);assert.equal((await worker.fetch(new Request(url,{method:'PUT',headers:{...headers,Origin:'https://elsewhere.test'},body:'x'}),env)).status,403);});
 test('application routes preserve static game paths',async()=>{const seen=[];const env={ASSETS:{fetch:r=>{seen.push(new URL(r.url).pathname);return new Response('app');}}},worker=createWorker();for(const route of ['/play/dino-run','/library','/gallery','/clips/example','/games/dino-run/'])await worker.fetch(new Request('https://arcade.test'+route),env);assert.deepEqual(seen,['/','/','/','/','/games/dino-run/']);});
 for(const identity of ['private-key','metadata'])test(`mock GCP ${identity} publication persists, retries idempotently, streams ranges, and revokes without exposing its key`,async()=>{
@@ -22,7 +23,7 @@ for(const identity of ['private-key','metadata'])test(`mock GCP ${identity} publ
   const u=new URL(raw);if(u.hostname==='oauth2.googleapis.com'){assert.equal(identity,'private-key');return Response.json({access_token:'test-token',expires_in:3600});}
   assert.equal(options.headers.Authorization,'Bearer test-token');
   const name=u.searchParams.get('name')||decodeURIComponent(u.pathname.split('/o/')[1]||'');
-  if(options.method==='POST'){if(objects.has(name))return new Response('',{status:412});objects.set(name,typeof options.body==='string'?new TextEncoder().encode(options.body):options.body);writes++;return Response.json({name});}
+  if(options.method==='POST'){const decoded=await decodeUpload(raw,options);options={...options,body:decoded.body};if(objects.has(name))return new Response('',{status:412});objects.set(name,typeof options.body==='string'?new TextEncoder().encode(options.body):options.body);writes++;return Response.json({name});}
   if(!name)return Response.json({items:[...objects.keys()].filter(x=>x.startsWith('gallery/')).map(name=>({name}))});
   if(!objects.has(name))return new Response('',{status:404});
   if(options.method==='DELETE'){objects.delete(name);return new Response(null,{status:204});}

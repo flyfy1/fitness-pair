@@ -55,8 +55,9 @@ the attached identity; an earlier nested CLI projection incorrectly appeared emp
 - The VM identity is shared by workloads on this VM; this delegation follows that
   existing host trust boundary. It does not grant project or bucket administration.
 - Keep uniform bucket-level access and public-access prevention enabled. The
-  lifecycle rule deletes `gallery/` and `videos/` objects after seven days; the app
-  denies expired records immediately. Existing seven-day soft-delete retention
+  lifecycle rule deletes `gallery/` and `videos/` objects using each object’s
+  `customTime` expiry. Permanent objects have no custom time; the app denies
+  finite records immediately at expiry. Existing seven-day soft-delete retention
   can retain deleted bytes beyond their availability through the app.
 - Set `GCP_BUCKET`, `GCP_IMPERSONATE_SERVICE_ACCOUNT`, `INTEG_AUTH_ISSUER`,
   `INTEG_AUTH_CLIENT_ID=hopmodo`, and its independent `INTEG_AUTH_CLIENT_SECRET`
@@ -104,3 +105,42 @@ temporary private directory below `FITNESS_STATE_DIR/.local` that is removed aft
 each clip. Original videos, publication records and account state are not rewritten.
 Do not print the environment file or token responses. Browser-local clips are
 separate: use Generate thumbnail in My clips on the device that owns them.
+
+
+## Sharing expiry migration
+
+`deploy.py` runs `retention-policy.mjs` before release installation and again after
+installation to catch uploads completed by the previous gateway. It uses the
+release machine's existing gcloud identity, without changing the VM's bucket role.
+Run `node apps/arcade/deploy/gcp/retention-policy.mjs` for a read-only inventory.
+`--apply --backup=<private-directory>` saves the prior lifecycle and planned
+metadata changes with mode 0600, stamps existing finite objects at their original
+publication expiry, and replaces only the recognized seven-day deletion rule.
+Unknown overlapping deletion rules fail closed; unrelated rules are preserved.
+
+The replacement rule is `Delete` with `daysSinceCustomTime: 0` for `gallery/` and
+`videos/`. New finite uploads save bytes and custom time together. Objects with no
+custom time are excluded, allowing permanent shares. Existing videos are not made
+permanent or given a new expiry. Orphan objects preserve an existing custom time;
+unstamped orphans use their creation time plus seven days. Generation and metadata
+preconditions reject concurrent mutations. Rerun a failed migration after checking
+the reported storage error; already applied metadata is safe to inventory again.
+
+Cloud lifecycle changes may take up to 24 hours to propagate. Application expiry
+checks remain immediate. Do not restore the old age-based rule after permanent
+shares exist, and do not restore an account store that rejects `expiresAt: null`.
+Use a compatible gateway or disable publication while recovering; preserve ledger
+state. Bucket privacy, other object prefixes and soft-delete policy are unchanged.
+
+References: [GCS lifecycle](https://docs.cloud.google.com/storage/docs/lifecycle),
+[custom-time metadata](https://docs.cloud.google.com/storage/docs/metadata),
+and [atomic data and metadata upload](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert).
+
+
+The 200 MB upload path is bounded by the gateway, so rejections receive a useful
+413 response and an audit event. Other routes retain the earlier 20 MiB proxy
+bound, including the separate legacy studio. The gateway accepts one upload at a
+time, allows five minutes to receive it and two minutes for the cloud write. Its
+1 GiB service memory ceiling accommodates the bounded body and cloud-upload copy.
+Local clips allow 200 MB per file and a 400 MB aggregate library, still retaining
+at most the latest two clips. This does not increase either cloud quota.

@@ -50,3 +50,13 @@ test('anonymous pool includes imported clips, persists reservations, and cannot 
   now = 3000;
   assert.equal((await store.list(null)).usedBytes, 0);
 });
+
+
+test('permanent clips retain their quota across time and restart and release only on deletion',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-permanent-');t.after(()=>rm(directory,{recursive:true,force:true}));
+ let now=1000;const store=createAccountStore(directory,{now:()=>now}),owner='a'.repeat(64),id=randomUUID();
+ await store.reserve(owner,{id,bytes:ACCOUNT_LIMIT_BYTES,expiresAt:null});now+=365*86400000;
+ const restarted=createAccountStore(directory,{now:()=>now});assert.equal((await restarted.list(owner)).usedBytes,ACCOUNT_LIMIT_BYTES);
+ await assert.rejects(restarted.reserve(owner,{id:randomUUID(),bytes:1,expiresAt:null}),{status:413});
+ await restarted.release(owner,id);assert.equal((await restarted.list(owner)).usedBytes,0);
+});

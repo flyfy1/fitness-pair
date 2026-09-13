@@ -68,7 +68,8 @@ Gameplay records automatically to IndexedDB on the player’s device. Branded MP
 exports use a supported native encoder, with an explicitly labeled WebM fallback.
 Full replays can produce a short local copy for website sharing. Gallery publication is enabled on
 `fitness.integ.life` with a shared 10 GB anonymous public-upload pool and 2 GB per-account storage.
-Accounts can also upload private videos and share a link with friends; GPT Sites retains its
+Anonymous shares last seven days, with the oldest anonymous videos replaced when the pool is full.
+Accounts can choose 1, 7, 30, or 90 days, or no expiry; private links let friends watch without login. GPT Sites retains its
 separate, disabled gallery configuration.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
