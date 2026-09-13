@@ -14,7 +14,9 @@ Each replay keeps the orientation at the start of its round: portrait play recor
 
 Round completion shows a visible preparation message, then automatically focuses and scrolls to that round’s replay when it is ready. Play replay starts the video; Back to game returns to the native restart controls and pauses playback. View replay reopens the current round without publishing it. The player reserves its recorded dimensions before the thumbnail loads, so automatic scrolling lands on the video. Starting another round cancels a pending reveal, so a late save cannot interrupt new gameplay. Recording failures explain why no video is available; storage failures still show the playable in-memory replay with a download warning. Saved videos retain their original speed and game audio. Both video and optional conversation use bounded rolling buffers; the saved conversation offset follows the retained video window. Download alone creates a temporary branded copy with the Hopmodo footer and a three-second invitation; it does not replace the unbranded preview or upload source and does not occupy a library slot. Existing previously branded recordings cannot have their baked-in branding removed.
 
-“Share with a friend” passes the actual video File to the operating system share dialog, only from a player click and only when file sharing is supported. Otherwise, the player can download and attach it manually. “Copy game link” sends friends to the game, not to the private local clip. Cancelling sharing leaves the recording in place.
+“Share with a friend” passes the actual video File to the operating system share dialog, only from a player click and only when file sharing is supported. Otherwise, the player can download and attach it manually. “Copy game link” sends friends to the game, not to the private local clip. Cancelling sharing leaves the recording in place. Local clips also provide a complete Copy message caption to send with the video attachment; it includes the game invitation and does not claim to link to the local recording.
+
+After uploading, and on each shared video page, Copy message includes the full viewer link, game invitation and expiry date when set. Private messages retain the access token and explain that anyone holding the link can watch; private pages have no public social-network shortcuts. Public videos offer LinkedIn, X (Twitter), and Facebook links that open the platform composer for user review. X receives a short caption; LinkedIn and Facebook receive the viewer link, with the full message available to copy and paste. No social login, third-party SDK, automatic posting or visibility change is added. A selectable message remains available when clipboard access is blocked.
 
 MP4 is preferred and confirmed from actual encoded bytes. Browsers without an available MP4 encoder save clearly labeled WebM files; files are never renamed to claim MP4. See [recording evidence and browser limits](RECORDING.md).
 
@@ -142,3 +144,10 @@ the backdrop dismiss it and restore focus/scrolling. Long guides scroll inside
 the dialog, while the heading and entry button remain available. Mobile guides
 stack the person diagrams with readable captions instead of shrinking the text.
 Instructions and diagrams live in `src/game-guides.js` and `src/movement-art.js`.
+
+Social sharing verification (2026-09-14): 84 unit checks and the complete build passed.
+Four focused browser checks cover public platform navigation, full private link
+copy/native sharing, blocked clipboard selection at 320px, and immediate sharing
+after a consented upload. Uploads, clipboard, native sharing and platform responses
+use synthetic fixtures; no social post or participant video was sent. Real platform
+login/composer behavior and device share-sheet recipients still need manual checks.
