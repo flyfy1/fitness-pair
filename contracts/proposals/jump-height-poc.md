@@ -49,3 +49,8 @@ The optional `measuredRise` and `canConfirmMaximum` fields support an explicit U
 confirmation of a captured calibration range. `confirm-maximum` is a UI cue only;
 confirmation is not a completed jump. Dino's held-hand commands operate in the host
 UI, preserve source/input identity, and never award game score or jump completions.
+
+`prepare-jump` is an additive cue for a visible preparatory crouch after standing
+calibration. Its output height is zero and it never supplies a completion event.
+The existing standing reference is retained; calibration confirmation remains blocked
+until the player returns upright after a measured rise.
