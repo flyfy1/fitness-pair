@@ -7,3 +7,12 @@ body:has(.tutorial-active) .hopmodo-conversation{display:none!important}
 .tutorial-active::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(90deg,#0a232df7 0%,#0a232de3 42%,#0a232d25 100%)}
 @media(max-width:700px){.tutorial-active::before{background:#0a232da6}}
 #tutorial-detail{background:#0a242bde;border-radius:14px;padding:12px 16px}
+
+/* Distance-first practice: the command and its short qualifier lead the screen. */
+#tutorial{padding-top:116px;grid-template-columns:minmax(0,1fr) minmax(210px,.34fr);gap:3vw;align-content:start}.tutorial-copy{align-self:start;max-width:none}.tutorial-copy h1{font-size:clamp(72px,8vw,132px);line-height:1.02;margin-bottom:24px}.tutorial-copy #tutorial-detail{font-size:clamp(32px,3.5vw,54px);line-height:1.25;padding:14px}.tutorial-copy #tutorial-step{font-size:24px}.tutorial-progress span{font-size:26px}.tutorial-actions button{font-size:24px;min-height:60px}#tutorial-feedback{font-size:30px;min-height:0}#tutorial-feedback:empty{display:none}#tutorial-diagram figcaption{font-size:24px}.tutorial-visual{align-self:start}#tutorial-privacy{font-size:16px}
+@media(max-width:700px){#tutorial{grid-template-columns:1fr;padding:96px 18px 24px}.tutorial-copy h1{font-size:clamp(48px,12vw,76px)}.tutorial-copy #tutorial-detail{font-size:clamp(27px,7vw,40px)}.tutorial-copy #tutorial-step{font-size:19px}.tutorial-progress span{font-size:21px}.tutorial-actions button{font-size:20px;min-height:52px}#tutorial-feedback{font-size:24px}.tutorial-visual{justify-content:center}#tutorial-diagram figcaption{font-size:19px}#tutorial-privacy{font-size:14px}}
+@media(max-height:550px) and (min-width:701px){.tutorial-copy h1{font-size:52px}.tutorial-copy #tutorial-detail{font-size:30px}.tutorial-copy #tutorial-step{font-size:18px}.tutorial-progress span{font-size:20px}#tutorial-feedback{font-size:22px}}
+
+/* Keep permission and skip reachable while the large command scrolls on small screens. */
+@media(max-width:700px),(max-height:550px){.tutorial-actions{position:fixed;bottom:14px;left:18px;right:18px;z-index:6;background:#0a242bf5;padding:8px;border-radius:16px;margin:0}#tutorial{padding-bottom:180px}#tutorial-privacy{display:none}}
+@media(max-height:550px) and (min-width:701px){#tutorial{padding-top:82px}.tutorial-copy #tutorial-step,#tutorial-diagram figcaption,.tutorial-progress{display:none}.tutorial-copy h1{margin-bottom:12px}.tutorial-copy #tutorial-detail{margin-bottom:12px}#tutorial-feedback{margin-top:8px}}

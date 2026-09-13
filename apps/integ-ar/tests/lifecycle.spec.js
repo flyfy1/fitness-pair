@@ -1,3 +1,4 @@
+import {startWithHands} from './start-hands.js';
 import {test, expect} from '@playwright/test';
 import {readFile, mkdir, writeFile} from 'node:fs/promises';
 import {syntheticCamera} from './synthetic-camera.js';
@@ -18,7 +19,7 @@ test('cancelling pending permission releases a late camera stream', async ({page
 });
 test('backgrounding a live session stops tracks and the model worker', async ({page}) => {
   await syntheticCamera(page); await page.goto('/?game=knife'); await page.locator('#start').click();
-  await expect.poll(() => page.evaluate(() => window.integAR.getState().phase)).toBe('playing');
+  await startWithHands(page); await expect.poll(() => page.evaluate(() => window.integAR.getState().phase)).toBe('playing');
   await page.evaluate(() => {Object.defineProperty(document, 'hidden', {configurable: true, value: true}); document.dispatchEvent(new Event('visibilitychange'));});
   expect(await page.evaluate(() => window.testStream.getTracks().every(t => t.readyState === 'ended') && window.testWorker.terminated)).toBe(true);
   await expect(page.locator('#arena')).toHaveAttribute('data-phase', 'idle');

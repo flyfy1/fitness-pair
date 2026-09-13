@@ -1,4 +1,5 @@
 import './style.css';
+import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { Runner } from './engine.js';
 import {createRunnerMotionInput} from './motion-input.js';
 import { Renderer } from './render.js';
@@ -23,6 +24,7 @@ const storageKey = () => `motion-arcade:dino-run:best:${mode === 'motion' ? 'mot
 function loadBest() {
   try { const n = Number(localStorage.getItem(storageKey())); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; } catch { return 0; }
 }
+const startGate = createHandsStart(document.querySelector('#play-area'));
 let best = loadBest();
 const pad = number => String(number).padStart(5, '0');
 
@@ -32,7 +34,7 @@ const camera = new PoseCamera({
     cameraState = status.state;
     if (status.state === 'requesting') {
       const session = { sessionId: status.sessionId, source: status.source };
-      recognizer.reset(session); gestures.reset(session); gestureState = null; gestureMessage = ''; gestureStartRequested = false; motionInput.reset(session); latestAction = null;
+      startGate.reset(session); recognizer.reset(session); gestures.reset(session); gestureState = null; gestureMessage = ''; gestureStartRequested = false; motionInput.reset(session); latestAction = null;
       lastPoseAt = 0; countdownAt = null; cameraError = '';
     }
     paint();
@@ -52,7 +54,10 @@ const camera = new PoseCamera({
     latestAction = action;
     gestureState = gestures.update(frame);
     if (gestureState?.neutral && !gestureState.latched) gestureMessage = '';
-    handleGesture(gestureState?.event);
+    if (startGate.update(frame, action.calibrated || action.canConfirmMaximum)) {
+      if (!action.calibrated) recognizer.confirmMaximum();
+      else handleGesture(gestureState?.event);
+    }
     drawSkeleton(frame);
     if (action.phase === 'missing' || !action.calibrated) {
       countdownAt = null;
@@ -61,6 +66,7 @@ const camera = new PoseCamera({
     renderer.draw(); paint();
   },
   onStop({ reason }) {
+    startGate.hide();
     cameraState = 'off'; latestAction = null; gestureState = null; gestureMessage = ''; gestureStartRequested = false; awaitingStart = false; countdownAt = null;
     $('skeleton').getContext('2d').clearRect(0, 0, $('skeleton').width, $('skeleton').height);
     if (runner.status === 'running') {
@@ -270,7 +276,7 @@ function frame(now) {
   if (mode === 'motion' && camera.running) {
     const fresh = lastPoseAt && now - lastPoseAt < 250;
     if (runner.status === 'running' && !fresh) pauseRun('Tracking is delayed. Stand steady, then resume.', false);
-    if (awaitingStart && fresh && (gestureStartRequested ? gestureState?.neutral : !gestureState?.tracked || gestureState.neutral) && latestAction?.calibrated && latestAction.phase !== 'missing' && latestAction.heightRatio < .03) {
+    if (awaitingStart && startGate.open && fresh && (gestureStartRequested ? gestureState?.neutral : !gestureState?.tracked || gestureState.neutral) && latestAction?.calibrated && latestAction.phase !== 'missing' && latestAction.heightRatio < .03) {
       countdownAt ??= now;
       if (now - countdownAt >= 3000) { runner.command(runner.status === 'paused' ? 'resume' : 'start'); awaitingStart = false; countdownAt = null; pauseReason = ''; }
     } else countdownAt = null;
