@@ -216,3 +216,38 @@ pushed `main` as `20260913T112054Z-5b314af89f6f`.
 - Public health matches the source above. GPT Sites still serves
   `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; it was not changed or deployed.
   Previously silent recordings cannot recover audio that was never captured.
+
+
+## Varied local GPT encouragement resources
+
+Source `43c933460e18ccbe36aba8b578b3b303df27ce6e` was deployed from clean,
+pushed `main` as `20260913T122731Z-43c933460e18`.
+
+- Generated 18 distinct speech resources through OpenAI's speech endpoint using
+  `gpt-4o-mini-tts-2025-12-15`, six built-in voices and reviewed tone instructions.
+  Twelve milestone clips and six endings pair with six original synthesized music
+  stingers. The complete pack and manifest occupy 954,355 bytes. Request/output
+  hashes and generation provenance are committed alongside the local resources.
+- The generator accepts a named variable in a local secret file. The credential
+  was neither logged nor copied to the repository; browser build artifacts were
+  checked for its absence. A second generator run reused all 18 matching outputs
+  without issuing speech requests. Ordinary builds never call the speech API.
+- Milestones use random groups of 2–5 completed gates plus a 12-second minimum
+  interval. Cooldown waits for a later gate; duplicate frame updates cannot score,
+  mute skips queued rewards, and separate shuffle bags avoid repeated milestone
+  lines and endings. The game clearly discloses AI-generated voices.
+- Validation passed: 72 repository tests, 20 Flight tests, the complete arcade
+  build, resource decoding and gate-trigger/recording checks, two existing Flight
+  recording/short-copy checks, and the existing sound/mute/cancel browser check.
+  All 11 game shell checks passed across the main run and a targeted rerun after
+  fixing the new disclosure's initial mobile layout overflow. Final 320px/390px
+  layouts and landscape disclosure visibility passed; the 320px screenshot was
+  visually reviewed.
+- Two additional checks passed against the deployed GCP assets in 50.8 seconds.
+  All 24 resources decoded; a pointer-controlled synthetic run completed real
+  engine gates, triggered spaced non-repeating encouragement, selected a random
+  ending and saved a non-silent replay including it. No microphone/camera input,
+  OpenAI request or upload occurred during these browser checks. Human preference
+  between voice styles remains a playtesting question.
+- Public health matches the source above. GPT Sites still serves
+  `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; it was not changed or published.
