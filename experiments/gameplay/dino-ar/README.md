@@ -1,7 +1,7 @@
 # Dino AR — gameplay mode 02 POC
 
-A separate, camera-first alternative to [Dino Run](../../../apps/dino-run/README.md).
-The mirrored video fills the window. The player stays in that video, with a virtual
+A separate, full-window alternative to [Dino Run](../../../apps/dino-run/README.md).
+Keyboard preview is the default input; optional mirrored camera video fills the window. The player stays in that video, with a virtual
 full-width runway, large running dinosaur, incoming cacti, scores and live cues
 drawn over the same scene. **Debug · show body skeleton** toggles named-joint bones
 and points, game hitboxes, and a compact tracking status (stage, visible shoulder count, rejection reason and input age);
@@ -11,12 +11,13 @@ gameplay experience, not a mode switch added to the original app.
 
 ## MVP card
 
-- **Target user:** one player with a fixed local camera.
+- **Target user:** one player testing runner gameplay, with optional local camera input.
 - **Job:** feel present inside the runner rather than control a separate dinosaur.
 - **Riskiest assumption:** a large, high-contrast dinosaur and full-width runway make
   obstacle timing understandable over a full-window video view.
-- **P1 loop:** enable camera → detect steady shoulders → automatically play → jump to clear cacti → collision → camera off → retry.
-- **Success proof:** a browser round calibrates, changes dinosaur height, clears a
+- **P1 loop:** play → simulate a jump with Space → clear cacti → collision → retry.
+  Camera is an interchangeable input using the same game rules.
+- **Success proof:** a browser round consumes action frames, changes dinosaur height, clears a
   cactus, collides, releases resources and restarts; a human trial must separately
   establish that timing and body placement are understandable.
 - **No-gos:** private recordings, uploads, new models/dependencies, physical-height
@@ -40,6 +41,27 @@ engine. The experiment owns a small shoulder-motion recognizer in
 no root package or lockfile change is needed. The first asset preparation downloads
 the existing checksum-verified Lite model into ignored `public/runtime/`.
 Runtime camera processing stays local; video and landmarks are not saved.
+
+### Keyboard preview (default)
+
+1. Select **Play**, or press **Space / ↑** to start with a jump. A jump button also
+   supports pointer/touch play. Press **P** to pause/resume; Escape pauses.
+2. **Jump height** selects a simulated peak from 25% to 100%. Each press produces
+   a complete rise-and-fall action. Airborne presses and held-key repeats do not
+   retrigger a jump. The next jump uses the newly selected height.
+3. Clear the cacti, collide, then use **Play again** or Space to retry. Pausing
+   freezes both input trajectory and game time. Leaving the window pauses play.
+4. **Controls → Camera** switches input and resets the round; select **Enable
+   camera** to use shoulders. Switching back stops owned tracks and the model
+   worker before keyboard play. Permission failures can return to keyboard mode.
+
+The page labels keyboard input **SIMULATED INPUT**. It requests no camera or model
+worker. Scores and best lift in this mode are game-testing data, not movement or
+recognition evidence.
+
+### Camera controls
+
+Choose **Camera** in the Controls selector, then:
 
 1. Keep the camera fixed, stand centered and leave room above your head. Select
    **Enable camera**. After a short shoulder reference (200 ms, at least three
@@ -73,7 +95,17 @@ Runtime camera processing stays local; video and landmarks are not saved.
 ## Geometry and rules
 
 The existing `PoseFrame → jump-height ActionFrame → Runner snapshot` flow is reused
-without changing shared contracts. Continuous height moves the dinosaur;
+without changing shared contracts. Input adapters are separate from the game:
+
+- `ShoulderMotionRecognizer` turns named camera joints into action frames.
+- `KeyboardInput` simulates those action frames with a bounded parabolic jump.
+  Its source is always `synthetic/keyboard-preview`, with its own session, strictly
+  increasing frame identity and a single stable completion ID on landing.
+- Both feed `consumeAction` and the same motion-mode `Runner`. No keyboard-specific
+  collision or scoring rules exist. Input switching resets and rebinds the round;
+  camera and synthetic sessions cannot share actions or scores.
+
+Continuous height moves the dinosaur;
 the runner counts jumps only from stable, deduplicated completion IDs. Score is
 distance, and cleared cacti come from the existing collision engine. The session,
 timestamps and camera provenance remain unchanged through recognition.
@@ -187,3 +219,17 @@ covers synthetic shoulder-only play, clearing/collision/retry, readable sprite b
 full-window resizing without scrolling or restarting, and model/camera cleanup.
 One check uses the real local model on a public image. Screenshots are synthetic;
 real-person viewing distance, recognition accuracy and playability remain unverified.
+
+### Separate input and gameplay revision (2026-09-13)
+
+The user requested keyboard simulation of movement-recognition output to focus on
+game feel. Keyboard preview is now the default, with a peak-height slider, tap-to-
+jump trajectory, pause/resume and retry. Camera controls remain selectable. This
+is an input adapter inside the POC, not a new engine or shared contract change.
+
+Validation: 10 unit checks, production build and 13 Chrome checks. New coverage
+includes synthetic provenance, proportional jump peaks, single landing events,
+repeat suppression, frozen pause state, no camera/model initialization in keyboard
+mode, clear/collision/retry, touch input and cleanup when switching from a live
+camera. Camera recognition and real local inference on the public fixture remain
+covered. Keyboard results make no claim about human recognition accuracy.
