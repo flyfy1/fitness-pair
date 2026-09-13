@@ -1,5 +1,4 @@
 import './style.css';
-import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { SquatRecognizer } from '@fitness-pair/action-squat';
 import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';
 import { createGameState, consumeAction } from '@fitness-pair/game-forest';
@@ -9,7 +8,6 @@ import { cameraPoint } from './camera-projection.js';
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
 const video = $('camera'), overlay = $('skeleton'), ctx = overlay.getContext('2d');
-const startGate = createHandsStart($('app'));
 const game = new ARGame($('game'));
 const detector = new SquatRecognizer();
 const links = [['leftShoulder','rightShoulder'],['leftShoulder','leftElbow'],['leftElbow','leftWrist'],['rightShoulder','rightElbow'],['rightElbow','rightWrist'],['leftShoulder','leftHip'],['rightShoulder','rightHip'],['leftHip','rightHip'],['leftHip','leftKnee'],['leftKnee','leftAnkle'],['rightHip','rightKnee'],['rightKnee','rightAnkle']];
@@ -56,7 +54,7 @@ function resetRound() {
   const sessionId = crypto.randomUUID();
   document.documentElement.dataset.roundId = sessionId;
   const source = { kind: mode === 'demo' ? 'synthetic' : 'camera', id: sessionId };
-  gameState = createGameState({ sessionId, source }); startGate.reset({sessionId,source}); inputSeq = 0;
+  gameState = createGameState({ sessionId, source }); inputSeq = 0;
   actionPhase = 'calibrating'; setReplayPhase('setup');
   statusUntil = 0; detector.reset({ sessionId, source }); game.reset(); progress(0);
   $('rep-count').textContent = '0'; $('damage-count').textContent = '0'; $('elapsed').textContent = '00:00';
@@ -89,7 +87,6 @@ function attack(actionFrame) {
   }
 }
 function releaseCamera() {
-  startGate.hide();
   generation++;
   clearTimeout(initTimer); initTimer = null;
   clearTimeout(loadingHintTimer); loadingHintTimer = null;
@@ -171,7 +168,7 @@ async function startCamera() {
         clearTimeout(initTimer); clearTimeout(loadingHintTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
         $('start').hidden = true; $('start').disabled = false; $('calibrate').hidden = false;
         $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera AR · squat controls';
-        status('Raise both hands to begin', 'Hold above your shoulders for one second, then lower both hands.', false, 'Raise BOTH hands');
+        status('Stand tall to calibrate', 'Keep shoulders to ankles visible for about 2 seconds. Turn slightly sideways.', false, 'Stand tall');
       } else if (data.type === 'pose') {
         inFlight = false; lastResultAt = performance.now();
         $('fps').textContent = `${Math.round(data.inferenceMs)} ms / frame`;
@@ -180,12 +177,8 @@ async function startCamera() {
             tMs: data.time, source: gameState.source, width: video.videoWidth, height: video.videoHeight });
           drawSkeleton(frame.joints);
           game.setPose(frame.joints, video.videoWidth, video.videoHeight);
-          // Start gestures own setup first. Squat calibration and completion events
-          // begin only after the hands are released; they never share this input.
-          if (startGate.update(frame, true)) {
-            const action = detector.update(frame);
-            if (action) handlePose(action);
-          }
+          const action = detector.update(frame);
+          if (action) handlePose(action);
         } catch (error) { failCamera(error); }
       } else if (data.type === 'error') failCamera(Object.assign(new Error(data.message), { name: data.name || 'Error' }));
     };

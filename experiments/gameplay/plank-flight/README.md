@@ -209,7 +209,7 @@ The AR stage also outlines confidently recognized body joints using the shared
 named-joint overlay. Close-up play shows only visible joints; missing hips or
 limbs are never inferred for display. Stale overlays clear after 250 ms.
 
-Camera entry now asks you to show both shoulders and wrists, raise both hands for one second, then lower them before the flight countdown. After this shared start confirmation, the existing head and one-shoulder view remains sufficient.
+Camera entry uses the existing head and one-shoulder countdown directly. No raised-hand gesture or visible wrists are required.
 
 
 ## English and Chinese resources
