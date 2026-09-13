@@ -61,7 +61,7 @@ export function mountShareMessage(container,clip,{local=false,origin=location.or
    actions.append(native);
   }
   if(clip.visibility!=='private')for(const [name,href] of socialLinks(message)){
-   const link=document.createElement('a');link.className='social-share-logo';link.title=name==='X (Twitter)'?'Share on X with this message':'Copy message and share on '+name;link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Share on '+name+' (opens a new tab)');
+   const link=document.createElement('a');link.className='social-share-logo';link.title=name==='X (Twitter)'?'Open X with your message prefilled':`Click to copy the message, then paste it into your ${name} post.`;link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Share on '+name+' (opens a new tab)');
    const logo=document.createElement('img');logo.src='/assets/social/'+({'LinkedIn':'linkedin','X (Twitter)':'twitter-x','Facebook':'facebook'}[name])+'.svg';logo.alt='';logo.width=22;logo.height=22;link.append(logo);actions.append(link);
    link.onclick=event=>{
     if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
