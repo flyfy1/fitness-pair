@@ -25,9 +25,10 @@ const energy=async locator=>locator.evaluate(async media=>{
 });
 
 test('conversation is a separate local track; selected export includes it and original does not',async({page})=>{
+ test.setTimeout(75000);
  await syntheticMicrophone(page);const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Game sound',exact:true}).click();await game.locator('#demo').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  expect(await page.evaluate(()=>window.microphoneCalls.length)).toBe(0);
  await page.waitForTimeout(700);
@@ -38,6 +39,7 @@ test('conversation is a separate local track; selected export includes it and or
  expect(await page.evaluate(()=>window.syntheticMicrophones[0].stream.getAudioTracks()[0].readyState)).toBe('ended');
  await page.waitForTimeout(500);
  await game.getByRole('button',{name:'Record conversation',exact:true}).click();
+ for(let i=0;i<5;i++){await game.locator('#demo-action').focus();await page.keyboard.down('Space');await page.waitForTimeout(750);await page.keyboard.up('Space');}
  await expect(page.locator('#record-status')).toContainText('Saved on this device',{timeout:18000});
  expect(await page.evaluate(()=>window.syntheticMicrophones.every(x=>x.stream.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
  await page.goto('/library');await page.reload();
