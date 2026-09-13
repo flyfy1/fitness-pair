@@ -112,8 +112,9 @@ need a trial with the user's camera and natural movement.
 
 ## Movement controls
 
-**Show body movement** toggles a live skeleton over the mirrored camera, using
-only visible, confident named joints. It aligns with the video's cover crop;
+**Skeleton debug view** is on by default and shows a live skeleton over the
+mirrored camera as soon as tracking starts. It uses only visible, confident named
+joints. The switch can hide it. It aligns with the video's cover crop;
 missing/stale joints are cleared rather than displayed as a frozen body. Turning
 the switch off, stopping the camera or completing setup clears the overlay.
 Nothing is recorded.
