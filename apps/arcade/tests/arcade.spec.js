@@ -7,7 +7,7 @@ test('landing has a direct arcade path and a factual build story',async({page})=
  await expect(page.getByRole('link',{name:'Hopmodo home',exact:true}).first()).toBeVisible();
  await expect(page.getByRole('heading',{name:'GAMES THAT GET YOU MOVING.'})).toBeVisible();
  await page.getByRole('link',{name:'Take me to the arcade',exact:true}).first().click();await expect(page).toHaveURL(/#arcade$/);
- await expect(page.getByRole('link',{name:'Play Dino Run',exact:true})).toBeInViewport();
+ await expect(page.getByRole('link',{name:'Play Ready to Move',exact:true})).toBeInViewport();
  await page.getByRole('link',{name:'How we built it',exact:true}).click();await expect(page.getByRole('heading',{name:'BUILDING THE ARCADE WITH ASTRA.'})).toBeInViewport();
  expect(errors).toEqual([]);
 });
@@ -178,7 +178,10 @@ test('storage failure preserves download fallbacks from consecutive rounds',asyn
 });
 
 test('new game cards and shared tracking assets are available',async({page,request})=>{
- await page.goto('/');for(const title of ['Dino AR','Push-up Flight','Ready to Move'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
+ await page.goto('/');
+ await expect(page.locator('.game-card')).toHaveCount(3);
+ for(const id of ['dino-run','dino-ar','orbit-pop'])await expect(page.locator(`a[href="/play/${id}"]`)).toHaveCount(0);
+ for(const title of ['Motion Quest','Push-up Flight','Ready to Move'])await expect(page.getByRole('link',{name:'Play '+title,exact:true})).toBeVisible();
  for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start']){
   const script=await request.get(`/games/${game}/runtime/pose-worker.js`);expect(script.status()).toBe(200);expect(script.headers()['content-type']).toContain('javascript');expect(await script.text()).toContain('onmessage');
   const wasm=await request.get(`/games/${game}/runtime/wasm/vision_wasm_internal.wasm`);expect(wasm.status()).toBe(200);expect(wasm.headers()['content-type']).toBe('application/wasm');
