@@ -6,10 +6,11 @@ import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { createDiagnostics } from './diagnostics.js';
 
 const $ = id => document.getElementById(id);
-const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true });
+const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true, robustTracking: true });
 const gestures = new BodyGestures();
 const diagnostics = createDiagnostics();
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
+let trackingHoldAt = null, signalState = null, candidateKey = '', candidateSince = 0;
 let complete = false, error = '', view = {}, lastViewKey = '', previousStage = null;
 const log = (event, detail = {}) => { diagnostics.append(event, detail); paintLog(); };
 log('app-opened');
@@ -31,7 +32,7 @@ const camera = new PoseCamera({
     cameraState = status.state; log('camera-state', { state: cameraState });
     if (cameraState === 'requesting') {
       recognizer.reset(status); gestures.reset(status); action = null; hands = null;
-      lastPoseAt = 0; countdownAt = null; previousStage = null;
+      lastPoseAt = 0; countdownAt = null; previousStage = null; trackingHoldAt = null; signalState = null;
     }
     paint();
   },
@@ -42,6 +43,14 @@ const camera = new PoseCamera({
     const next = recognizer.update(frame);
     if (!next) return;
     action = next; hands = gestures.update(frame);
+    const signal = stale ? 'stale-frame' : action.quality;
+    if (signal !== signalState) {
+      if (signal === 'tracking-grace' || signalState === 'tracking-grace'
+        || action.phase === 'missing') log('tracking-signal', { from: signalState, to: signal, reason: action.trackingReason ?? null,
+          rejectedForMs: recognizer.rejectedSince === null ? 0 : input.tMs - recognizer.rejectedSince,
+          inputSeq: input.seq });
+      signalState = signal;
+    }
     if (action.stage !== previousStage) {
       log('calibration-stage', { from: previousStage, to: action.stage, quality: action.quality });
       previousStage = action.stage;
@@ -81,6 +90,21 @@ function presentation(now) {
   if (cameraState === 'off') return { stage: 'off', status: 'LET’S GET YOU READY', title: 'Stand back.\nWe’ll guide you.', detail: 'One step at a time. Follow the big words.', feedback: 'Camera stays on your device. No recording.', button: 'Enable camera' };
   if (cameraState === 'requesting') return { stage: 'loading', status: 'CAMERA PERMISSION', title: 'Allow your camera.', detail: 'Choose Allow in the browser prompt.', feedback: 'Then step back where you can see the screen.' };
   if (cameraState === 'loading') return { stage: 'loading', status: 'GETTING READY', title: 'One moment…', detail: 'Starting your camera tracking.', feedback: 'Keep your shoulders and hips in view.' };
+  const unavailable = !lastPoseAt || now - lastPoseAt >= 250 || !action || action.phase === 'missing';
+  if (unavailable) {
+    if (trackingHoldAt === null) {
+      trackingHoldAt = now;
+      log('tracking-hold-started', { reason: now - lastPoseAt >= 250 ? 'stale-tracking' : action?.quality });
+    }
+    if (now - trackingHoldAt < 350 && ['standing', 'maximum', 'confirm', 'ready', 'countdown'].includes(view.stage)) {
+      return { ...view, button: undefined, paused: true, reason: 'tracking-grace',
+        feedback: 'Brief tracking interruption. Your progress is saved.' };
+    }
+  } else if (trackingHoldAt !== null) {
+    const durationMs = Math.round(now - trackingHoldAt);
+    if (countdownAt !== null) countdownAt += now - trackingHoldAt;
+    log('tracking-hold-ended', { durationMs }); trackingHoldAt = null;
+  }
   if (!lastPoseAt || now - lastPoseAt >= 250) return { stage: 'missing', status: 'WAITING FOR LIVE TRACKING', title: 'Tracking paused.', detail: 'Stay in view. We’re waiting for a fresh frame.', feedback: 'Nothing will start until tracking returns.', reason: 'stale-tracking' };
   if (!action || action.phase === 'missing') return { stage: 'missing', status: 'WE NEED TO SEE YOU', title: action?.quality === 'position-changed' ? 'Return to your spot.' : 'Step into view.', detail: 'Show both shoulders and hips. Face the camera.', feedback: 'Your legs can stay outside the picture.', reason: action?.quality ?? 'missing-body' };
   if (action.stage === 'standing') return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand tall.\nHold still.', detail: 'Stay where you are for two seconds.', feedback: action.quality === 'unstable-stance' ? 'Keep your shoulders and hips steady.' : 'We can see you. Keep holding…', progress: (action.calibrationProgress ?? 0) * 2, step: 'standing', reason: action.quality };
@@ -101,7 +125,16 @@ function presentation(now) {
 }
 function paint() {
   const now = performance.now();
-  const next = presentation(now);
+  let next = presentation(now);
+  // Debounce competing jump/confirmation instructions, independently of action
+  // recognition. An unready confirmation button is never kept actionable.
+  const requestedKey = [next.stage, next.title].join('|');
+  if (requestedKey !== candidateKey) { candidateKey = requestedKey; candidateSince = now; }
+  if (!next.paused && action?.stage === 'maximum'
+    && ['maximum', 'confirm'].includes(view.stage) && ['maximum', 'confirm'].includes(next.stage)
+    && requestedKey !== [view.stage, view.title].join('|') && now - candidateSince < 180) {
+    next = { ...view, button: undefined };
+  }
   if (next.stage !== 'countdown' && countdownAt !== null) {
     log('countdown-interrupted', { reason: next.reason ?? next.stage }); countdownAt = null;
   }
@@ -139,7 +172,7 @@ window.cameraSetup = Object.freeze({ getState: () => ({ stage: view.stage, reaso
 function tick() {
   if (camera.running) {
     paint();
-    if (countdownAt !== null && performance.now() - countdownAt >= 3000) {
+    if (trackingHoldAt === null && countdownAt !== null && performance.now() - countdownAt >= 3000) {
       complete = true; log('setup-completed'); camera.stop('setup-complete'); paint();
     }
   }

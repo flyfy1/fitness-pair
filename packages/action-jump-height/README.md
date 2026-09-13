@@ -142,3 +142,29 @@ landing may end a tracked flight, but manual height confirmation requires a retu
 to upright baseline. Missing joints, significant sideways/depth changes and initial
 crouched calibration retain their existing rejection rules. These are bounded 2D
 heuristics verified with synthetic sequences; human crouch/jump accuracy is unverified.
+
+
+## Debounced tracking in Camera Start
+
+The separate Camera Start POC enables `robustTracking: true` alongside manual
+maximum confirmation and upper-body preference. Other callers retain the default
+recognition behavior. This opt-in policy:
+
+- Preserves the standing reference, captured maximum and pending motion during
+  up to 350 ms of missing or rejected geometry. Rejected frames still emit
+  `phase: missing`, zero height and no completion; `quality: tracking-grace` and
+  `trackingReason` identify the temporary rejection. No joints are synthesized.
+- Excludes missing time from standing stability and clears landing/confirmation
+  holds immediately. Recovery requires a fresh observed landing hold. Longer
+  gaps cancel pending motion; sustained rejection beyond 750 ms recalibrates.
+- Applies a three-observed-sample median before exponential height smoothing.
+  Isolated coherent height spikes cannot establish a maximum. This adds about
+  one input frame of response latency to typical rise/fall sequences.
+- Uses torso length, anchor positions and upright geometry rather than narrow
+  projected shoulder/hip widths as the upper-body distance checks. Significant
+  torso-scale and lateral drift remain rejected.
+
+The host holds the current large instruction for 350 ms during a brief dropout,
+freezes its countdown, and hides confirmation controls until current tracking is
+valid. Competing jump/confirm instructions must persist for 180 ms before display.
+These are synthetic-tested thresholds, not measured guarantees of human accuracy.

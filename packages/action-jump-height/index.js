@@ -4,6 +4,7 @@ export const RECOGNIZER_ID = 'jump-height-2d/1';
 const STANDING_MS = 1500;
 const LANDING_MS = 200;
 const LOSS_MS = 750;
+const NOISE_GRACE_MS = 350;
 const FLIGHT_TIMEOUT_MS = 2500;
 const MAXIMUM_WAIT_MS = 15000;
 const clamp = value => Math.max(0, Math.min(1, value));
@@ -45,9 +46,9 @@ function geometry(frame, mode) {
 
 /** Relative image displacement only: no camera, recording, or model-specific joints. */
 export class JumpHeightRecognizer {
-  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false } = {}) {
+  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false, robustTracking = false } = {}) {
     this.manualMaximum = manualMaximum; this.preferUpperBody = preferUpperBody;
-    this.quickStart = quickStart;
+    this.quickStart = quickStart; this.robustTracking = robustTracking;
   }
 
   get canConfirmMaximum() {
@@ -71,6 +72,7 @@ export class JumpHeightRecognizer {
   }
 
   recalibrate() {
+    this.rejectedSince = null; this.riseSamples = [0, 0];
     this.stage = 'standing'; this.baseline = null; this.peakRise = null;
     this.measuredRise = 0; this.confirmGroundedSince = null;
     this.trackingMode = null; this.lowerAbsentSince = null; this.fallbackAnchor = null;
@@ -89,9 +91,38 @@ export class JumpHeightRecognizer {
       phase, progress: heightRatio, calibrationProgress, cue, completion,
       stage: this.stage, calibrated, heightRatio, peakRise: this.peakRise, quality, trackingMode: this.trackingMode,
       measuredRise: this.measuredRise, canConfirmMaximum: this.canConfirmMaximum,
+      ...(this.robustTracking ? { trackingReason: quality === 'tracking-grace' ? this.rejectionReason : null } : {}),
     };
     assertActionFrame(result);
     return result;
+  }
+
+  rejectNoise(frame, reason) {
+    this.rejectedSince ??= this.lastValidTMs ?? frame.tMs;
+    this.rejectionReason = reason; this.riseSamples = [0, 0];
+    this.confirmGroundedSince = null; this.landingSince = null;
+    // Keep measured state, but never credit an unseen landing, stance or peak.
+    if (frame.tMs - this.rejectedSince <= NOISE_GRACE_MS) {
+      return this.output(frame, { phase: 'missing', cue: 'hold-tracking', quality: 'tracking-grace' });
+    }
+    this.flight = null; this.armed = false; this.rearmSince = null;
+    this.filteredRise = 0; this.filterTMs = null; this.riseSamples = [0, 0];
+    this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
+    if (frame.tMs - this.rejectedSince > LOSS_MS) this.recalibrate();
+    return this.output(frame, { phase: 'missing', cue: 'move-back-into-frame', quality: reason });
+  }
+
+  recoverNoise(frame) {
+    if (this.rejectedSince !== null && frame.tMs - this.rejectedSince > NOISE_GRACE_MS) {
+      this.flight = null; this.armed = false; this.rearmSince = null;
+      this.filteredRise = 0; this.filterTMs = null; this.riseSamples = [0, 0];
+      this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
+    }
+    if (this.rejectedSince !== null && this.standingSince !== null) {
+      this.standingSince += frame.tMs - this.rejectedSince;
+    }
+    this.rejectedSince = null;
+    this.lastValidTMs = frame.tMs;
   }
 
   update(frame) {
@@ -140,6 +171,7 @@ export class JumpHeightRecognizer {
     }
     const pose = this.trackingMode === 'full-body' ? fullPose : upperPose;
     if (!pose) {
+      if (this.robustTracking) return this.rejectNoise(frame, 'tracking-lost');
       this.confirmGroundedSince = null;
       // A lost interval cannot provide evidence of a landing or stable standing.
       this.flight = null; this.landingSince = null; this.armed = false; this.rearmSince = null;
@@ -147,13 +179,13 @@ export class JumpHeightRecognizer {
       this.filterTMs = null; this.filteredRise = 0;
       return this.output(frame, { phase: 'missing', cue: 'move-back-into-frame', quality: 'tracking-lost' });
     }
-    this.lastValidTMs = frame.tMs;
+    if (!this.robustTracking) this.lastValidTMs = frame.tMs;
     if (this.stage === 'standing') return this.stand(frame, pose);
 
     const baseline = this.baseline;
     const upperBody = this.trackingMode === 'upper-body';
     const scaleChanged = Math.abs(pose.torso / baseline.torso - 1) > (upperBody ? .12 : .2)
-      || upperBody && !this.quickStart && (Math.abs(pose.shoulderWidth / baseline.shoulderWidth - 1) > .12
+      || upperBody && !this.quickStart && !this.robustTracking && (Math.abs(pose.shoulderWidth / baseline.shoulderWidth - 1) > .12
         || Math.abs(pose.hipWidth / baseline.hipWidth - 1) > .12);
     const bentTorso = upperBody && !pose.upright;
     const movedSideways = Math.abs(pose.centerX - baseline.centerX) > .12;
@@ -170,6 +202,7 @@ export class JumpHeightRecognizer {
       && !movedSideways && (upperBody || Math.abs(pose.leftAnkleY - baseline.leftAnkleY) < .025
         && Math.abs(pose.rightAnkleY - baseline.rightAnkleY) < .025);
     if (movedSideways || movedDown || !preparingJump && (scaleChanged || bentTorso)) {
+      if (this.robustTracking) return this.rejectNoise(frame, 'position-changed');
       this.confirmGroundedSince = null;
       this.driftSince ??= frame.tMs;
       this.flight = null; this.landingSince = null; this.armed = false;
@@ -177,20 +210,27 @@ export class JumpHeightRecognizer {
       if (frame.tMs - this.driftSince >= 400) this.recalibrate();
       return this.output(frame, { phase: 'missing', cue: 'rebaseline', quality: 'position-changed' });
     }
+    if (this.robustTracking) this.recoverNoise(frame);
     this.driftSince = null;
     const hipRise = baseline.hipY - pose.hipY;
     const leftRise = upperBody ? baseline.shoulderY - pose.shoulderY : baseline.leftAnkleY - pose.leftAnkleY;
     const rightRise = upperBody ? hipRise : baseline.rightAnkleY - pose.rightAnkleY;
     // Visible feet must both rise in full-body mode. With cropped legs, coherent
     // shoulder and hip rise controls relative motion, without claiming takeoff.
-    const rawRise = Math.max(0, Math.min(hipRise, leftRise, rightRise));
+    let rawRise = Math.max(0, Math.min(hipRise, leftRise, rightRise));
+    if (this.robustTracking) {
+      // Three observed samples suppress an isolated coherent pose spike. Missing
+      // frames never enter this window and cannot invent height evidence.
+      this.riseSamples.push(rawRise); this.riseSamples = this.riseSamples.slice(-3);
+      rawRise = [...this.riseSamples].sort((a, b) => a - b)[1];
+    }
     const alpha = this.filterTMs === null ? 1 : 1 - Math.exp(-(frame.tMs - this.filterTMs) / 35);
     this.filteredRise += alpha * (rawRise - this.filteredRise);
     this.filterTMs = frame.tMs;
     const liftThreshold = Math.max(this.quickStart ? .012 : .008, baseline.torso * .035);
     const landThreshold = Math.max(.005, baseline.torso * .025);
     const airborne = rawRise > liftThreshold;
-    const grounded = leftRise <= landThreshold && rightRise <= landThreshold && hipRise <= liftThreshold;
+    const grounded = (!this.robustTracking || rawRise <= landThreshold) && leftRise <= landThreshold && rightRise <= landThreshold && hipRise <= liftThreshold;
     if (grounded && !preparingJump && pose.upright && hipRise >= -liftThreshold) this.confirmGroundedSince ??= frame.tMs;
     else this.confirmGroundedSince = null;
 
@@ -275,7 +315,7 @@ export class JumpHeightRecognizer {
     const anchor = this.standingAnchor;
     // Narrow projected joint widths fluctuate strongly with landmark jitter or
     // a slight turn. Quick torso entry relies on torso length/position instead.
-    const quickTorso = this.quickStart && this.trackingMode === 'upper-body';
+    const quickTorso = (this.quickStart || this.robustTracking) && this.trackingMode === 'upper-body';
     const stable = pose.upright && (!anchor || Math.abs(pose.hipY - anchor.hipY) < .012
       && Math.abs(pose.shoulderY - anchor.shoulderY) < .012
       && (quickTorso || Math.abs(pose.shoulderWidth / anchor.shoulderWidth - 1) < .08
@@ -285,9 +325,11 @@ export class JumpHeightRecognizer {
       && Math.abs(pose.centerX - anchor.centerX) < .015
       && Math.abs(pose.torso / anchor.torso - 1) < .08);
     if (!stable) {
+      if (this.robustTracking) return this.rejectNoise(frame, 'unstable-stance');
       this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
       return this.output(frame, { phase: 'calibrating', cue: 'stand-still', quality: 'unstable-stance', calibrationProgress: 0 });
     }
+    if (this.robustTracking) this.recoverNoise(frame);
     this.standingSince ??= frame.tMs;
     this.standingAnchor ??= pose;
     this.standingSamples.push(pose);
