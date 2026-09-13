@@ -39,6 +39,31 @@ test('narrow layout and pointer control fit without horizontal overflow', async 
   await page.screenshot({ path: 'test-results/mobile.png', fullPage: true });
 });
 
+test('status guidance is a large in-scene line and controls have no panel chrome', async ({ page }) => {
+  await page.goto('/');
+  const layout = await page.evaluate(() => {
+    const panel = document.querySelector('.tracking-panel');
+    const detail = document.querySelector('#status-detail');
+    const message = document.querySelector('.arena-message');
+    const panelStyle = getComputedStyle(panel);
+    const detailStyle = getComputedStyle(detail);
+    return {
+      detailInsideMessage: message.contains(detail),
+      detailFontSize: parseFloat(detailStyle.fontSize),
+      panelBackground: panelStyle.backgroundColor,
+      panelBorderWidth: panelStyle.borderWidth,
+      panelBoxShadow: panelStyle.boxShadow,
+    };
+  });
+  expect(layout.detailInsideMessage).toBe(true);
+  expect(layout.detailFontSize).toBeGreaterThanOrEqual(18);
+  expect(layout.panelBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(layout.panelBorderWidth).toBe('0px');
+  expect(layout.panelBoxShadow).toBe('none');
+  await expect(page.locator('#start')).toBeInViewport();
+  await expect(page.locator('#demo')).toBeInViewport();
+});
+
 test('denied camera permission has a useful error and preview still works', async ({ page }) => {
   await page.addInitScript(() => {
     navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('denied', 'NotAllowedError'); };
