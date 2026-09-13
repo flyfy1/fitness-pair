@@ -37,3 +37,14 @@ Verification in this checkout:
 - One bounded independent read-only review found no blocking issues in the new identity, recorder, compositor, sharing, or test flow.
 
 Native sharing is exercised through a browser API mock; a real messaging-app handoff on each target mobile platform is not claimed. Download is the fallback when file sharing is unsupported. Copy game link invites friends to the game and does not expose a private local recording. GCP configuration remains deferred by the owner; live gallery publication is still disabled. The Site remains public as requested.
+
+
+## Automatic replay update — supersedes opt-in behavior above
+
+The player now starts only the game. The host automatically records each Motion Quest or Dino Run round on the device, saves at completion/game over, and presents preview, download and explicit sharing controls. There is no recording opt-in control. The old 60-second capture cutoff is removed; a 100 MiB per-file safety bound and 150 MiB local library bound remain. Long replays use native sharing/download; the prepared gallery retains its 60-second / 20 MiB upload bound.
+
+Hopmodo's logo and website appear throughout the exported video. A three-second ending frame explains “Games that get you moving” and “Movement games for kids and adults” with the full public website address. Separate capture sessions let an immediate restart record while the prior end card finishes. Backgrounding saves a segment, and returning starts another. Unsaved clips are retained on the page across later rounds.
+
+Browser evidence uses synthetic game input and generated red/green camera fixtures only. It covers automatic start/end, immediate and delayed repeat rounds, no idle capture, pause, background/resume, storage failure fallback retention, the former 60-second cutoff (virtual clock), local playback and persistence, decoded watermark/end-card pixels, native share mocks, download, and no automatic upload. A read-only review identified restart, backgrounding and fallback-retention gaps; each has a regression case. Real mobile share-sheet delivery and human movement accuracy remain unverified.
+
+Validation: production build, 53 root tests, 18 Dino tests, 5 gateway tests and all 14 Chrome arcade checks passed. The final encoded synthetic end frame was decoded and visually inspected at 1280×800.

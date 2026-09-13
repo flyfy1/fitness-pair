@@ -155,3 +155,8 @@ Success evidence is synthetic range retention, no calibration bypass, one-shot
 commands, delayed/missing-input rejection, and a complete browser confirmation →
 run → gesture pause → gesture resume loop. No new model, recording, hand classifier,
 backend or deployment is added. Human calibration reliability remains unverified.
+
+
+## Arcade replay integration
+
+When embedded in Hopmodo, the arcade host automatically composites and stores a local replay after game start. The standalone game does not create recordings. The host shows a notice before play; enabled camera imagery stays device-local until the player chooses to share. A round identifier lets replays distinguish a restart from pause/resume without changing movement-event semantics.

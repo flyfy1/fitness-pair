@@ -38,6 +38,7 @@ function startClock() { if (runningAt === null && reps < 5) runningAt = performa
 function resetRound() {
   reps = 0; elapsedMs = 0; runningAt = null; demoHeldAt = null; demoCharge = 0;
   const sessionId = crypto.randomUUID();
+  document.documentElement.dataset.roundId = sessionId;
   const source = { kind: mode === 'demo' ? 'synthetic' : 'camera', id: sessionId };
   gameState = createGameState({ sessionId, source }); inputSeq = 0;
   statusUntil = 0; detector.reset({ sessionId, source }); game.reset(); progress(0);
