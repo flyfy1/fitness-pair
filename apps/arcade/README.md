@@ -49,7 +49,13 @@ no landing-page class. These checks cover presentation, not human recognition.
 
 Dino AR and Push-up Flight retain their camera and keyboard/pointer preview modes. Ready to Move uses its guided standing/range/countdown flow. Their cards label experimental controls. All five game adapters use existing read-only game state to detect start, round identity, and completion. Dino AR's already-projected skeleton is not mirrored twice. Ready to Move composites its smaller game canvas into the full camera viewport using DOM rectangles. Push-up Flight preserves its crash sequence using a frozen camera frame when the game has already stopped its camera. No recognition contract changes were needed.
 
-Motion Quest is the primary recording reference. Its `/play/motion-quest` route presents the unchanged native game interface in a full-window iframe, without landing-page navigation or a fixed-height arcade card around it. Replay tools follow the game and receive focus at completion. The native MQ home mark returns to the arcade. Full-window desktop/mobile layout and the complete synthetic five-repetition replay flow are tested.
+All five playable `/play/` routes share `src/game-shell.js` and `src/game-shell.css`. The native game fills the browser viewport from entry, with its own stage, status and controls. The game title or home mark returns to the arcade; replay tools sit directly below the game and receive focus at completion. Landing navigation, duplicate game introductions and fixed-height cards are excluded from this layout. Standalone `/games/` routes and the labeled Orbit Pop concept retain their own pages. Motion Quest remains the primary recording reference.
+
+Layout checks cover all five games at 1440×1000, 390×844 and 320×740, including
+viewport sizing, reachable start controls, pointer/keyboard return navigation,
+recording notices and replay placement. Synthetic browser flows also cover game
+entry and local replays for every game, plus the separate concept preview. These
+checks establish presentation and software behavior, not human movement accuracy.
 
 ## Movement control preparation
 

@@ -1,0 +1,27 @@
+.game-mode { background: #101511; }
+.game-play { padding: 0; }
+.game-play #game-frame {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background: #101511;
+}
+.game-replay-tools {
+  padding: 24px max(20px, 4vw);
+  background: #f3f4ed;
+}
+.game-replay-tools > .back { display: inline-block; margin-bottom: 16px; }
+.game-replay-tools .record-bar { padding: 0; margin: 0; max-width: none; }
+.game-play .local-result {
+  padding: 32px max(20px, 4vw);
+  margin: 0;
+  max-width: none;
+  background: white;
+}
+.game-play .local-result > .clip-grid { max-width: 1000px; }

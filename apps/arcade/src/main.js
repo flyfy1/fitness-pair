@@ -3,8 +3,9 @@ import {brandLink} from './brand.js';
 import './style.css';
 import './landing.css';
 import {games} from './games.js';
+import {mountGame} from './game-shell.js';
 import {drawPreview, setupPlayground, startConcept} from './playground.js';
-import {mountRecording, renderLibrary, renderGallery, renderClip} from './recording.js';
+import {renderLibrary, renderGallery, renderClip} from './recording.js';
 const app=document.querySelector('#app');
 const arrow='<span aria-hidden="true">↗</span>';
 const nav=()=>`<a class="skip" href="#main">Skip to content</a><header class="nav"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><nav aria-label="Main navigation"><a href="/#arcade">The arcade</a><a href="/#why">Why movement games</a><a href="/#built">How we built it</a><a href="/gallery">The gallery</a></nav><a class="nav-play" href="/#arcade">Let’s play ${arrow}</a></header>`;
@@ -22,15 +23,9 @@ document.querySelectorAll('[data-preview]').forEach(c=>drawPreview(c,c.dataset.p
 }
 function play(id){
 const g=games.find(g=>g.id===id);if(!g){app.innerHTML=`${nav()}<main id="main" class="utility"><h1>Game not found.</h1><a class="button primary" href="/#arcade">Back to the arcade →</a></main>${footer()}`;return;}
-if(g.id==='motion-quest'){
- document.body.classList.add('quest-mode');
- app.innerHTML=`<main id="main" class="quest-play"><iframe id="game-frame" src="${g.path}" title="${g.title} game" allow="camera; fullscreen" referrerpolicy="same-origin"></iframe><div class="quest-replay-tools"><a class="back" href="/#arcade">← Back to the arcade</a><div class="record-bar" id="record-panel"></div></div><section class="local-result" id="local-result" hidden></section></main>`;
- const frame=document.querySelector('#game-frame');
- frame.addEventListener('load',()=>{const home=frame.contentDocument?.querySelector('.brand');if(home){home.href='/#arcade';home.target='_top';home.title='Back to the Hopmodo arcade';home.setAttribute('aria-label','Back to the Hopmodo arcade');}});
- mountRecording(g,frame);return;
-}
-app.innerHTML=`${nav()}<main id="main" class="play-page"><div class="play-heading"><a class="back" href="/#arcade">← All games</a><h1>${g.title}</h1><p>${g.description}</p></div>${g.kind==='concept'?`<section class="concept-stage"><p class="concept-label">Interactive concept · button simulation · no camera</p><div class="concept-score"><strong id="pop-score">0</strong> / 10 pops</div><div id="pop-field"><button id="pop-target" aria-label="Pop the orbit">✳</button></div><p id="pop-status" role="status">Tap the star ten times. This preview uses buttons; camera controls are planned.</p><button class="button primary" id="pop-restart">Start again ↻</button></section>`:`<div class="record-bar" id="record-panel"></div><iframe id="game-frame" src="${g.path}" title="${g.title} game" allow="camera; fullscreen" referrerpolicy="same-origin"></iframe><section class="local-result" id="local-result" hidden></section>`}</main>${footer()}`;
-if(g.kind==='concept')startConcept();else mountRecording(g,document.querySelector('#game-frame'));
+if(g.kind==='playable'){mountGame(app,g);return;}
+app.innerHTML=`${nav()}<main id="main" class="play-page"><div class="play-heading"><a class="back" href="/#arcade">← All games</a><h1>${g.title}</h1><p>${g.description}</p></div><section class="concept-stage"><p class="concept-label">Interactive concept · button simulation · no camera</p><div class="concept-score"><strong id="pop-score">0</strong> / 10 pops</div><div id="pop-field"><button id="pop-target" aria-label="Pop the orbit">✳</button></div><p id="pop-status" role="status">Tap the star ten times. This preview uses buttons; camera controls are planned.</p><button class="button primary" id="pop-restart">Start again ↻</button></section></main>${footer()}`;
+startConcept();
 }
 const path=location.pathname;
 if(path.startsWith('/play/'))play(path.split('/')[2]);
