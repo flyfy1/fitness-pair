@@ -66,7 +66,7 @@ test('real local model infers a public pose image, with no camera upload; stop r
     };
   }, { dataURL });
   const external = [], errors = [];
-  page.on('request', req => { if (!req.url().startsWith('http://127.0.0.1:5178') && !req.url().startsWith('data:')) external.push(req.url()); });
+  page.on('request', req => { if (!req.url().startsWith(`http://127.0.0.1:${process.env.MOTION_PORT || 5179}/`) && !req.url().startsWith('data:')) external.push(req.url()); });
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', msg => { if (msg.type() === 'error') console.error(msg.text()); });
   await page.goto('/'); await page.locator('#start').click();
@@ -77,7 +77,11 @@ test('real local model infers a public pose image, with no camera upload; stop r
   }, { timeout: 35_000 }).toContain('ms / frame');
   await expect(page.locator('#tracking-badge')).toHaveText(/Body landmarks detected|Calibrating/);
   await expect(page.locator('#rep-count')).toHaveText('0');
+  await assertARLayers(page);
   await page.screenshot({ path: 'test-results/real-model.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertARLayers(page);
+  await page.screenshot({ path: 'test-results/real-model-mobile.png', fullPage: true });
   await page.locator('#stop').click(); await expect(page.locator('#camera-tag')).toHaveText('CAM 01 · OFF');
   expect(await page.evaluate(() => window.testStream.getTracks().every(t => t.readyState === 'ended'))).toBe(true);
   await expect.poll(() => page.workers().length).toBe(0);
@@ -136,4 +140,37 @@ test('synthetic landmark sequence runs through actual detector and wins; complet
   await expect(page.locator('#victory')).toBeVisible();
   expect(await page.evaluate(() => window.testWorker.terminated && window.testStream.getTracks().every(t => t.readyState === 'ended'))).toBe(true);
   await expect(page.locator('#hp-label')).toHaveText('0 / 100');
+});
+
+async function assertARLayers(page) {
+  const bounds = await page.evaluate(() => {
+    const video = document.querySelector('#camera'), game = document.querySelector('#game');
+    const rect = element => { const b = element.getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+    return { video: rect(video), game: rect(game), skeleton: rect(document.querySelector('#skeleton')),
+      viewport: [0, 0, innerWidth, innerHeight], fit: getComputedStyle(video).objectFit,
+      mirrored: getComputedStyle(video).transform, live: video.readyState >= 2 && !!video.srcObject,
+      // The former opaque forest would hide the camera even with correct DOM geometry.
+      cornerAlpha: game.getContext('2d').getImageData(0, 0, 1, 1).data[3],
+      overflow: document.documentElement.scrollHeight > innerHeight || document.documentElement.scrollWidth > innerWidth };
+  });
+  expect(bounds.video).toEqual(bounds.viewport);
+  expect(bounds.game).toEqual(bounds.viewport);
+  expect(bounds.skeleton).toEqual(bounds.viewport);
+  expect(bounds.fit).toBe('cover');
+  expect(bounds.mirrored).toBe('matrix(-1, 0, 0, 1, 0, 0)');
+  expect(bounds.live).toBe(true);
+  expect(bounds.cornerAlpha).toBe(0);
+  expect(bounds.overflow).toBe(false);
+  await expect(page.locator('#camera-placeholder')).toBeHidden();
+  await expect(page.locator('#stop')).toBeInViewport();
+  await expect(page.locator('#calibrate')).toBeInViewport();
+}
+
+test('landscape controls remain reachable over the full camera stage', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 }); await page.goto('/');
+  await page.locator('#demo').click();
+  await expect(page.locator('#demo-action')).toBeInViewport();
+  await expect(page.locator('#start')).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
+  await page.screenshot({ path: 'test-results/landscape.png' });
 });

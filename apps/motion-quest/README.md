@@ -53,3 +53,47 @@ Worker. Dependencies and generated assets are ignored by Git.
 - [MediaPipe Apache-2.0 license](https://github.com/google-ai-edge/mediapipe/blob/master/LICENSE)
 
 See [research notes](../../docs/research.md) for alternatives and evidence boundaries.
+
+## Camera AR presentation
+
+The camera now fills the entire browser viewport. The mirrored video uses centered
+`object-fit: cover`; the transparent game layer adds a guardian, summoning ring,
+body-linked charge and magic projectiles. There is no opaque forest or separate
+camera preview. Compact controls and round statistics float over the live scene.
+The skeleton and magic use the same cover crop; only presentation is mirrored,
+while recognition continues to receive the original named coordinates.
+
+### MVP card
+
+- Target user: one player using their camera as the game screen.
+- Job: see themselves charge and attack the guardian with five squats.
+- Riskiest assumption: the full-viewport camera and floating controls leave enough
+  movement visible for understandable feedback, especially on narrow screens.
+- Loop: enable camera → stand to calibrate → squat to charge → stand to attack →
+  five hits → victory with camera/worker released → retry.
+- Proof: cover/mirror projection tests, public-image local inference, synthetic
+  full detector-to-victory flow, desktop/portrait/landscape browser checks.
+- No-gos: room scanning, WebXR world anchors, depth/occlusion, recordings, uploads,
+  new recognition semantics or multiplayer.
+- Appetite: one camera-overlay AR loop using the current model and game rules.
+
+This is camera-overlay AR with a screen-positioned guardian, not world-tracked AR.
+The charge ring follows the latest confident torso position; attacks retain their
+launch position. The video may crop its edges to fill a differently shaped window.
+Keep shoulders through ankles near the center and move farther back when needed.
+The unrecorded live camera stops on victory, cancellation, failure or leaving the
+page; the result screen uses a neutral background. Preview mode uses a neutral
+background and explicitly synthetic controls, without activating a camera.
+
+Verification for this change: 17 app/shared checks and 7 production Chrome checks
+passed. Browser checks include public-image local inference with no external
+requests, full-viewport transparent layers at 1440×1080 and 390×844, a 844×390
+landscape control check, synthetic five-repetition victory, permission denial,
+late-permission cancellation and resource cleanup. Screenshots use only the
+public fixture or synthetic preview. These checks do not establish human movement
+accuracy or whether the floating controls obscure a particular player's stance.
+
+Run `npm run test --workspace @fitness-pair/motion-quest` and, after building,
+`CI=1 PREVIEW=1 npm run test:browser`. Browser checks now start an isolated server
+on port 5179 (override with `MOTION_PORT`) and never reuse another checkout's
+preview. The interactive game remains on port 5178.

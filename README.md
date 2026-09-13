@@ -2,7 +2,8 @@
 
 A collaborative workspace for local camera-based movement controls and games.
 The current integrated baseline, Motion Quest, uses five squats to defeat a forest
-guardian. No multiplayer is implemented by this baseline.
+guardian over a full-viewport live camera view. Charge and attacks follow the
+player in a camera-overlay AR presentation. No multiplayer is implemented by this baseline.
 
 ## Run
 
@@ -110,7 +111,8 @@ CI=1 PREVIEW=1 npm run test:browser
 tests passed**, including actual local inference on a public image, synthetic
 end-to-end victory, English desktop/mobile UI, permission denial, cancellation,
 and camera/Worker cleanup. The browser command requires installed Google Chrome
-and fails if port 5178 is occupied; stop your own preview first.
+and starts an isolated server on port 5179 (override with `MOTION_PORT`),
+leaving the interactive preview on port 5178 available.
 
 Human squat accuracy, phone performance, exercise quality, calories, and player
 enjoyment remain unverified. No private recordings, dependencies, model weights, or

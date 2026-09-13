@@ -2,11 +2,12 @@ import './style.css';
 import { SquatRecognizer } from '@fitness-pair/action-squat';
 import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';
 import { createGameState, consumeAction } from '@fitness-pair/game-forest';
-import { ForestGame } from '@fitness-pair/game-forest/renderer';
+import { ARGame } from './ar-game.js';
+import { cameraPoint } from './camera-projection.js';
 
 const $ = id => document.getElementById(id);
 const video = $('camera'), overlay = $('skeleton'), ctx = overlay.getContext('2d');
-const game = new ForestGame($('game'));
+const game = new ARGame($('game'));
 const detector = new SquatRecognizer();
 const links = [['leftShoulder','rightShoulder'],['leftShoulder','leftElbow'],['leftElbow','leftWrist'],['rightShoulder','rightElbow'],['rightElbow','rightWrist'],['leftShoulder','leftHip'],['rightShoulder','rightHip'],['leftHip','rightHip'],['leftHip','leftKnee'],['leftKnee','leftAnkle'],['rightHip','rightKnee'],['rightKnee','rightAnkle']];
 let mode = 'idle', stream = null, worker = null, generation = 0, inFlight = false;
@@ -82,7 +83,7 @@ function releaseCamera() {
   clearTimeout(initTimer); initTimer = null;
   worker?.terminate(); worker = null; inFlight = false;
   stream?.getTracks().forEach(track => track.stop()); stream = null;
-  video.srcObject = null; ctx.clearRect(0, 0, overlay.width, overlay.height);
+  video.srcObject = null; game.body = null; ctx.clearRect(0, 0, overlay.width, overlay.height);
   $('camera-placeholder').hidden = false; $('fps').textContent = '';
   game.charge = 0;
 }
@@ -135,7 +136,7 @@ async function startCamera() {
       if (data.type === 'ready') {
         clearTimeout(initTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
         $('start').hidden = true; $('start').disabled = false; $('calibrate').hidden = false;
-        $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera controls';
+        $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera AR · squat controls';
         status('Stand tall to calibrate', 'Keep shoulders to ankles visible for about 2 seconds. Turn slightly sideways.');
       } else if (data.type === 'pose') {
         inFlight = false; lastResultAt = performance.now();
@@ -144,6 +145,7 @@ async function startCamera() {
           const frame = fromMediaPipe({ landmarks: data.landmarks, sessionId: gameState.sessionId, seq: inputSeq++,
             tMs: data.time, source: gameState.source, width: video.videoWidth, height: video.videoHeight });
           drawSkeleton(frame.joints);
+          game.setPose(frame.joints, video.videoWidth, video.videoHeight);
           const action = detector.update(frame);
           if (action) handlePose(action);
         } catch (error) { failCamera(error); }
@@ -159,7 +161,7 @@ function handlePose(result) {
     missing: ['Your full movement is not visible', 'Keep shoulders to ankles in frame and stand steady before continuing.'],
     stand: ['Stand tall first', 'Stand comfortably with straight legs, turned slightly sideways.'],
     calibrating: ['Calibrating your standing pose', 'Stay upright for about 2 seconds.'],
-    ready: ['Ready. Try a squat', 'Lower slowly and watch your character charge.'],
+    ready: ['Ready. Try a squat', 'Lower slowly and watch the magic gather around you.'],
     lowering: ['Keep lowering to charge', 'Stay within a comfortable range. Turn slightly sideways if charge stays low.'],
     down: ['Charged! Stand to attack', 'Return to standing to release your magic.'],
   };
@@ -178,15 +180,15 @@ function handlePose(result) {
 }
 function drawSkeleton(points) {
   const w = video.videoWidth || 640, h = video.videoHeight || 480;
-  // Match video object-fit:contain at every aspect ratio, including mobile portrait cameras.
-  const box = overlay.getBoundingClientRect(), ratio = Math.min(box.width / w, box.height / h);
+  // Match the full-screen, centered object-fit: cover camera, including its crop.
+  const box = overlay.getBoundingClientRect();
   const dpr = Math.min(devicePixelRatio || 1, 2);
   if (overlay.width !== Math.round(box.width * dpr) || overlay.height !== Math.round(box.height * dpr)) {
     overlay.width = Math.round(box.width * dpr); overlay.height = Math.round(box.height * dpr);
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, box.width, box.height);
-  const x = p => (box.width - w * ratio) / 2 + p.x * w * ratio;
-  const y = p => (box.height - h * ratio) / 2 + p.y * h * ratio;
+  const x = p => cameraPoint(p, box.width, box.height, w, h).x;
+  const y = p => cameraPoint(p, box.width, box.height, w, h).y;
   ctx.strokeStyle = '#d2ff8c'; ctx.lineWidth = 2; ctx.fillStyle = '#ecffd0';
   const visible = p => p && p.confidence !== null && p.confidence >= .6;
   for (const [a, b] of links) if (visible(points[a]) && visible(points[b])) {
@@ -208,6 +210,7 @@ function beginDemo() {
   stopCamera(); mode = 'demo'; resetRound(); enableSound();
   $('mode-label').textContent = 'Preview · simulated movement'; $('tracking-badge').textContent = 'Preview · no camera';
   $('demo-action').hidden = false; $('demo').hidden = true;
+  $('camera-placeholder').hidden = true;
   status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.');
 }
 function holdDemo() {
