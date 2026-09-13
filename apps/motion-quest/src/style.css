@@ -99,3 +99,6 @@ kbd { font: inherit; opacity: .65; }
 @media (prefers-reduced-motion: reduce) { #hp-bar, #charge-bar { transition: none; } }
 
 #model-download{display:block;width:min(72vw,430px);height:8px;margin:14px auto 0;accent-color:#e6ff9b}
+
+/* Only the current setup controller speaks; keep camera controls reachable. */
+#app.awaiting-hands-start .arena-message{visibility:hidden}
