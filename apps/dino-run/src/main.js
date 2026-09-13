@@ -3,12 +3,14 @@ import { Runner } from './engine.js';
 import { Renderer } from './render.js';
 import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { PoseCamera } from './camera.js';
+import { setupFullscreen } from './fullscreen.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner();
 runner.setControlMode('motion');
 const renderer = new Renderer($('game'), runner);
 const recognizer = new JumpHeightRecognizer();
+setupFullscreen($('play-area'), $('fullscreen'), message => { $('announcement').textContent = message; });
 let mode = 'motion', cameraState = 'off', latestAction = null, lastPoseAt = 0;
 let awaitingStart = false, countdownAt = null, cameraError = '', pauseReason = '';
 let previousStatus = '', lastFrame = 0, lastPaint = 0;
@@ -103,7 +105,7 @@ function paint() {
     else if (!running) overlay('READY WHEN YOU ARE', 'Every adventure starts with a leap.', 'Cacti ahead. Jump over them and keep going.', 'Let’s run', 'or press Space to start');
   } else if (!running) {
     if (cameraError) overlay('CAMERA NEEDS ATTENTION', 'Let’s get you connected.', cameraError, 'Retry camera', 'Keyboard mode is also available.');
-    else if (cameraState === 'off') overlay('MOVE TO PLAY', paused ? 'Ready to move again?' : 'First, set your jump range.', pauseReason || 'Stand still, then make one maximum comfortable jump.', 'Enable camera', 'Keep the camera fixed and your whole body visible.');
+    else if (cameraState === 'off') overlay('MOVE TO PLAY', paused ? 'Ready to move again?' : 'First, set your jump range.', pauseReason || 'Stand still, then make one maximum comfortable jump.', 'Enable camera', 'Keep the camera fixed, with your shoulders and hips visible.');
     else if (!latestAction?.calibrated) overlay('CALIBRATION', latestAction?.stage === 'maximum' ? 'Set your maximum jump.' : 'Stand tall and still.', cameraState === 'requesting' ? 'Allow camera access in your browser.' : cameraState === 'loading' ? 'Loading the local pose model…' : calibrationCopy().detail, 'Calibrating…', 'The game waits until calibration is complete.', true);
     else if (!awaitingStart) overlay('TAKE A BREATHER', 'Ready when you are.', pauseReason || 'Stand in your calibrated position before continuing.', 'Resume run', 'A three-second countdown gives you time to get ready.');
     else overlay('CALIBRATION COMPLETE', countdownAt === null ? 'Land and stand steady.' : `Starting in ${Math.max(1, Math.ceil((3000 - (performance.now() - countdownAt)) / 1000))}`, 'Your maximum jump is now 100%. Small hops make smaller jumps.', 'Get ready…', 'Stay in place. Jump when the run begins.', true);
@@ -113,19 +115,21 @@ function paint() {
 
 function calibrationCopy() {
   if (cameraError) return { title: 'Camera needs attention', detail: cameraError };
-  if (cameraState === 'off') return { title: 'Calibrate before you run', detail: 'Keep your whole body in view. Stand still, then jump once to set your maximum comfortable height.' };
+  if (cameraState === 'off') return { title: 'Calibrate before you run', detail: 'Keep your shoulders and hips in view; full body works too. Stand still, then jump once to set your maximum comfortable height.' };
   if (cameraState === 'requesting') return { title: 'Allow camera access', detail: 'Only video is requested. Your camera stays on this device.' };
-  if (cameraState === 'loading') return { title: 'Loading local tracking', detail: 'Keep the camera fixed. Leave room above your head and below your feet.' };
-  if (latestAction?.phase === 'missing') return { title: 'Keep your full body in view', detail: 'Stand back into frame. The game pauses when tracking is lost.' };
+  if (cameraState === 'loading') return { title: 'Loading local tracking', detail: 'Keep the camera fixed. Leave room above your head; your legs may be outside the frame.' };
+  if (latestAction?.phase === 'missing') return { title: 'Keep shoulders and hips in view', detail: 'Stand back into frame. If your feet stay out of view, upper-body tracking will recalibrate.' };
   if (latestAction?.cue === 'jump-higher-and-retry') return { title: 'Let’s measure that again', detail: 'That jump was too small to calibrate. Stand steady, then try one clear jump.' };
   if (latestAction?.stage === 'maximum') return { title: 'Jump once to set your maximum', detail: latestAction.cue === 'land-and-hold' ? 'Land and stand steady to finish the measurement.' : 'Make your highest comfortable jump, then land in the same spot.' };
+  if (latestAction?.calibrated && latestAction.trackingMode === 'upper-body') return { title: 'Your upper-body range is set', detail: 'Dino follows your torso height. Return to your standing position to bring Dino down.' };
   if (latestAction?.calibrated) return { title: 'Your jump range is set', detail: '50% of your measured height gives Dino 50% height. Landing brings Dino down.' };
-  return { title: 'Stand tall and still', detail: 'Keep shoulders, hips, knees and feet visible for about two seconds.' };
+  return { title: 'Stand tall and still', detail: 'Keep both shoulders and hips visible and steady for about two seconds.' };
 }
 function paintCalibration() {
   $('motion-panel').hidden = mode !== 'motion';
   if (mode !== 'motion') return;
   const copy = calibrationCopy();
+  $('tracking-mode').textContent = latestAction?.trackingMode === 'upper-body' ? 'UPPER BODY · TORSO MOVEMENT' : latestAction?.trackingMode === 'full-body' ? 'FULL BODY · HIPS + FEET' : 'AUTO · FULL OR UPPER BODY';
   $('calibration-title').textContent = copy.title; $('calibration-copy').textContent = copy.detail;
   $('camera-tag').textContent = cameraState === 'off' ? 'CAMERA OFF' : cameraState === 'ready' ? 'LOCAL · LIVE' : cameraState.toUpperCase();
   const calibrated = latestAction?.calibrated && latestAction.phase !== 'missing';
@@ -212,7 +216,7 @@ window.addEventListener('blur', () => { if (runner.status === 'running') pauseRu
 window.addEventListener('pagehide', () => camera.stop('pagehide'));
 window.addEventListener('fitness:action', event => { if (mode === 'keyboard' && typeof event.detail?.action === 'string') command(event.detail.action); });
 window.dinoGame = Object.freeze({ command, getState: () => ({ ...runner.snapshot(), best,
-  camera: { state: cameraState, calibrated: latestAction?.calibrated ?? false, stage: latestAction?.stage ?? 'standing', heightRatio: latestAction?.heightRatio ?? 0, cue: latestAction?.cue ?? null, awaitingStart },
+  camera: { state: cameraState, calibrated: latestAction?.calibrated ?? false, stage: latestAction?.stage ?? 'standing', heightRatio: latestAction?.heightRatio ?? 0, cue: latestAction?.cue ?? null, trackingMode: latestAction?.trackingMode ?? null, awaitingStart },
 }) });
 
 function frame(now) {

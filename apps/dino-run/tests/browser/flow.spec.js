@@ -5,7 +5,7 @@ test('a timed keyboard jump clears a spawned cactus; losing focus pauses', async
   await page.addInitScript(() => { Math.random = () => 0.25; });
   await page.goto('/');
   await page.getByRole('button', {name: 'Keyboard mode'}).click();
-  const width = await page.locator('#game').evaluate(canvas => Math.max(480, canvas.getBoundingClientRect().width));
+  const width = await page.locator('#game').evaluate(canvas => { const r = canvas.getBoundingClientRect(); return r.width / Math.min(r.width / 480, r.height / 360); });
   // The first cactus spawns at 1.6s. Jump with its leading edge at x=200,
   // using its travel distance and the game's initial acceleration (2.4px/s²).
   const travel = width + 30 - 200;
