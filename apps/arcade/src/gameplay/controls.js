@@ -6,7 +6,7 @@ export function mountConversationControls(doc,connect){
  const style=doc.createElement('style');
  style.textContent=`
  .hopmodo-conversation{position:fixed;right:12px;top:12px;z-index:100;color:#182346;font:12px Arial,sans-serif}
- .hopmodo-conversation button{display:grid;place-items:center;width:40px;height:40px;padding:0;box-shadow:0 2px 12px #0003;border:1px solid #18234633;border-radius:50%;background:#fff;color:#182346}
+ .hopmodo-conversation button{display:grid;place-items:center;width:40px;height:40px;min-width:40px;min-height:40px;padding:0;box-shadow:0 2px 12px #0003;border:1px solid #18234633;border-radius:50%;background:#fff;color:#182346}
  .hopmodo-conversation[data-state=recording] button{background:#a92020;color:#fff}
  .hopmodo-conversation[data-state=ready] button,.hopmodo-conversation[data-state=pending] button{background:#2347ee;color:#fff}
  .hopmodo-conversation button[aria-pressed=true] .mic-off{display:none}
