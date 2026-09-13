@@ -6,6 +6,7 @@ const step=(frame,value)=>expect(frame.locator('#tutorial')).toHaveAttribute('da
 test('tutorial stays out of local recording and completed practice enters the original AR round',async({page},info)=>{
  await syntheticCamera(page);const uploads=[],errors=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/play/ar-invaders');const game=page.frameLocator('#game-frame');await game.locator('#tutorial-start').click();await step(game,'left');
+ expect(await game.locator('#tutorial-detail').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
  await expect(page.locator('#record-panel')).not.toHaveAttribute('data-state','recording');await expect(game.getByRole('button',{name:'Record conversation',exact:true})).toBeHidden();
  const initial=await game.locator('#arena').evaluate(()=>window.integAR.getState().game);
  await move(game,{x:.08});await step(game,'right');await move(game,{x:-.08});await step(game,'fire');
