@@ -14,8 +14,8 @@ document.querySelector('#app').innerHTML = `
 <div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view for a moment to take off automatically. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
 <div class="cue"><span id="cue" role="status">Head and one shoulder are enough. Lower down, then push up.</span><progress id="calibration" max="1" value="0" hidden aria-label="Automatic takeoff"></progress></div>
 <div class="difficulty" role="group" aria-label="Difficulty">
-<label for="opening"><span>Gate opening <output id="opening-value">50%</output></span><input id="opening" type="range" min="30" max="70" step="1" value="50"></label>
-<label for="speed"><span>Speed <output id="speed-value">1.0×</output></span><input id="speed" type="range" min="0.4" max="1.8" step="0.1" value="1"></label>
+<label for="opening"><span>Gate opening <output id="opening-value">4.0× plane</output></span><input id="opening" type="range" min="2" max="6" step="0.1" value="4"></label>
+<label for="speed"><span>Speed <output id="speed-value">1.0×</output></span><input id="speed" type="range" min="0.4" max="6" step="0.1" value="1"></label>
 <label for="acceleration"><span>Acceleration <output id="acceleration-value">+0.4×/min</output></span><input id="acceleration" type="range" min="0" max="1.5" step="0.1" value="0.4"></label>
 </div><div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
 <span class="privacy">Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
@@ -112,9 +112,9 @@ function finishOrStop(){
   } else interrupt('Camera and model stopped. Take your time.');
 }
 function updateDifficulty(){
-  difficulty={opening:Number($('opening').value)/100,speed:Number($('speed').value),acceleration:Number($('acceleration').value)};
+  difficulty={opening:Number($('opening').value),speed:Number($('speed').value),acceleration:Number($('acceleration').value)};
   setDifficulty(state,difficulty);
-  $('opening-value').textContent=`${Math.round(difficulty.opening*100)}%`;
+  $('opening-value').textContent=`${difficulty.opening.toFixed(1)}× plane`;
   $('speed-value').textContent=`${difficulty.speed.toFixed(1)}×`;
   $('acceleration-value').textContent=`+${difficulty.acceleration.toFixed(1)}×/min`;
 }

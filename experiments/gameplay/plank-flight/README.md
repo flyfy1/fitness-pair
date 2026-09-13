@@ -55,9 +55,11 @@ is labeled synthetic. Demo input cannot override a camera session.
 
 Three sliders remain available during play and retain their settings on retry:
 
-- **Gate opening:** 30–70% of screen height, applied to existing and new gates.
-- **Speed:** 0.4–1.8×. Moving it sets the current speed and clears accumulated gain.
-- **Acceleration:** 0–1.5× per minute of flight, with total speed capped at 3×.
+- **Gate opening:** 2–6× the helicopter height (rotor to landing skids), applied to
+  existing and new gates. The hardest setting leaves exactly twice its height
+  on normal portrait/landscape screens; very large openings stop at 96% of the stage.
+- **Speed:** 0.4–6×. Moving it sets the current speed and clears accumulated gain.
+- **Acceleration:** 0–1.5× per minute of flight, with total speed capped at 10×.
   Changes affect future acceleration; setting zero holds the current speed.
 
 The HUD shows the current speed, including accumulated acceleration. Changing a
@@ -89,7 +91,8 @@ local model → PoseFrame + optional head → ActionFrame + headControl → Game
   anchors the cockpit there. Recognition coordinates are never mirrored.
 - `src/engine.js`: rejects stale, foreign or invalid head input, advances the world
   throughout a flight, and handles gates, collisions and crash completion. Contact
-  must persist for 180 ms to trigger a crash; a single-frame overlap is tolerated.
+  is debounced for 180 ms at normal speed. At higher speeds the debounce is capped
+  at half the gate crossing time, with small simulation steps to prevent tunneling.
 - `src/tracking-gate.js`: holds position on missing/stale tracking and requires
   200 ms of consecutive good observations before resuming head control.
 - `src/difficulty.js`: shared gate geometry, speed and incremental acceleration.
@@ -143,11 +146,12 @@ preview stays on 5184. Generated screenshots, runtime files and model weights ar
 
 2026-09-13 updated evidence:
 
-- Twelve synthetic unit checks: close-up automatic takeoff, missing/low-confidence
+- Fifteen synthetic unit checks: close-up automatic takeoff, missing/low-confidence
   input, stale and foreign frames, down/up/sideways following, no hold-based lift,
   aspect/mirror projection, collision/finalization and head extraction without hips;
   tracking debounce, continued world motion through loss, sustained-contact collision,
-  live difficulty and acceleration limits.
+  live difficulty and acceleration limits, retained missing-input controls, 2×
+  opening geometry across viewports, and collision/pass-through behavior at 10× speed.
 - Nine browser checks: one synthetic shoulder and nose start the camera round; head
   positions map within one CSS pixel through descent/ascent, sideways movement,
   portrait/landscape and fullscreen; collision, encouragement, retry, pointer demo,
