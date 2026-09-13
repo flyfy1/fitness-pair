@@ -5,6 +5,8 @@ export function projectHead(head, width, height) {
     y: ((height-head.image.height*scale)/2+head.y*head.image.height*scale)/height };
 }
 export const helicopterScale = width => Math.max(.7, Math.min(width/900,1.25));
+// Full visible width: tail tip to the furthest spinning rotor edge.
+export const helicopterWidth = width => 161*helicopterScale(width);
 // Match the vertical collision envelope, from rotor to landing skids.
 export const helicopterHeight = width => 86*helicopterScale(width);
 export function validHeadControl(head) {

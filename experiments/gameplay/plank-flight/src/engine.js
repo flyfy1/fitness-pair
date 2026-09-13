@@ -1,5 +1,5 @@
 import { assertActionFrame, sameSource } from '../../../../contracts/index.js';
-import { projectHead, helicopterScale, validHeadControl } from './projection.js';
+import { projectHead, helicopterScale, helicopterWidth, validHeadControl } from './projection.js';
 import { normalizeDifficulty, flightSpeed, gateOpening, MAX_FLIGHT_SPEED } from './difficulty.js';
 import { FRAME_FRESH_MS } from './tracking-gate.js';
 export const COUNTDOWN_SECONDS = 3;
@@ -11,7 +11,7 @@ export function createFlight(session, difficulty) {
     lastInputSeq: -1, lastTMs: -1, consumedCompletionIds: [], finished: false,
     difficulty: normalizeDifficulty(difficulty), trackingHeld: false, collisionSeconds: 0, speedGain: 0,
     status: 'waiting', countdownSeconds: 0, x: .35, y: .52, headControl: null, velocity: 0, flightSeconds: 0,
-    crashSeconds: 0, passed: 0, spawned: 0, obstacles: [], reason: null, active: false };
+    crashSeconds: 0, passed: 0, spawned: 0, lastSpawnSeconds: 0, obstacles: [], reason: null, active: false };
 }
 export function consumeAction(state, action) {
   assertActionFrame(action);
@@ -58,10 +58,18 @@ function advanceWorld(state,dt,viewport) {
   // Lost tracking freezes only the helicopter position: time, speed and gates keep advancing.
   state.flightSeconds+=dt;
   state.speedGain=Math.min(MAX_FLIGHT_SPEED-state.difficulty.speed,state.speedGain+state.difficulty.acceleration*dt/60);
-  const obstacleIndex = Math.floor(state.flightSeconds / GATE_INTERVAL_SECONDS);
-  if (obstacleIndex > state.spawned) {
-    state.spawned = obstacleIndex;
-    state.obstacles.push({ x: 1+17/viewport.width, gap: [.3,.7,.2,.8][(obstacleIndex-1)%4], counted: false });
+  // Keep edge-to-edge clearance independent of speed and the vertical gate opening.
+  const separation = (34 + 2*helicopterWidth(viewport.width))/viewport.width;
+  // A narrower viewport must not squeeze gates already in flight together.
+  for(let i=1;i<state.obstacles.length;i++) {
+    state.obstacles[i].x=Math.max(state.obstacles[i].x,state.obstacles[i-1].x+separation);
+  }
+  const spawnX=1+17/viewport.width, previous=state.obstacles.at(-1);
+  if (state.flightSeconds-state.lastSpawnSeconds >= GATE_INTERVAL_SECONDS-1e-9 &&
+      (!previous || spawnX-previous.x >= separation)) {
+    state.spawned++;
+    state.lastSpawnSeconds=state.flightSeconds;
+    state.obstacles.push({ x: spawnX, gap: [.3,.7,.2,.8][(state.spawned-1)%4], counted: false });
   }
   const size = helicopterScale(viewport.width);
   const left = state.x*viewport.width-105*size, right = state.x*viewport.width+36*size;

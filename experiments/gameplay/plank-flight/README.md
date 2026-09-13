@@ -44,8 +44,11 @@ fills the screen with a centered, aspect-preserving crop; viewport rotation/resi
 and fullscreen use the same projection for the overlay and collisions.
 
 The first gate enters from the right at 3 seconds of flight, with another gate
-every 3 seconds. At the same speed, gates are half as far apart as the earlier
-6-second schedule.
+no sooner than 3 seconds after the previous one. Spawning waits longer when needed
+so the horizontal edge-to-edge clearance is at least twice the visible helicopter
+width (tail through the widest rotor position). Acceleration and the vertical gate
+opening never reduce this minimum. Delayed gates are not queued for catch-up bursts.
+Resizing also preserves this clearance for gates already in flight.
 
 The timer shows **flight time**, not detected exercise time. Gates are game obstacles,
 not repetition events. Head tracking can also respond to seated or standing motion;
