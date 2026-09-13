@@ -35,4 +35,9 @@ test('anchor uses feet or torso explicitly and rejects unknown confidence', () =
   assert.equal(anchorFromPose(frame,{trackingMode:'upper-body',peakRise:.14}).y,.48);
   frame.joints.leftHip.confidence = null;
   assert.equal(anchorFromPose(frame,{trackingMode:'full-body',peakRise:.14}),null);
+  frame.joints.leftShoulder={x:.4,y:.25,confidence:.55}; frame.joints.rightShoulder={x:.6,y:.25,confidence:.55};
+  const chest=anchorFromPose(frame,{trackingMode:'shoulders',peakRise:.14});
+  assert.equal(chest.mode,'shoulders'); assert.equal(chest.y,.33);
+  frame.joints.leftShoulder.y=.94; frame.joints.rightShoulder.y=.94;
+  assert.equal(anchorFromPose(frame,{trackingMode:'shoulders',peakRise:.14}).y,.95);
 });

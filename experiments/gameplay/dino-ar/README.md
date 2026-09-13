@@ -4,7 +4,7 @@ A separate, camera-first alternative to [Dino Run](../../../apps/dino-run/README
 The mirrored video fills the window. The player stays in that video, with a virtual
 runway, incoming cacti, a glowing collision marker, scores and entry cues
 drawn over the same scene. **Debug · show body skeleton** toggles named-joint bones
-and points plus a compact tracking status (stage, rejection reason and input age);
+and points plus a compact tracking status (stage, visible shoulder count, rejection reason and input age);
 it is off by default and never hides the person or stops recognition.
 The original Dino app remains the baseline; this experiment is its separate second
 gameplay experience, not a mode switch added to the original app.
@@ -34,27 +34,29 @@ npm --prefix experiments/gameplay/dino-ar run dev
 ```
 
 Open <http://127.0.0.1:5196>. The experiment uses the existing repository Vite,
-Playwright, MediaPipe provider, jump-height recognizer, camera lifecycle, fullscreen
-helper and runner engine. It is intentionally outside the workspace package list:
+Playwright, MediaPipe provider, camera lifecycle, fullscreen helper and runner
+engine. The experiment owns a small shoulder-motion recognizer in
+`src/shoulder-motion.js` for cameras that do not show the waist. It is intentionally outside the workspace package list:
 no root package or lockfile change is needed. The first asset preparation downloads
 the existing checksum-verified Lite model into ignored `public/runtime/`.
 Runtime camera processing stays local; video and landmarks are not saved.
 
 1. Keep the camera fixed, stand centered and leave room above your head. Select
    **Enable camera**, wait for **Jump now to start**, then jump once. The host automatically captures
-   a short standing reference (250 ms). Until it is ready, the UI says **Stand
-   comfortably for a moment**. Coherent shoulder and hip rise starts play while
+   a short shoulder-height reference (200 ms, at least three samples). Until it is ready, the UI says **Stand
+   comfortably for a moment**. Coherent movement of both shoulders starts play while
    you are still airborne. There is no maximum-height measurement, landing wait,
    confirmation button or countdown.
-2. Detection always uses shoulders and hips, so bent knees, missing ankles and
-   stationary foot predictions cannot block entry. The runway still anchors to
-   visible pre-jump feet; if feet are unavailable, it anchors to the waist.
-   Detection and visual anchoring are independent.
+2. Detection requires only two visible shoulders. Missing or low-confidence hips,
+   knees and ankles cannot block entry. The runway anchors to visible pre-jump
+   feet, then the waist, or finally an upper-chest marker when only shoulders
+   are available. Detection and visual anchoring are independent.
 3. Jump in place to lift the glowing marker over orange cacti. Its filled box is
    the player's collision area; each cactus's solid central trunk is its collision
    area. Arms and glow are decorative. Movement level uses a body-proportion scale,
    not a percentage of your personal maximum.
-4. **Debug · show body skeleton** controls only the bones/points overlay. Use the
+4. **Debug · show body skeleton** shows bones/points and the compact diagnostic
+   line, including the number of usable shoulders (`0/2`, `1/2` or `2/2`). Use the
    fullscreen button for browser fullscreen, with the existing in-window fallback.
 5. **Pause**, **Turn camera off**, leaving the page/window, errors and game over
    release tracks and workers. Restarting the camera requires just another jump.
@@ -72,8 +74,11 @@ timestamps and camera provenance remain unchanged through recognition.
 
 `scene.js` uses the same mirrored `object-fit: cover` projection as the video.
 It never mirrors recognition inputs. When the first lift is detected, the cached pre-jump
-foot/hip midpoint becomes the fixed runway anchor. Half the standing torso length
-(minimum 0.04 image height) scales the existing 165-unit game height. This keeps
+foot/hip midpoint becomes the fixed runway anchor. When neither is usable, the
+anchor is the shoulder midpoint plus a visual chest offset of 0.08 image height.
+This offset is game placement, not an inferred body joint. The standing shoulder
+span, corrected for image aspect ratio and multiplied by 0.7 (minimum 0.04 image
+height), scales the existing 165-unit game height. This keeps
 the marker tied to image movement without measuring a personal maximum. Renderer collision boxes are the exact
 affine transforms of the engine's collision boxes. A resize reprojects the same
 anchor and adjusts the spawn boundary; it does not reset the session or score.
@@ -81,10 +86,13 @@ anchor and adjusts the spawn boundary; it does not reset the session or score.
 This is **2D video-overlay AR**, not world-tracked 3D AR. The camera view is center
 cropped to fill the viewport, which can crop limbs near the edges; stay centered.
 Sideways movement does not steer the lane, and significant position/scale drift
-invalidates the standing reference. The AR host keeps torso detection selected even when legs appear or disappear.
-A new position reset selects the visible-foot or waist anchor again. The marker is a game proxy,
+invalidates the standing reference. The AR host keeps shoulder detection selected regardless of waist/leg visibility.
+A new position reset selects the visible-foot, waist or shoulder anchor again. The marker is a game proxy,
 not whole-body collision or a foot-contact/physical jump measurement. Upper-body
-motion cannot establish that the feet left the floor. No enjoyment, physical
+motion cannot establish that the feet left the floor. A two-shoulder shrug,
+standing taller or moving the camera can also trigger this deliberately permissive
+mode. The UI labels it **shoulder movement mode**. Completion events count
+confirmed up/down control cycles, not verified physical jumps. No enjoyment, physical
 accuracy, exercise-quality, calorie or latency claim follows from synthetic tests.
 
 ## Validation and comparison
@@ -105,8 +113,8 @@ The quick-start browser check uses a synthetic lift of 0.02 image height, below
 our previous maximum-calibration threshold. It asserts that the round is running
 before the fixture lands, then verifies proportional movement, clear/collision,
 retry, full-body/upper-body layouts, debug toggling and resource cleanup. Unit
-checks reject jitter, isolated foot lifts, single-frame spikes and missing poses;
-existing default/manual calibration behavior remains covered separately. This is
+checks reject jitter, one-sided shoulder lifts, single-frame spikes and missing
+shoulders, and preserve input identity, timestamps and completion IDs. This is
 synthetic evidence, not a human detection-accuracy or responsiveness measurement.
 
 For a future human comparison, use the same camera, player and starting position
@@ -119,17 +127,27 @@ infer recognition accuracy from score. Participant recordings require prior cons
 for the baseline. Human timing, crop/framing comfort, body-to-marker registration
 and enjoyment remain unverified. No public deployment is configured by this work.
 
-### Missed-start regression (2026-09-13)
+### Cropped-camera regression (2026-09-13)
 
-The old UI displayed “Jump once” even while its standing-reference gate was still
-blocked. Its full-body preference required reliable knees/ankles, and projected
-shoulder/hip-width jitter could repeatedly reset standing. A new synthetic test
-reproduced the width-jitter failure before the fix (`stand-still` never advanced).
-AR now opts into `quickStart: true, preferUpperBody: true`; quick torso mode ignores
-projected width changes but retains torso-length, upright-pose, vertical-motion,
-confidence, freshness and position guards. Ordinary/default recognition is unchanged.
-Browser coverage adds unstable standing → accurate preparation message → width
-jitter plus bent knees/stuck feet → coherent torso lift → actual running state.
-The live browser was camera-off after losing focus; no private trial was recorded,
-so the exact cause of the reported human attempt remains unconfirmed. Human retry
-is still required to verify this correction on the user's framing and movement.
+After the torso-based correction, the reported framing still did not clearly show
+the waist. Live DOM inspection showed `Stage: standing · tracking-lost · Input age:
+33 ms`: fresh model input was failing the joint-availability gate before any jump
+could be considered. No private video or landmarks were recorded.
+
+The POC now uses `ShoulderMotionRecognizer` instead of the shared hip-dependent
+recognizer. Both shoulders need confidence >= 0.5 and valid image coordinates.
+After a short reference, a coherent rise above max(0.008 image height, 0.04 of the
+aspect-corrected shoulder span), on at least two samples over 60 ms, starts play.
+The body movement is smoothed over 35 ms; return to reference for 150 ms emits a
+single stable completion ID. Missing shoulders cancel a partial cycle; recovery
+requires the starting height, and loss over 750 ms resets the reference. Camera
+freshness and worker watchdogs remain owned by the existing host/camera helper.
+
+**7 local unit checks and 8 production Chrome checks passed**, plus the POC build.
+New browser coverage removes all waist/leg landmarks, then repeats with low-
+confidence, out-of-frame hips: both cases enter the real runner, move its marker,
+render the chest anchor, and release camera resources. Existing clear/collision/
+retry, full/partial-body layouts and local public-image inference checks pass.
+These are synthetic/public-fixture results; a real-person retry remains necessary
+for this exact camera framing. The shared recognizer and original Dino app are
+unchanged by this shoulder-only correction.

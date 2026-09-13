@@ -9,17 +9,22 @@ export function videoProjection(image, width, height) {
 
 export function anchorFromPose(frame, action) {
   // Visual anchoring is independent of detection: unreliable feet must never
-  // block torso controls. Use feet when visible, otherwise use the waist.
+  // block shoulder controls. Fall back from feet to waist to upper chest.
   const feetVisible = ['leftAnkle', 'rightAnkle'].every(name => {
     const p = frame.joints[name];
     return p && p.confidence !== null && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y > .015 && p.y < .985;
   });
-  const mode = feetVisible ? 'full-body' : 'upper-body';
-  const names = feetVisible ? ['leftAnkle', 'rightAnkle'] : ['leftHip', 'rightHip'];
+  const hipsVisible = ['leftHip', 'rightHip'].every(name => {
+    const p = frame.joints[name];
+    return p && p.confidence !== null && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y > .015 && p.y < .985;
+  });
+  const mode = feetVisible ? 'full-body' : hipsVisible ? 'upper-body' : 'shoulders';
+  const names = feetVisible ? ['leftAnkle', 'rightAnkle'] : hipsVisible ? ['leftHip', 'rightHip'] : ['leftShoulder', 'rightShoulder'];
   const points = names.map(name => frame.joints[name]);
-  if (points.some(p => !p || p.confidence === null || p.confidence < .6) || !(action.peakRise > 0)) return null;
+  if (points.some(p => !p || p.confidence === null || p.confidence < (mode === 'shoulders' ? .5 : .6)) || !(action.peakRise > 0)) return null;
   return { image: { ...frame.image }, x: (points[0].x + points[1].x) / 2,
-    y: (points[0].y + points[1].y) / 2, peakRise: action.peakRise, mode };
+    // The chest offset is a game-placement choice, not an inferred body joint.
+    y: Math.min(.95, (points[0].y + points[1].y) / 2 + (mode === 'shoulders' ? .08 : 0)), peakRise: action.peakRise, mode };
 }
 
 export function sceneGeometry(anchor, width, height) {
@@ -86,6 +91,6 @@ export function drawWorld(canvas, runner, anchor) {
   c.shadowColor = '#d8ff81'; c.shadowBlur = 16;
   c.beginPath(); c.ellipse(g.origin.x, player.y + player.h, player.w * .8, 5, 0, 0, Math.PI * 2); c.stroke(); c.shadowBlur = 0;
   c.font = 'bold 11px system-ui'; c.textAlign = 'center'; c.fillStyle = '#f6ffef';
-  c.fillText(anchor.mode === 'upper-body' ? 'YOU · TORSO MARKER' : 'YOU', g.origin.x, player.y - 12);
+  c.fillText(anchor.mode === 'shoulders' ? 'YOU · UPPER BODY' : anchor.mode === 'upper-body' ? 'YOU · TORSO MARKER' : 'YOU', g.origin.x, player.y - 12);
   return g;
 }
