@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 import {syntheticCamera} from '../../camera-start/tests/browser/synthetic-camera.js';
 test('landing has a direct arcade path and a factual build story',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
@@ -68,10 +69,11 @@ test('synthetic Motion Quest recording saves locally, survives reload, and never
  });
  expect(endCard).toBeGreaterThan(600);
  await page.getByRole('button',{name:'Share with a friend'}).click();
- const shared=await page.evaluate(()=>window.sharedFile);expect(shared.name).toMatch(/^hopmodo-motion-quest\.(mp4|webm)$/);expect(shared.size).toBeGreaterThan(1000);expect(shared.text).toContain('https://fitness-pair-playground.rajatsg18.chatgpt.site/play/motion-quest');
+ const shared=await page.evaluate(()=>window.sharedFile);expect(shared.name).toBe('hopmodo-motion-quest.mp4');expect(shared.type).toBe('video/mp4');expect(shared.size).toBeGreaterThan(1000);expect(shared.text).toContain('https://fitness-pair-playground.rajatsg18.chatgpt.site/play/motion-quest');
  await page.evaluate(()=>{window.shareMode='cancel';});await page.getByRole('button',{name:'Share with a friend'}).click();await expect(page.getByText('Sharing cancelled. Your clip is still here.')).toBeVisible();
  await page.evaluate(()=>{window.shareMode='unsupported';});await page.getByRole('button',{name:'Share with a friend'}).click();await expect(page.getByText(/This browser cannot share video files directly/)).toBeVisible();
- const downloadEvent=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const download=await downloadEvent;expect(download.suggestedFilename()).toMatch(/^hopmodo-motion-quest\.(mp4|webm)$/);
+ const downloadEvent=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const download=await downloadEvent;expect(download.suggestedFilename()).toBe('hopmodo-motion-quest.mp4');
+ const downloaded=await readFile(await download.path());expect(downloaded.subarray(4,8).toString()).toBe('ftyp');
  await page.getByRole('button',{name:'Publish to gallery'}).click();await expect(page.getByText(/Gallery sharing isn’t available yet/)).toBeVisible();expect(uploads).toEqual([]);
  await page.getByRole('button',{name:'Delete local clip'}).click();await expect(page.locator('video')).toHaveCount(0);
 });
@@ -210,4 +212,23 @@ test('guided camera Dino calibrates and saves a replay on manual finish with syn
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
  await expect(page.getByRole('heading',{name:'Ready to Move · my replay'})).toBeVisible();
  expect(await page.evaluate(()=>document.querySelector('#game-frame').contentWindow.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
+});
+
+test('a WebM-only encoder saves genuine WebM with an explicit fallback notice',async({page})=>{
+ await page.addInitScript(()=>{
+  if(window!==window.top)return;
+  const supports=MediaRecorder.isTypeSupported.bind(MediaRecorder);
+  MediaRecorder.isTypeSupported=mime=>!mime.startsWith('video/mp4')&&supports(mime);
+ });
+ await page.goto('/play/motion-quest');
+ await page.frameLocator('#game-frame').locator('#demo').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.evaluate(()=>{const doc=document.querySelector('#game-frame').contentDocument;doc.querySelector('#rep-count').textContent='5';});
+ await expect(page.locator('#local-result video')).toBeVisible({timeout:12000});
+ await expect(page.getByText(/This browser saved WebM/)).toBeVisible();
+ const pending=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const file=await pending;
+ expect(file.suggestedFilename()).toBe('hopmodo-motion-quest.webm');
+ const bytes=await readFile(await file.path());expect([...bytes.subarray(0,4)]).toEqual([26,69,223,163]);
+ await page.locator('#local-result video').evaluate(v=>v.play());
+ await expect.poll(()=>page.locator('#local-result video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
 });

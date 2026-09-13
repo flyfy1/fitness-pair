@@ -1,3 +1,4 @@
+import {startVideoRecorder,recordedBlob,videoExtension,formatLabel} from './video-format.js';
 import {BRAND_NAME,SITE_URL} from './brand.js';
 import {CLIP_WIDTH,CLIP_HEIGHT,loadRecordingLogo,drawClipFrame,drawClipEnding} from './clip-compositor.js';
 import {saveClip,listClips,deleteClip,updateClip,MAX_BYTES} from './local-clips.js';
@@ -55,7 +56,7 @@ export function mountRecording(game,frame){
   function stopTracks(){cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
   function saveNow(){
    if(session.phase==='saving')return;
-   cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';
+   cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';session.stoppedAt=performance.now();
    if(active===session)active=null;
    if(!active)setState('saving','Saving your clip on this device…');
    if(session.recorder?.state!=='inactive')session.recorder?.stop();
@@ -71,11 +72,11 @@ export function mountRecording(game,frame){
   }
   session.saveNow=saveNow;session.finish=finish;
   try{
-   const mime=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
-   if(!mime)throw new Error('This browser cannot record a supported video. You can still play.');
    session.lastCamera=document.createElement('canvas');
    const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
-   session.recorder=new MediaRecorder(session.capture,{mimeType:mime,videoBitsPerSecond:2200000});
+   drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,logo});
+   session.recorder=startVideoRecorder(session.capture,recorder=>{
+   session.recorder=recorder;
    session.recorder.ondataavailable=e=>{
     if(!e.data.size)return;
     session.bytes+=e.data.size;
@@ -90,15 +91,17 @@ export function mountRecording(game,frame){
    session.recorder.onstop=async()=>{
     stopTracks();sessions.delete(session);
     if(session.failed){session.chunks=[];if(!active)setState('idle','This replay could not be saved. Your next round will record automatically.');return;}
-    const blob=new Blob(session.chunks,{type:mime.split(';')[0]});session.chunks=[];
-    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,createdAt:Date.now(),duration:(performance.now()-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,brand:BRAND_NAME,website:SITE_URL,blob};
+    let blob;
+    try{blob=await recordedBlob(session.chunks,session.recorder.mimeType);}
+    catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
+    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,createdAt:Date.now(),duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,brand:BRAND_NAME,website:SITE_URL,blob};
     let message=session.limited?'File limit reached. The replay up to that point is saved below.':'Saved on this device. Your replay is ready below.';
     try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
     if(!active)setState(sessions.size?'finishing':'idle',message);
     showResult(clip);
    };
-   drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,logo});
-   session.recorder.start(500);setState('recording','Recording your game · stays on this device');
+   });
+   setState('recording','Recording your game · stays on this device');
    function paint(){
     if(session.phase!=='recording')return;
     try{
@@ -141,7 +144,7 @@ export function mountRecording(game,frame){
 }
 function mountClipCard(container,clip){
  const card=document.createElement('article');card.className='clip-card';const url=objectURL(clip.blob);
- card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p><div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${clip.blob.type==='video/mp4'?'mp4':'webm'}">Download</a><button data-link>Copy game link</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
+ card.innerHTML=`<video controls playsinline preload="metadata" src="${url}" aria-label="${escape(clip.title)}"></video><h3>${escape(clip.title)}</h3><p>${clip.source==='synthetic'?'Synthetic gameplay':'Player recording'} · ${Math.round(clip.duration)} seconds · ${formatLabel(clip.blob)} · ${clip.unsaved?'Not saved — download before leaving':'Saved on this device'}</p>${formatLabel(clip.blob)==='WebM'?'<p>This browser saved WebM. For MP4 recording, use an updated Chrome or Edge on a supported device.</p>':''}<div class="clip-actions"><button class="share-file" data-friend>Share with a friend</button><a href="${url}" download="hopmodo-${clip.game}.${videoExtension(clip.blob)}">Download</a><button data-link>Copy game link</button><button data-share>Publish to gallery</button><button data-delete>Delete local clip</button></div><p class="clip-share-status" data-share-status role="status"></p><div data-publish></div>`;
  card.querySelector('[data-delete]').onclick=async()=>{try{if(!clip.unsaved)await deleteClip(clip.id);releaseURL(url);card.remove();if(!container.children.length)container.innerHTML='<p>No local clips yet. Open a game to record a clip.</p>';}catch{card.querySelector('[data-publish]').textContent='Could not delete this clip. Please retry.';}};
  mountFriendSharing(card,clip);
  card.querySelector('[data-share]').onclick=()=>publishForm(card.querySelector('[data-publish]'),clip);
@@ -150,7 +153,7 @@ function mountClipCard(container,clip){
 function mountFriendSharing(card,clip){
  const status=card.querySelector('[data-share-status]'),button=card.querySelector('[data-friend]');
  const gameURL=`${SITE_URL}/play/${encodeURIComponent(clip.game)}`;
- const file=new File([clip.blob],`hopmodo-${clip.game}.${clip.blob.type==='video/mp4'?'mp4':'webm'}`,{type:clip.blob.type});
+ const file=new File([clip.blob],`hopmodo-${clip.game}.${videoExtension(clip.blob)}`,{type:clip.blob.type});
  button.onclick=async()=>{
   try{
    if(!navigator.share||!navigator.canShare?.({files:[file]})){
