@@ -25,8 +25,8 @@ hands down. A missing/stale frame or loss of readiness resets the attempt. Reset
 the gate for every camera session; hide its view on teardown. It emits permission
 to begin, never a scoring ActionFrame. Camera permission still requires a button.
 
-Jump Game does not use this gate; its standing calibration and Confirm & continue
-button lead directly to the countdown.
+Jump Game does not use this gate; after standing calibration, a one-second
+left-hand raise or the Confirm & continue button leads directly to the countdown.
 
 `createHandsStart` provides the large instruction overlay for participating
 camera routes, with transparent text and no panel or progress bar. Pointer and keyboard previews keep their existing controls.

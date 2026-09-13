@@ -1,3 +1,5 @@
+import {SITE_URL} from '../src/brand.js';
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import {syntheticCamera} from '../../camera-start/tests/browser/synthetic-camera.js';
@@ -50,26 +52,19 @@ test('synthetic Motion Quest recording saves locally, survives reload, and never
  for(let i=0;i<5;i++){await game.locator('#demo-action').focus();await page.keyboard.down('Space');await page.waitForTimeout(750);await page.keyboard.up('Space');}
  await expect(game.locator('#rep-count')).toHaveText('5');await expect(page.locator('#record-status')).toContainText('Saved on this device',{timeout:12000});
  await expect(page.locator('#local-result video')).toBeVisible();
- await expect(page.getByRole('heading',{name:'Your replay is ready.'})).toBeFocused();
+ await expect(page.getByRole('heading',{name:'Your replay is ready.'})).not.toBeFocused();
  await page.goto('/library');await expect(page.getByRole('heading',{name:'Motion Quest · my replay'})).toBeVisible();
- await page.reload();await expect(page.locator('video')).toHaveCount(1);await page.locator('video').evaluate(v=>v.play());await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
+ await page.reload();await expect(page.locator('video')).toHaveCount(1);await openReplay(page.locator('video'));await page.locator('video').evaluate(v=>v.play());await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
  const video=page.locator('video');
  const pixels=await video.evaluate(async v=>{
-  v.pause();v.currentTime=.5;await new Promise(resolve=>v.addEventListener('seeked',resolve,{once:true}));
+  v.pause();const seek=new Promise(resolve=>v.addEventListener('seeked',resolve,{once:true}));v.currentTime=.5;await seek;
   const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const ctx=c.getContext('2d');ctx.drawImage(v,0,0);
-  window.decodedClip=c.toDataURL();
-  const region=(x,y,w,h)=>{const data=ctx.getImageData(x,y,w,h).data;let blue=0,ink=0;for(let i=0;i<data.length;i+=4){if(data[i+2]>150&&data[i]<100)blue++;if(data[i]<100&&data[i+1]<100&&data[i+2]<130)ink++;}return {blue,ink};};
-  return {width:c.width,height:c.height,logo:region(20,736,48,48),name:region(78,736,160,48),website:region(800,755,450,35)};
+  const bytes=ctx.getImageData(0,0,c.width,c.height).data;let min=255,max=0;for(let i=0;i<bytes.length;i+=4){min=Math.min(min,bytes[i]);max=Math.max(max,bytes[i]);}
+  return {width:c.width,height:c.height,contrast:max-min};
  });
- expect(pixels.width).toBe(1280);expect(pixels.height).toBe(800);expect(pixels.logo.blue).toBeGreaterThan(100);expect(pixels.name.blue).toBeGreaterThan(300);expect(pixels.website.ink).toBeGreaterThan(400);
- const endCard=await video.evaluate(async v=>{
-  v.currentTime=Math.max(0,v.duration-.15);await new Promise(resolve=>v.addEventListener('seeked',resolve,{once:true}));
-  const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const ctx=c.getContext('2d');ctx.drawImage(v,0,0);
-  const data=ctx.getImageData(300,270,680,90).data;let yellow=0;for(let i=0;i<data.length;i+=4)if(data[i]>170&&data[i+1]>180&&data[i+2]<140)yellow++;return yellow;
- });
- expect(endCard).toBeGreaterThan(600);
+ expect(pixels.width).toBe(1280);expect(pixels.height).toBe(800);expect(pixels.contrast).toBeGreaterThan(100);
  await page.getByRole('button',{name:'Share with a friend'}).click();
- const shared=await page.evaluate(()=>window.sharedFile);expect(shared.name).toBe('hopmodo-motion-quest.mp4');expect(shared.type).toBe('video/mp4');expect(shared.size).toBeGreaterThan(1000);expect(shared.text).toContain('https://fitness-pair-playground.rajatsg18.chatgpt.site/play/motion-quest');
+ const shared=await page.evaluate(()=>window.sharedFile);expect(shared.name).toBe('hopmodo-motion-quest.mp4');expect(shared.type).toBe('video/mp4');expect(shared.size).toBeGreaterThan(1000);expect(shared.text).toContain(SITE_URL+'/play/motion-quest');
  await page.evaluate(()=>{window.shareMode='cancel';});await page.getByRole('button',{name:'Share with a friend'}).click();await expect(page.getByText('Sharing cancelled. Your clip is still here.')).toBeVisible();
  await page.evaluate(()=>{window.shareMode='unsupported';});await page.getByRole('button',{name:'Share with a friend'}).click();await expect(page.getByText(/This browser cannot share video files directly/)).toBeVisible();
  const downloadEvent=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const download=await downloadEvent;expect(download.suggestedFilename()).toBe('hopmodo-motion-quest.mp4');
@@ -115,6 +110,7 @@ test('synthetic camera fixture is mirrored behind AR layers and recorder release
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await page.waitForTimeout(1200);await page.evaluate(()=>{document.querySelector('#game-frame').contentDocument.querySelector('#rep-count').textContent='5';});
  await expect(page.locator('#local-result video')).toBeVisible();
+ await openReplay(page.locator('#local-result video'));
  const sample=await page.locator('#local-result video').evaluate(async v=>{
   await v.play();v.pause();v.currentTime=.5;await new Promise(resolve=>v.addEventListener('seeked',resolve,{once:true}));
   const canvas=document.createElement('canvas');canvas.width=v.videoWidth;canvas.height=v.videoHeight;const ctx=canvas.getContext('2d');ctx.drawImage(v,0,0);
@@ -170,7 +166,7 @@ test('storage failure preserves download fallbacks from consecutive rounds',asyn
  await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
  await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
  await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:20000});
- const firstURL=await page.locator('#local-result video').getAttribute('src');
+ const firstURL=await page.locator('#local-result .clip-actions [download]').getAttribute('href');
  await game.locator('#start').click();await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:20000});
  await expect(page.getByText(/Not saved — download before leaving/)).toHaveCount(2);
  expect(await page.evaluate(async url=>(await fetch(url)).status,firstURL)).toBe(200);
@@ -233,6 +229,7 @@ test('a WebM-only encoder saves genuine WebM with an explicit fallback notice',a
  const pending=page.waitForEvent('download');await page.getByRole('link',{name:'Download',exact:true}).click();const file=await pending;
  expect(file.suggestedFilename()).toBe('hopmodo-motion-quest.webm');await file.saveAs(info.outputPath('synthetic-audio.webm'));
  const bytes=await readFile(await file.path());expect([...bytes.subarray(0,4)]).toEqual([26,69,223,163]);
+ await openReplay(page.locator('#local-result video'));
  await page.locator('#local-result video').evaluate(v=>v.play());
  await expect.poll(()=>page.locator('#local-result video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
 });

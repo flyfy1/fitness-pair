@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 
@@ -29,7 +30,7 @@ test('share copy is local, previewed, and uploaded only after explicit publicati
  await original.getByRole('button',{name:'Make short share copy',exact:true}).click();
  await expect(page.locator('#local-result .clip-card')).toHaveCount(2,{timeout:12000});
  const copy=page.locator('#local-result .clip-card').nth(1);await expect(copy).toContainText('MP4');
- expect(uploadCount).toBe(0);await copy.locator('video').evaluate(v=>v.play());await expect.poll(()=>copy.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
+ expect(uploadCount).toBe(0);await openReplay(copy.locator('video'));await copy.locator('video').evaluate(v=>v.play());await expect.poll(()=>copy.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
  await copy.getByRole('button',{name:'Publish to gallery',exact:true}).click();
  await expect(copy.locator('form')).toBeVisible();expect(uploadCount).toBe(0);
  await copy.getByLabel('Early-access upload code').fill('synthetic-upload-code');await copy.locator('input[name=consent]').check();expect(uploadCount).toBe(0);
@@ -56,6 +57,7 @@ test('long real media produces a bounded unbranded share copy without replacing 
  await page.evaluate(async bytes=>{const blob=new Blob([new Uint8Array(bytes)],{type:'video/mp4'});await new Promise((resolve,reject)=>{const request=indexedDB.open('fitness-pair-clips',1);request.onupgradeneeded=()=>request.result.createObjectStore('clips',{keyPath:'id'});request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result,tx=db.transaction('clips','readwrite');tx.objectStore('clips').put({id:crypto.randomUUID(),title:'Motion Quest · long synthetic fixture',game:'motion-quest',gameTitle:'Motion Quest',source:'synthetic',includesCamera:true,createdAt:Date.now(),duration:70,blob});tx.oncomplete=()=>{db.close();resolve();};};});},[...bytes]);
  await page.reload();const original=page.locator('.clip-card').first();await original.getByRole('button',{name:'Make short share copy'}).click();
  await expect(page.locator('.clip-card')).toHaveCount(2,{timeout:70000});const copy=page.locator('.clip-card').nth(1);
+ await openReplay(copy.locator('video'));
  const result=await copy.locator('video').evaluate(async video=>{if(video.readyState<2)await new Promise(r=>video.addEventListener('loadeddata',r,{once:true}));const blob=await (await fetch(video.src)).blob();video.currentTime=video.duration-.2;await new Promise(r=>video.addEventListener('seeked',r,{once:true}));const c=document.createElement('canvas');c.width=1280;c.height=800;const ctx=c.getContext('2d');ctx.drawImage(video,0,0);const pixel=[...ctx.getImageData(5,5,1,1).data];return {duration:video.duration,size:blob.size,type:blob.type,pixel};});
  expect(result.duration).toBeGreaterThan(54);expect(result.duration).toBeLessThanOrEqual(60);expect(result.size).toBeLessThanOrEqual(20*1024*1024);expect(result.type).toBe('video/mp4');expect(result.pixel[0]>200&&result.pixel[1]>200&&result.pixel[2]<100).toBe(false);
  await page.reload();await expect(page.locator('.clip-card')).toHaveCount(2);await expect(page.getByRole('heading',{name:'Motion Quest · long synthetic fixture'})).toBeVisible();

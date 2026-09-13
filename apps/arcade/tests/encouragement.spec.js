@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import pack from '../../../experiments/gameplay/plank-flight/resources/encouragement.json' with {type:'json'};
 
@@ -47,6 +48,7 @@ test('completed gate groups trigger spaced varied encouragement and retain rando
  await game.getByRole('button',{name:'Finish & rest'}).click();
  await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastEncouragement?.id)).toMatch(/-end$/);
  await expect(page.locator('#local-result video')).toBeVisible({timeout:16000});
+ await openReplay(page.locator('#local-result video'));
  const recorded=await page.locator('#local-result video').evaluate(async video=>{
   const audio=new AudioContext();try{
    const data=await audio.decodeAudioData(await(await fetch(video.src)).arrayBuffer()),samples=data.getChannelData(0);
@@ -93,6 +95,7 @@ test.describe('Chinese voices and interface',()=>{
   const voice=await game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastVoice);
   expect(voice.language).toBe('zh');expect(voice.file).toMatch(/^zh\//);expect(voice.text).toMatch(/[\u4e00-\u9fff]/);
   await expect(page.locator('#local-result video')).toBeVisible({timeout:18000});
+  await openReplay(page.locator('#local-result video'));
   expect(await page.locator('#local-result video').evaluate(async video=>{const a=new AudioContext();try{const b=await a.decodeAudioData(await(await fetch(video.src)).arrayBuffer());const d=b.getChannelData(0);return Math.sqrt(d.reduce((s,x)=>s+x*x,0)/d.length);}finally{await a.close();}})).toBeGreaterThan(.005);
   await game.locator('#language').selectOption('en');await page.reload();
   await expect(page.frameLocator('#game-frame').locator('#language')).toHaveValue('en');

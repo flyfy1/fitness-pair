@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 
 async function setup(page){
@@ -12,6 +13,7 @@ async function setup(page){
  return page.frameLocator('#game-frame');
 }
 async function audioLevels(video,times=[]){
+ await openReplay(video);
  return video.evaluate(async(video,times)=>{
   const context=new AudioContext();
   try{

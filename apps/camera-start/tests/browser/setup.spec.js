@@ -9,6 +9,32 @@ async function standingSetup(page) {
   await expect(page.locator('#instruction')).toHaveText('Standing pose captured.');
 }
 
+test('left-hand confirmation starts the game once; right, both and short raises do not', async ({page}) => {
+  await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
+  await expect(page.locator('#detail')).toContainText('Raise your LEFT hand');
+  for (const hand of ['right', 'both']) {
+    await page.evaluate(hand => { window.poseTest.hand = hand; }, hand);
+    await page.waitForTimeout(1300);
+    expect(await page.evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(false);
+    await page.evaluate(() => { window.poseTest.hand = 'down'; });
+    await page.waitForTimeout(500);
+  }
+  await page.evaluate(() => { window.poseTest.hand = 'up'; });
+  await page.waitForTimeout(350);
+  await page.evaluate(() => { window.poseTest.hand = 'down'; });
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(false);
+  await page.evaluate(() => { window.poseTest.hand = 'up'; });
+  await expect(page.locator('#status')).toHaveText('MOVEMENT CONFIRMED · GET READY');
+  await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().game.status), {timeout:6000}).toBe('running');
+  const events = await page.evaluate(() => window.cameraSetup.getLog());
+  expect(events.filter(e => e.event === 'height-confirmed' && e.via === 'gesture')).toHaveLength(1);
+  expect(events.filter(e => e.event === 'game-started')).toHaveLength(1);
+  await page.locator('#show-settings').click();
+  await page.locator('#end-run').click();
+  expect(await page.evaluate(() => window.testWorker.terminated && window.testStream.getTracks().every(t => t.readyState === 'ended'))).toBe(true);
+});
+
 test('camera fills the window and distant instructions remain large on desktop, portrait and landscape', async ({page})=>{
   await page.goto('/?mode=detect');
   for (const size of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]) {

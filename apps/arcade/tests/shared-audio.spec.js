@@ -1,6 +1,7 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {syntheticCamera as guidedCamera} from '../../camera-start/tests/browser/synthetic-camera.js';
-const energy=video=>video.evaluate(async v=>{const context=new AudioContext();try{const b=await context.decodeAudioData(await(await fetch(v.src)).arrayBuffer());const d=b.getChannelData(0);return Math.sqrt(d.reduce((sum,x)=>sum+x*x,0)/d.length);}finally{await context.close();}});
+const energy=async video=>{await openReplay(video);return video.evaluate(async v=>{const context=new AudioContext();try{const b=await context.decodeAudioData(await(await fetch(v.src)).arrayBuffer());const d=b.getChannelData(0);return Math.sqrt(d.reduce((sum,x)=>sum+x*x,0)/d.length);}finally{await context.close();}});};
 
 test('Jump Game shares the countdown and now retains its game sound in replay',async({page})=>{
  await guidedCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');

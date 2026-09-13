@@ -1,3 +1,4 @@
+import {captureClipThumbnail} from './clip-thumbnail.js';
 import {loadRecordingLogo,drawClipEnding,drawDownloadFrame} from './clip-compositor.js';
 import {startVideoRecorder,recordedBlob} from './video-format.js';
 import {MAX_BYTES} from './local-clips.js';
@@ -59,7 +60,7 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{},includeConv
   const logo=brandedDownload?await abortable(loadRecordingLogo(),localSignal):null;localSignal.throwIfAborted();
   const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;const ctx=canvas.getContext('2d');
   const draw=()=>brandedDownload?drawDownloadFrame(ctx,video,clip,logo):ctx.drawImage(video,0,0,canvas.width,canvas.height);
-  draw();stream=canvas.captureStream(24);
+  draw();const thumbnail=captureClipThumbnail(canvas);stream=canvas.captureStream(24);
   for(const track of audioOutput?.stream.getAudioTracks()||[])stream.addTrack(track);
   let chunks=[],bytes=0,startedAt=0,stoppedAt=0,finishing=false,lastTime=video.currentTime,lastFrameAt=performance.now();
   const output=new Promise((resolve,reject)=>{
@@ -100,7 +101,7 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{},includeConv
     }
     raf=requestAnimationFrame(paint);},error=>controller.abort(new Error('Replay playback could not start. Please retry from the clip button.',{cause:error})));
   });
-  const encoded=await output;localSignal.throwIfAborted();
+  const encoded=await output;encoded.thumbnail=await thumbnail;localSignal.throwIfAborted();
   if(!fullLength&&!fitsWebsiteShare(encoded))throw new Error('The share copy exceeded the website limits. Your full replay is still saved.');
   return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · ${fullLength?'with conversation':'share copy'}`,game:clip.game,createdAt:Date.now(),width:canvas.width,height:canvas.height,source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio||!!voiceBuffer,conversationEmbedded:!!voiceBuffer||!!clip.conversationEmbedded,gameTitle:clip.gameTitle,brand:clip.brand,website:clip.website,shareCopy:!fullLength,branded:brandedDownload||clip.branded!==false,playbackRate:(clip.playbackRate||1)*playbackRate,endingSeconds:brandedDownload?3:fullLength?(clip.endingSeconds??3)/playbackRate:0,hasEnding:brandedDownload||(fullLength&&!!clip.hasEnding),finalScore:clip.finalScore,...encoded};
  }finally{

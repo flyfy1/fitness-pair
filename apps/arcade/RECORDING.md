@@ -30,6 +30,10 @@ segments and remux compressed video/audio packets without another encode or a
 playback-time delay. Export starts at the first keyframe inside the last 90
 seconds, so the clip may be slightly shorter than 90 seconds (normally less than
 one second shorter; browsers may ignore the requested keyframe interval).
+A trimmed replay also decodes its first retained keyframe once during assembly
+to save its JPEG thumbnail. The operation is bounded; unavailable decoding leaves
+the playback placeholder. Browsing the library never decodes a video for a
+thumbnail, and discarded first-round images are not persisted for trimmed clips.
 Both audio and video use the same rebased timestamp. Optional conversation has
 its own rolling audio buffer and adjusted offset. No discarded footage is saved
 to the library, and no media leaves the device during assembly.

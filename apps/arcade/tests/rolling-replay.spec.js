@@ -68,17 +68,19 @@ test('a 96-second recording retains only the latest 90 seconds at original speed
   await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=reject;});
   const sample=async time=>{video.currentTime=time;await new Promise(resolve=>video.onseeked=resolve);ctx.drawImage(video,0,0);return [...ctx.getImageData(80,80,1,1).data];};
   const first=await sample(.2),last=await sample(video.duration-.1);URL.revokeObjectURL(video.src);
+  const poster=await createImageBitmap(saved.thumbnail);ctx.drawImage(poster,0,0,160,120);poster.close();const thumbnail=[...ctx.getImageData(80,80,1,1).data];
   await new Promise((resolve,reject)=>{
    const request=indexedDB.open('fitness-pair-clips',1);request.onsuccess=()=>{const db=request.result,tx=db.transaction('clips','readwrite');
     tx.objectStore('clips').put({id:crypto.randomUUID(),title:'Motion Quest · synthetic rolling replay',game:'motion-quest',gameTitle:'Motion Quest',source:'synthetic',createdAt:Date.now(),duration:saved.duration,playbackRate:1,branded:false,blob:saved.blob});
     tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);
    };request.onerror=()=>reject(request.error);
   });
-  return {segments,duration:saved.duration,decoded:video.duration,start:saved.startSeconds,first,last,size:saved.blob.size};
+  return {segments,duration:saved.duration,decoded:video.duration,start:saved.startSeconds,first,last,thumbnail,size:saved.blob.size};
  });
  expect(result.segments).toBeLessThanOrEqual(19);expect(result.duration).toBeGreaterThan(88.5);expect(result.duration).toBeLessThanOrEqual(90);
  expect(result.decoded).toBeGreaterThan(88.5);expect(result.decoded).toBeLessThanOrEqual(90.05);expect(result.start).toBeGreaterThan(6.4);
  expect(result.first[1]).toBeGreaterThan(80);expect(result.first[0]).toBeLessThan(30);expect(result.last[2]).toBeGreaterThan(200);
+ expect(result.thumbnail[1]).toBeGreaterThan(80);expect(result.thumbnail[0]).toBeLessThan(30);
  await page.reload();const card=page.locator('.clip-card');
  await card.getByRole('button',{name:'Publish to gallery',exact:true}).click();
  await card.locator('input[name=consent]').check();await card.getByRole('button',{name:'Publish this clip',exact:false}).click();

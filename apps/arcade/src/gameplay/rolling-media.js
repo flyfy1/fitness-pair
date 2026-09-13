@@ -1,4 +1,5 @@
 import {startVideoRecorder} from '../video-format.js';
+import {captureClipThumbnail} from '../clip-thumbnail.js';
 import {Input,ALL_FORMATS,BlobSource,EncodedPacketSink,Output,BufferTarget,Mp4OutputFormat,WebMOutputFormat,EncodedVideoPacketSource,EncodedAudioPacketSource} from 'mediabunny';
 
 export const REPLAY_SECONDS=90;
@@ -68,7 +69,7 @@ export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1
 // first decodable keyframe inside the window (at most one requested GOP later).
 // Rebase both tracks against that same point so audio keeps its original timing.
 export async function assembleRecording(segments,{startSeconds,endSeconds,audioOnly=false}){
- let output,videoSource,audioSource,videoCodec,audioCodec,origin=null,duration=0;
+ let output,videoSource,audioSource,videoCodec,audioCodec,origin=null,duration=0,thumbnail=null;
  try{
   for(const segment of segments){
    if(!segment.bytes||segment.end<=startSeconds)continue;
@@ -82,6 +83,7 @@ export async function assembleRecording(segments,{startSeconds,endSeconds,audioO
     if(origin===null){
      const first=(audioOnly?audioPackets:videoPackets).find(packet=>(audioOnly||packet.type==='key')&&base+packet.timestamp>=startSeconds&&base+packet.timestamp<endSeconds);
      if(!first)continue;origin=base+first.timestamp;
+     if(!audioOnly&&startSeconds>0)thumbnail=await retainedThumbnail(first,await video.getDecoderConfig());
      videoCodec=await video?.getCodec();audioCodec=await audio?.getCodec();
      const mp4=(!videoCodec||videoCodec==='avc'||videoCodec==='hevc')&&(!audioCodec||audioCodec==='aac');
      output=new Output({format:mp4?new Mp4OutputFormat():new WebMOutputFormat(),target:new BufferTarget()});
@@ -107,6 +109,27 @@ export async function assembleRecording(segments,{startSeconds,endSeconds,audioO
   if(!output||duration<=0)throw new Error('The browser returned an empty recording.');
   await output.finalize();
   const type=output.format instanceof Mp4OutputFormat?(audioOnly?'audio/mp4':'video/mp4'):(audioOnly?'audio/webm':'video/webm');
-  return {blob:new Blob([output.target.buffer],{type}),duration,startSeconds:origin};
+  return {blob:new Blob([output.target.buffer],{type}),duration,startSeconds:origin,trimmed:startSeconds>0,thumbnail};
  }catch(error){await output?.cancel();throw error;}
+}
+
+// Decode just the retained keyframe during assembly, never during library browsing.
+// A bounded failure leaves the normal playback placeholder instead of an old image.
+function retainedThumbnail(packet,config){
+ if(typeof VideoDecoder==='undefined')return Promise.resolve(null);
+ return new Promise(resolve=>{
+  let decoder,settled=false;
+  const finish=value=>{if(settled)return;settled=true;clearTimeout(timer);if(decoder?.state!=='closed')decoder?.close();resolve(value);};
+  const timer=setTimeout(()=>finish(null),3000);
+  try{
+   decoder=new VideoDecoder({error:()=>finish(null),output:frame=>{
+    try{
+     const canvas=document.createElement('canvas');canvas.width=frame.displayWidth;canvas.height=frame.displayHeight;
+     canvas.getContext('2d').drawImage(frame,0,0);
+     captureClipThumbnail(canvas).then(finish,()=>finish(null));
+    }catch{finish(null);}finally{frame.close();}
+   }});
+   decoder.configure(config);decoder.decode(packet.toEncodedVideoChunk());decoder.flush().catch(()=>finish(null));
+  }catch{finish(null);}
+ });
 }

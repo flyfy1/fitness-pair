@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {startWithHands} from '../../integ-ar/tests/start-hands.js';
 import {test,expect} from '@playwright/test';
 import {syntheticCamera} from '../../integ-ar/tests/synthetic-camera.js';
@@ -20,6 +21,7 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
  await page.screenshot({path:info.outputPath('host-mobile.png')});
  await game.locator('#finish').click();await expect(page.locator('#local-result video')).toBeVisible({timeout:12000});
  await expect(page.locator('#local-result')).toContainText(config.title);
+ await openReplay(page.locator('#local-result video'));
  const decoded=await page.locator('#local-result video').evaluate(async v=>{
   v.pause();await new Promise(resolve=>{v.addEventListener('seeked',resolve,{once:true});v.currentTime=.4;});
   const c=document.createElement('canvas');c.width=1280;c.height=800;const x=c.getContext('2d');x.drawImage(v,0,0,c.width,c.height);

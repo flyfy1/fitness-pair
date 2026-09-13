@@ -5,6 +5,9 @@ const visible = p => p && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y 
 
 /** UI commands from named pose joints, independent of jump calibration and score. */
 export class BodyGestures {
+  constructor({ oneHandSide = null } = {}) {
+    this.oneHandSide = oneHandSide;
+  }
   reset(session) {
     this.session = session; this.lastSeq = -1; this.lastTMs = -1;
     this.kind = null; this.since = null; this.releaseSince = null; this.latched = false;
@@ -23,7 +26,9 @@ export class BodyGestures {
     const raised = side => j[`${side}Wrist`].y < j[`${side}Shoulder`].y - .10;
     const lowered = side => j[`${side}Wrist`].y > j[`${side}Shoulder`].y + .04;
     const left = raised('left'), right = raised('right');
-    const kind = left && right ? 'both-hands' : left && lowered('right') || right && lowered('left') ? 'one-hand' : null;
+    const oneHand = (this.oneHandSide !== 'right' && left && lowered('right'))
+      || (this.oneHandSide !== 'left' && right && lowered('left'));
+    const kind = left && right ? 'both-hands' : oneHand ? 'one-hand' : null;
     let event = null, progress = 0;
     if (lowered('left') && lowered('right')) {
       this.releaseSince ??= frame.tMs;

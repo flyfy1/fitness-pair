@@ -1,4 +1,5 @@
 import {createConversationCapture} from './conversation.js';
+import {captureClipThumbnail} from '../clip-thumbnail.js';
 import {startRollingRecorder,REPLAY_SECONDS} from './rolling-media.js';
 import {BRAND_NAME,SITE_URL} from '../brand.js';
 import {recordingSize,drawClipFrame} from '../clip-compositor.js';
@@ -62,6 +63,7 @@ export function mountRecording(game,runtime,{panel,result}){
    sessions.delete(session);
    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,blob:recorded.blob};
    clip.conversation=await session.conversationResult;
+   clip.thumbnail=recorded.trimmed?recorded.thumbnail:await session.thumbnail;
    if(clip.conversation)clip.conversation.offsetSeconds-=recorded.startSeconds;
    let message=session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the latest camera replay below.':'Saved on this device. Your replay is ready below.';
    try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
@@ -84,6 +86,7 @@ export function mountRecording(game,runtime,{panel,result}){
    for(const track of snapshot.audio?.getAudioTracks()||[])if(track.readyState==='live')session.capture.addTrack(track.clone());
    session.includesAudio=session.capture.getAudioTracks().length>0;
    drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,branded:false});
+   session.thumbnail=captureClipThumbnail(canvas);
    session.recorder=startRollingRecorder(session.capture,{onError:()=>saveNow()});
    setState('recording','Recording your game · stays on this device');
    function paint(){
