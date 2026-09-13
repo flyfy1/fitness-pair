@@ -9,13 +9,15 @@ import {BodyArcadeRecognizer} from '../../../experiments/action-recognition/body
 import {createBodyInput} from './input.js';
 
 const $ = id => document.getElementById(id);
-const config = arGames.find(game => game.slug === new URLSearchParams(location.search).get('game')) || arGames[0];
+const selected = new URLSearchParams(location.search).get('game');
+const config = arGames.find(game => selected ? game.slug === selected : location.pathname.split('/').includes(game.id)) || arGames[0];
 const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures();
 document.title = `${config.title} · Hopmodo`;
 $('game-title').textContent = config.title;
 $('category').textContent = config.category.toUpperCase() + ' · CAMERA AR';
 $('detail').textContent = $('control-help').textContent = config.action;
 $('hand').hidden = !config.primary;
+let hosted = false;
 let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
 const listeners = new Set(), changed = () => listeners.forEach(callback => callback());
@@ -135,7 +137,10 @@ function render(now) {
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
   }
   const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
-  const top = height < 550 ? 102 : 130, bottom = width < 600 ? 170 : 145;
+  const footerHeight = height - document.querySelector('.controls').getBoundingClientRect().top;
+  $('cue').style.bottom = `${footerHeight + 12}px`;
+  const top = height < 550 ? 102 : hosted ? 202 : 130;
+  const bottom = footerHeight + $('cue').getBoundingClientRect().height + 28;
   const available = Math.max(80, height - top - bottom), scale = Math.min((width - 32) / sourceCanvas.width, available / sourceCanvas.height);
   const w = sourceCanvas.width * scale, h = sourceCanvas.height * scale;
   if (['playing', 'paused', 'complete'].includes(phase)) ctx.drawImage(sourceCanvas, (width - w) / 2, top + (available - h) / 2, w, h);
@@ -155,7 +160,7 @@ window.gameplay = {
   getFrame: () => ({round, phase: phase === 'setup' ? 'setup' : phase, canvas: $('world'), video: $('camera'), skeleton: $('skeleton'),
     isAR: true, score: `${game.getState().score} points`, source: session?.source}),
   subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
-  configureHost({homeURL, recordingNote}) { if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
+  configureHost({homeURL, recordingNote}) { hosted = true; $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
   dispose,
 };
 window.integAR = {getState: () => ({phase, round, pauseReason, game: game.getState(), action, camera: camera.running})};

@@ -45,6 +45,17 @@ Recognition Lab is an independent AR skeleton capture and replay app at
 locally, bookmark recognition failures, and turn annotated windows into replayable
 regression cases. See [capture, privacy and test workflow](apps/recognition-lab/README.md).
 
+## Integ movement AR games
+
+The arcade adds six source-adapted Integ Games: Brick Pulse (torso paddle),
+Pixel Defense (torso steering + raised-hand fire), Perfect Stack and Orbit Knife
+(raised-hand timing), Bubble Pop (right-wrist aim + left-hand fire), and Fruit Orbit
+(torso aim + raised-hand drop). All use local camera AR with a live torso/limb
+overlay, standing calibration, tracking-loss pause and the shared local replay flow.
+See [all 20 source games and movement mappings](docs/movement-game-mapping.md).
+Start the standalone set with `npm run dev --workspace @fitness-pair/integ-ar`
+at <http://127.0.0.1:5284/?game=breakout>, or choose a game in the arcade below.
+
 ## Arcade landing page and local clips
 
 `npm run build` now builds the complete arcade, including Motion Quest and Dino Run.

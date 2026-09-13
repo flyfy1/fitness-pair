@@ -21,7 +21,7 @@
 | Both hands raised for one second | Existing Dino `BodyGestures`, with lower-to-rearm | Pause/resume; reserved as a system command |
 | Torso horizontal position | New adapter over existing named shoulders/hips; standing baseline and dead zone | Paddle, ship and fruit drop position |
 | Deliberate left-hand raise | New app-local 150 ms stable raise after observed lowering; one completion ID per raise | Shoot, drop, throw; no repeated action while held |
-| Right-wrist position | New app-local normalized aiming over existing named wrist; wrist required for aim games | Bubble aim with a visible reticle |
+| Right-wrist position | New app-local normalized aiming over existing named wrist; wrist below shoulder height, required for aim games | Bubble aim with a visible reticle |
 | Thumbs up, wave, seven static hand categories, finger ratings 1–5 | Existing Gesture Lab experiment; separate hand model, not connected to these six games | Later menu confirmation/selection; do not claim it is active in the AR body games |
 
 All recognition coordinates remain unmirrored. Presentation mirrors the video and skeleton together; control mapping makes screen-left movement move game objects left. Body-only inputs do not require a separate hand model. Incomplete or stale poses suppress commands and clear stale skeletons.
@@ -50,7 +50,7 @@ mechanics are imported locally under `apps/integ-ar/`; the source repository is 
 | Trap Trail | Possible later | Sway + jump; direction precision and traps need trials |
 | Tiny Wheels | Possible later | Lean to accelerate/brake; game speed needs body-scale tuning |
 | Fruit Orbit | Selected | Body sway + left-hand raise → Choose drop position + release fruit |
-| Bubble Pop | Selected | Right-wrist aim + left-hand raise → Aim at the on-screen reticle + shoot |
+| Bubble Pop | Selected | Right wrist below shoulder + left-hand raise → Aim at the reticle + shoot |
 | Hexa Fit | Poor initial fit | Tray selection and precise cell placement |
 | Orbit Knife | Selected | Left-hand raise → Throw once; lower the hand to rearm |
 | Pocket Survivor | Possible later | Two-axis body steering plus upgrade selection; requires a separate menu interaction |
@@ -72,3 +72,13 @@ observations are an app-local optional extension of the unchanged v1 envelope.
 
 Existing listed AR games retain their gameplay; Push-up Flight also gains the
 visible named-body overlay so the active catalog consistently shows tracking.
+
+## Verification and limits (2026-09-13)
+
+- 72 root Node tests and the gateway suite pass, including four new recognizer/input cases and all eleven mounted game IDs.
+- Twelve standalone browser cases cover all six original game loops, pause/resume, missing/stale tracking, repeated-input suppression, higher-tier fruit drops, permission cancellation/denial, background cleanup, and public-image inference with the real local MediaPipe model.
+- All eleven mounts pass full-window entry/exit and replay-tool checks at 1440, 390 and 320 pixel widths. The active home catalog contains nine games; older standalone Dino mounts remain unlisted.
+- Six camera-driven host flows produce decoded local replay video containing camera pixels and body lines; a second Orbit Knife round retains both clips. No upload occurs in these tests. Push-up Flight's close-up head-following browser flow also verifies the visible-joint overlay.
+- Source defects found during adaptation: Fruit Orbit's larger starting fruit crossed its overflow boundary on spawn; initial placement now respects radius. Bubble's right-wrist range stays below shoulder height so aiming and left-hand shooting cannot accidentally become the both-hands pause gesture.
+- Evidence uses generated camera fixtures and one public model fixture, never a private participant recording. These checks establish software behavior, not recognition accuracy or human playability. In-person latency, fatigue and control comfort still need a trial.
+- Original visuals/rules are adapted; these six games currently play silently. Optional conversation recording and local replay come from the shared host.

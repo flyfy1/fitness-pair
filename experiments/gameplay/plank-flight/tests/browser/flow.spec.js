@@ -44,6 +44,7 @@ async function followsHead(page,x,y){
 test('close-up camera automatically starts; helicopter follows head down/up and sideways; collision, encouragement and retry',async({page})=>{
   await syntheticCamera(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
   await page.screenshot({path:'test-results/ready.png',fullPage:true});await start(page);
+  expect(await page.locator('#body-overlay').evaluate(c=>c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0))).toBe(true);
   expect((await state(page)).headVisible).toBe(true);expect((await state(page)).source.kind).toBe('camera');
   for(const [x,y] of [[.35,.6],[.35,.3],[.6,.3],[.25,.4]])await followsHead(page,x,y);
   await page.waitForTimeout(400);await followsHead(page,.25,.4); // no elapsed-time lift

@@ -193,3 +193,7 @@ preview stays on 5184. Generated screenshots, runtime files and model weights ar
 Human close-up push-up tracking and enjoyment remain unverified. The official model's
 head indices are documented in the
 [MediaPipe landmark definitions](https://ai.google.dev/edge/api/mediapipe/python/mp/tasks/vision/PoseLandmark).
+
+The AR stage also outlines confidently recognized body joints using the shared
+named-joint overlay. Close-up play shows only visible joints; missing hips or
+limbs are never inferred for display. Stale overlays clear after 250 ms.

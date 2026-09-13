@@ -1,4 +1,5 @@
 import './style.css';
+import {drawBody} from '../../../../apps/camera-start/src/body-overlay.js';
 import { FlightAudio } from './audio.js';
 import { PoseCamera } from './camera.js';
 import { HeadFlightController } from './recognizer.js';
@@ -10,7 +11,7 @@ import { DEFAULT_DIFFICULTY, setDifficulty, flightSpeed } from './difficulty.js'
 import { projectHead, validHeadControl } from './projection.js';
 
 document.querySelector('#app').innerHTML = `
-<main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas>
+<main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas><canvas id="body-overlay" aria-label="Recognized body joints"></canvas>
 <div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">Push-up play · head tracking</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates<div class="current-speed">Speed <span id="current-speed">1.0×</span></div></div></div>
 <div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view to begin the 3-second countdown. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
 <div id="countdown" class="countdown" role="status" aria-live="assertive" hidden></div>
@@ -37,7 +38,7 @@ function panel(title,message,label='Try again') {
   $('panel').hidden=false;$('title').textContent=title;$('message').textContent=message;
   $('start').textContent=label;$('demo').hidden=false;
 }
-function clearHead() { pose=null;pilot=null;headCanvas.getContext('2d').clearRect(0,0,100,100); }
+function clearHead() { drawBody($('body-overlay'),null);pose=null;pilot=null;headCanvas.getContext('2d').clearRect(0,0,100,100); }
 function interrupt(message) {
   if (halted || state.finished) return;
   halted=true;state.status='paused';starting=false;
@@ -194,6 +195,7 @@ function tick(now){
     canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
   }
   ctx.setTransform(dpr,0,0,dpr,0,0);render(ctx,state,{width:rect.width,height:rect.height,pose,pilot,time:now,mode});
+  drawBody($('body-overlay'),mode==='camera'&&camera.active&&pose&&now-pose.tMs<250?pose:null);
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);

@@ -30,7 +30,7 @@ export const dinoARAdapter=frame=>legacy(frame,(window,doc)=>{
 
 export const plankFlightAdapter=frame=>legacy(frame,(window,doc)=>{
  const state=window.plankFlight?.getState(),canvas=doc.querySelector('#scene');if(!state||!canvas?.width)return null;
- return {canvas,video:doc.querySelector('#video'),isAR:true,round:state.sessionId,ready:state.status==='flying',paused:state.status==='paused',ending:state.status==='crashing',done:state.finished,score:`${Math.floor(state.flightSeconds)}s · ${state.passed} gates`};
+ return {canvas,video:doc.querySelector('#video'),skeleton:doc.querySelector('#body-overlay'),isAR:true,round:state.sessionId,ready:state.status==='flying',paused:state.status==='paused',ending:state.status==='crashing',done:state.finished,score:`${Math.floor(state.flightSeconds)}s · ${state.passed} gates`};
 });
 
 export const cameraStartAdapter=frame=>legacy(frame,(window,doc)=>{

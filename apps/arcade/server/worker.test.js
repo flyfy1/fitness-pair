@@ -46,9 +46,9 @@ for(const identity of ['private-key','metadata'])test(`mock GCP ${identity} publ
 
 test('all mounted games use shared same-origin tracking assets and support clip metadata',async()=>{
  const seen=[],worker=createWorker(),env={ASSETS:{fetch:r=>{seen.push(new URL(r.url).pathname);return new Response('asset');}}};
- for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start']){
+ for(const game of ['motion-quest','dino-run','dino-ar','plank-flight','camera-start','ar-breakout','ar-invaders','ar-stack','ar-knife','ar-bubble','ar-fruit']){
   await worker.fetch(new Request(`https://arcade.test/games/${game}/runtime/pose-worker.js`),env);
   const target=new URL(url);target.searchParams.set('game',game);assert.equal(validateUpload(new Request(target,{headers}),target).game,game);
  }
- assert.deepEqual(seen,Array(5).fill('/runtime/pose-worker.js'));
+ assert.deepEqual(seen,Array(11).fill('/runtime/pose-worker.js'));
 });
