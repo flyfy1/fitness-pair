@@ -5,11 +5,14 @@ import {webcrypto} from 'node:crypto';
 import {readFileSync,realpathSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import worker from '../../server/worker.js';
+import {createMetadataTokenProvider} from './identity.mjs';
 
 globalThis.crypto ??= webcrypto;
 
 // Caddy owns static files/TLS. The existing Worker owns gallery API semantics.
 export function createGateway({origin='https://fitness.integ.life',release={},env={}}={}) {
+  const runtimeEnv={...env};
+  if(env.GCP_IMPERSONATE_SERVICE_ACCOUNT)runtimeEnv.GCP_ACCESS_TOKEN_PROVIDER=createMetadataTokenProvider({serviceAccount:env.GCP_IMPERSONATE_SERVICE_ACCOUNT});
   return http.createServer(async(req,res)=>{
     try {
       if(req.url==='/healthz' && ['GET','HEAD'].includes(req.method)) {
@@ -19,7 +22,7 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
       }
       const request=new Request(new URL(req.url,origin),{method:req.method,headers:req.headers,
         ...(!['GET','HEAD'].includes(req.method)?{body:req,duplex:'half'}:{})});
-      const response=await worker.fetch(request,{...env,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
+      const response=await worker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
       res.writeHead(response.status,Object.fromEntries(response.headers));
       if(req.method==='HEAD'||!response.body)res.end();
       else await pipeline(Readable.fromWeb(response.body),res);

@@ -1,6 +1,6 @@
 # Optional GCP sharing gateway
 
-The deployed Sites Worker serves the arcade and private-bucket media. Sharing stays disabled until the owner provides configuration. The configured private bucket is `project-e8ef2daf-0520-4018-b9f-fitness-sharing`. A usable runtime identity has not been supplied; bucket configuration alone does not enable sharing.
+The Worker serves the gallery API and private-bucket media in two independent deployments. The GCP VM can use its keyless identity adapter; GPT Sites retains its separate configuration. The private bucket is `project-e8ef2daf-0520-4018-b9f-fitness-sharing`. Bucket configuration alone does not enable sharing. See the [GCP identity setup](../deploy/gcp/README.md#keyless-gallery-configuration).
 
 ## Runtime configuration
 
@@ -9,6 +9,11 @@ Set through Sites runtime environment management, never in Git or browser code:
 - `GCP_BUCKET`: a dedicated private bucket.
 - `GCP_SERVICE_ACCOUNT_JSON`: secret JSON with a narrowly scoped service account's email and PKCS8 private key. Prefer a future federated identity when available; this portable implementation uses the official signed JWT OAuth flow.
 - `SHARE_UPLOAD_CODE`: secret, at least 12 characters, shared privately with approved early-access uploaders. It is entered per publication, not persisted by the app. Replace this gated pilot with player authentication and durable quotas before unrestricted public uploads.
+
+The GCP Node adapter uses `GCP_IMPERSONATE_SERVICE_ACCOUNT` instead of a JSON key.
+It injects an internal `GCP_ACCESS_TOKEN_PROVIDER` function; this is server code,
+not a browser setting or a Sites environment variable. The VM obtains short-lived
+credentials for the dedicated storage account, scoped to Cloud Storage access.
 
 Grant the service account object create/get/list/delete permissions only on this bucket. Keep uniform bucket-level access and public-access prevention enabled. Configure a 7-day bucket lifecycle deletion rule before enabling sharing; the app denies expired records immediately, while lifecycle cleanup removes stored bytes. Supply the chosen project/bucket through normal configuration, not pasted private keys in chat.
 

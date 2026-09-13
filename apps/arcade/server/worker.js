@@ -5,7 +5,7 @@ const enc=new TextEncoder();
 const base64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
 const digest=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(value)))).map(b=>b.toString(16).padStart(2,'0')).join('');
 async function equal(a,b){const x=await digest(a||''),y=await digest(b||'');let diff=0;for(let i=0;i<x.length;i++)diff|=x.charCodeAt(i)^y.charCodeAt(i);return diff===0;}
-const enabled=env=>!!(env.GCP_BUCKET&&env.GCP_SERVICE_ACCOUNT_JSON&&env.SHARE_UPLOAD_CODE?.length>=12);
+const enabled=env=>!!(env.GCP_BUCKET&&(env.GCP_SERVICE_ACCOUNT_JSON||typeof env.GCP_ACCESS_TOKEN_PROVIDER==='function')&&env.SHARE_UPLOAD_CODE?.length>=12);
 export function validateUpload(request,url){
  if(request.headers.get('X-Sharing-Consent')!=='gallery-v1')throw fail(400,'Confirm gallery sharing before uploading.');
  const title=(url.searchParams.get('title')||'').trim(),source=url.searchParams.get('source'),game=url.searchParams.get('game'),duration=Number(url.searchParams.get('duration'));
@@ -27,6 +27,7 @@ function publicClip(record){const {id,title,source,game,duration,mime,createdAt,
 export function createWorker({fetcher=fetch,now=()=>Date.now()}={}){
  let tokenCache=null,uploadBusy=false;
  async function accessToken(env){
+  if(typeof env.GCP_ACCESS_TOKEN_PROVIDER==='function')return env.GCP_ACCESS_TOKEN_PROVIDER();
   if(tokenCache?.identity===env.GCP_SERVICE_ACCOUNT_JSON&&tokenCache.until>now())return tokenCache.token;
   const account=JSON.parse(env.GCP_SERVICE_ACCOUNT_JSON),seconds=Math.floor(now()/1000);
   if(!account.client_email||!account.private_key)throw fail(503,'Gallery identity is not configured.');

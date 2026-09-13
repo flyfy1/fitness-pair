@@ -13,7 +13,7 @@ See [deployment evidence](EVIDENCE.md) for the verified release and limitations.
 From clean, pushed `main`, after relevant tests and browser checks:
 
 ```sh
-node --test apps/arcade/deploy/gcp/gateway.test.mjs apps/arcade/server/worker.test.js
+node --test apps/arcade/deploy/gcp/*.test.mjs apps/arcade/server/worker.test.js
 python3 apps/arcade/deploy/gcp/deploy.py
 ```
 
@@ -36,11 +36,41 @@ it installs the old root-only proxy configuration. Use this deploy entry point.
 
 Local automatic recordings, the clip library, downloads, and file sharing work
 independently on each origin; IndexedDB clips do not migrate between the two sites.
-The optional UUID-based Gallery API uses the same Worker semantics as GPT Sites.
-It remains disabled until a usable GCP identity and upload code are configured.
-The VM has no attached service account and organization policy currently prohibits
-service-account key creation. This deployment does not change IAM or weaken that
-policy. `/api/config` accurately reports `sharingEnabled: false`.
+The UUID-based Gallery API uses the same Worker semantics as GPT Sites. On GCP,
+`/etc/fitness-arcade.env` configures the private bucket, dedicated storage identity
+and upload code. Systemd reads this root-only file; it is never in an archive or Git.
+The existing VM identity obtains a short-lived token for the storage account using
+IAM Credentials. No private keys are created and the organization key-creation
+restriction remains enforced. A complete `serviceAccounts` field inspection found
+the attached identity; an earlier nested CLI projection incorrectly appeared empty.
+
+## Keyless gallery configuration
+
+- VM identity: `snake-arena-runtime@project-e8ef2daf-0520-4018-b9f.iam.gserviceaccount.com`.
+- Storage identity: `fitness-sharing-storage@project-e8ef2daf-0520-4018-b9f.iam.gserviceaccount.com`.
+- Bucket: `project-e8ef2daf-0520-4018-b9f-fitness-sharing`.
+- IAM Credentials API must be enabled. Grant `roles/iam.serviceAccountTokenCreator`
+  to the VM identity **on the storage service account only**, never project-wide.
+  That storage identity has `roles/storage.objectUser` on this bucket only.
+- The VM identity is shared by workloads on this VM; this delegation follows that
+  existing host trust boundary. It does not grant project or bucket administration.
+- Keep uniform bucket-level access and public-access prevention enabled. The
+  lifecycle rule deletes `gallery/` and `videos/` objects after seven days; the app
+  denies expired records immediately. Existing seven-day soft-delete retention
+  can retain deleted bytes beyond their availability through the app.
+- Set `GCP_BUCKET`, `GCP_IMPERSONATE_SERVICE_ACCOUNT`, and `SHARE_UPLOAD_CODE` in
+  `/etc/fitness-arcade.env` (mode 0600), then restart `fitness-arcade.service`.
+  The upload code reuses the existing private code from the standalone sharing
+  pilot. Never paste it into source, public links, logs or a shell argument.
+- Check `/api/config`, then verify a synthetic upload through the browser, GCS
+  readback, public playback and owner deletion. Configuration alone is not proof.
+
+`identity.mjs` caches tokens only in process memory, coalesces concurrent refreshes,
+and renews them a minute before expiration. Metadata and IAM calls have bounded
+timeouts; failures return a generic 503 without including credential responses.
+GPT Sites keeps its separate runtime configuration and is not enabled by these
+VM-only settings. To disable GCP publication, remove the gallery environment
+settings and restart the arcade service; existing local recordings are unaffected.
 
 ## Verification and rollback
 
