@@ -5,31 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f5ed" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23244436'/%3E%3Ctext x='10' y='48' font-size='42'%3E🦖%3C/text%3E%3C/svg%3E" />
-    <title>Dino Run · One more jump</title>
+    <title>Dino Run · Move together</title>
   </head>
   <body>
-    <div class="shell">
-      <header><a class="brand" href="./" aria-label="Dino Run home"><span class="brand-mark">↗</span> MOTION ARCADE<span class="brand-slash">/</span><span class="brand-game">DINO RUN</span></a><span class="edition">SMALL GAME. BIG ADVENTURE. <i></i></span></header>
-      <main>
-        <section class="intro"><div><p class="eyebrow">01 / MOVE TO PLAY · POC</p><h1>Your jump.<span> Dino’s jump.</span></h1><p class="subtitle">Set your maximum. Small hops, big leaps — move together.</p></div><div class="mode-switch" aria-label="Choose controls"><button id="motion-mode" aria-pressed="true">Camera mode</button><button id="keyboard-mode" aria-pressed="false">Keyboard mode</button></div></section>
-        <section id="motion-panel" class="motion-panel" aria-label="Jump calibration">
-          <div class="camera-preview"><video id="camera" muted playsinline aria-label="Local camera preview"></video><canvas id="skeleton" aria-hidden="true"></canvas><span id="camera-tag">CAMERA OFF</span></div>
-          <div class="calibration-copy"><p class="eyebrow" id="calibration-step">YOUR PERSONAL JUMP RANGE</p><h2 id="calibration-title">Calibrate before you run</h2><p id="calibration-copy">Keep your whole body in view. Stand still, then jump once to set your maximum comfortable height.</p><div class="calibration-steps"><span id="step-standing">1 · Stand still</span><span id="step-maximum">2 · Maximum jump</span><span id="step-ready">3 · Move together</span></div><p class="camera-note">On-device camera · no recording · height relative to your calibration</p></div>
-          <div class="height-monitor"><div><span id="height-label">JUMP HEIGHT</span><strong id="height-value">—</strong></div><div class="height-track"><span id="height-bar"></span></div><small id="height-detail">Your maximum = 100%</small><div class="camera-actions"><button id="recalibrate" hidden>Recalibrate</button><button id="stop-camera" hidden>Turn camera off</button></div></div>
-        </section>
-        <section class="arcade" aria-label="Dinosaur runner game">
-          <div class="scorebar"><div class="world"><span class="world-icon">✳</span><div>Desert wanderer<small>THE QUIET DESERT</small></div></div><div class="scores"><div><span>SCORE</span><strong id="score">00000</strong></div><div class="best"><span>PERSONAL BEST</span><strong id="best">00000</strong></div><button id="pause" class="icon-button" aria-label="Pause game" disabled>Ⅱ</button></div></div>
-          <div class="stage" id="stage"><canvas id="game" aria-label="A dinosaur runs to the right. Jump to avoid cacti." role="img"></canvas>
-            <div class="overlay" id="overlay"><div class="overlay-card"><p class="eyebrow" id="overlay-kicker">READY WHEN YOU ARE</p><h2 id="overlay-title">Every adventure starts with a leap.</h2><p id="overlay-copy">Cacti ahead. Jump over them and keep going.</p><button id="start" class="primary">Let’s run <span>↗</span></button><small id="overlay-hint">or press Space to start</small></div></div>
-            <span class="landscape-label">DESERT / 01</span><span class="live-state" id="live-state">READY TO ROAM</span>
-          </div>
-          <div class="game-footer"><span><i></i> <span id="pace">Take it easy. Find your rhythm.</span></span><span id="distance">0 m</span></div>
-        </section>
-        <section class="controls" aria-label="Game controls"><div class="control-tip"><span class="tip-number">01</span><div><h3 id="input-title">Jump to move</h3><p id="input-copy">Your height controls Dino’s height in real time.</p></div></div><div class="control-tip"><span class="tip-number">02</span><div><h3>At your own pace</h3><p><kbd>P</kbd> / <kbd>Esc</kbd> to pause. Carry on anytime.</p></div></div><button id="jump" class="jump-button" disabled hidden>↑ <span>Jump</span><small>TAP TO JUMP</small></button></section>
-        <p class="status sr-only" id="announcement" role="status" aria-live="polite"></p>
-      </main>
-      <footer><span>Stay curious. Keep moving.</span><span>ONE MORE JUMP. <span class="footer-star">✳</span></span></footer>
-    </div>
+    <main id="play-area" class="play-area">
+      <section class="arcade" aria-label="Dinosaur runner game">
+        <header class="scorebar">
+          <a class="brand" href="./" aria-label="Dino Run home"><span class="brand-mark">↗</span><span>DINO RUN<small>MOVE TOGETHER</small></span></a>
+          <div class="game-actions"><button id="fullscreen" class="icon-button" aria-label="Enter fullscreen" aria-pressed="false" title="Enter fullscreen">⛶</button><button id="pause" class="icon-button" aria-label="Pause game" disabled>Ⅱ</button></div>
+        </header>
+        <div class="stage" id="stage">
+          <canvas id="game" aria-label="A dinosaur runs to the right. Jump to avoid cacti." role="img"></canvas>
+          <div class="overlay" id="overlay"><div class="overlay-card"><p class="eyebrow" id="overlay-kicker">READY WHEN YOU ARE</p><h1 id="overlay-title">Your jump. Dino’s jump.</h1><p id="overlay-copy">Set your maximum. Small hops, big leaps — move together.</p><button id="start" class="primary">Enable camera <span>↗</span></button><small id="overlay-hint">Your camera stays on this device.</small></div></div>
+          <span class="landscape-label">THE QUIET DESERT / 01</span>
+        </div>
+        <div class="game-footer"><i></i><span id="pace">Take it easy. Find your rhythm.</span></div>
+      </section>
+
+      <aside class="sidebar" aria-label="Player camera and game dashboard">
+        <div class="camera-preview"><div class="camera-placeholder"><span>◎</span>Your camera view<small>Shoulders and hips in view</small></div><video id="camera" muted playsinline aria-label="Local camera preview"></video><canvas id="skeleton" aria-hidden="true"></canvas><span id="camera-tag">CAMERA OFF</span><div class="camera-actions"><button id="recalibrate" hidden>Recalibrate</button><button id="stop-camera" hidden>Turn camera off</button></div></div>
+        <div class="dashboard">
+          <section class="run-summary" aria-label="Run statistics">
+            <div class="run-status"><i></i><span class="live-state" id="live-state">READY TO ROAM</span></div>
+            <div class="scores"><div><span>SCORE</span><strong id="score">00000</strong></div><div class="best"><span>PERSONAL BEST</span><strong id="best">00000</strong></div><div class="distance"><span>DISTANCE</span><strong id="distance">0 m</strong></div></div>
+          </section>
+          <div class="mode-switch" aria-label="Choose controls"><button id="motion-mode" aria-pressed="true">Camera mode</button><button id="keyboard-mode" aria-pressed="false">Keyboard mode</button></div>
+          <section id="motion-panel" class="motion-panel" aria-label="Jump calibration">
+            <div class="calibration-copy"><p class="eyebrow" id="calibration-step">YOUR PERSONAL JUMP RANGE</p><h2 id="calibration-title">Calibrate before you run</h2><p id="calibration-copy">Keep your shoulders and hips in view; full body works too. Stand still, then jump once to set your maximum comfortable height.</p><div class="calibration-steps"><span id="step-standing">1 · Stand still</span><span id="step-maximum">2 · Maximum jump</span><span id="step-ready">3 · Move together</span></div><p id="tracking-mode" class="tracking-mode">AUTO · FULL OR UPPER BODY</p></div>
+            <div class="height-monitor"><div class="height-reading"><span id="height-label">JUMP HEIGHT</span><strong id="height-value">—</strong></div><div class="height-track"><span id="height-bar"></span></div><small id="height-detail">Your maximum = 100%</small></div>
+            <p class="camera-note">On-device camera · no recording<br>Height relative to your calibration</p>
+          </section>
+          <section class="controls" aria-label="Game controls"><div class="control-tip"><h3 id="input-title">Jump to move</h3><p id="input-copy">Your height controls Dino’s height in real time.</p></div><div class="control-tip"><p><kbd>P</kbd> / <kbd>Esc</kbd> to pause.</p></div><button id="jump" class="jump-button" disabled hidden>↑ <span>Jump</span><small>TAP TO JUMP</small></button></section>
+        </div>
+      </aside>
+      <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+    </main>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

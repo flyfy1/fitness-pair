@@ -23,7 +23,9 @@ export class Renderer {
     const { width, height } = this.canvas.getBoundingClientRect();
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = Math.round(width * ratio); this.canvas.height = Math.round(height * ratio);
-    this.scale = width / Math.max(480, width); this.runner.width = Math.max(480, width);
+    // Scale the world uniformly so fullscreen enlarges the character and jump too.
+    this.scale = Math.max(.01, Math.min(width / 480, height / 360));
+    this.runner.width = width / this.scale;
     this.height = height / this.scale; this.ratio = ratio;
     this.draw();
   }
