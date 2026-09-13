@@ -19,8 +19,8 @@ Grant the service account object create/get/list/delete permissions only on this
 
 ## Flow
 
-1. Gameplay automatically creates a branded local replay in IndexedDB. Local recordings are bounded at 100 MiB; this pilot upload endpoint currently accepts up to 60 seconds / 20 MiB.
-2. For an oversized replay, the player first makes a local share copy of up to 55 seconds of final gameplay plus a three-second invitation. The original remains local. The player logs in with Integ.Life, previews the chosen copy and explicitly consents to gallery publication.
+1. Gameplay automatically creates an unbranded local replay of up to the latest 90 seconds in IndexedDB. Recordings stay at normal speed. This upload endpoint accepts up to 90 seconds / 20 MiB.
+2. For an oversized replay, the player first makes a local share copy of up to 55 seconds of final gameplay. The original remains local. The player logs in with Integ.Life, previews the chosen copy and explicitly consents to gallery publication.
 3. Worker verifies account authorization, Origin/CSRF, consent, metadata, bounded body and MP4/WebM magic bytes; reserves actual bytes against the account quota; then uploads private bytes and a publication record. New metadata binds the central account rather than a device management key.
 4. Gallery and `/clips/:id` read publication records. `/api/media/:id` streams private GCP bytes through the site and forwards byte ranges. No bucket key or public bucket URL reaches the browser.
 5. Deletion removes the publication record first; downloads no longer resolve. Local deletion and public revocation are independent.

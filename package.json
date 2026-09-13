@@ -26,5 +26,8 @@
     "preview:arcade": "node scripts/preview-arcade.mjs",
     "test:arcade": "node --test apps/arcade/server/worker.test.js",
     "build:motion-quest": "npm run build --workspace @fitness-pair/motion-quest"
+  },
+  "dependencies": {
+    "mediabunny": "1.56.2"
   }
 }

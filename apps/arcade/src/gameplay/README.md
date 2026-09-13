@@ -19,6 +19,9 @@
 
 `shell.js` owns the viewport, home/exit link, optional microphone control and
 replay area. `recording` owns automatic recording lifecycle and local persistence.
+`rolling-media.js` bounds native video and optional conversation capture to the
+latest 90 seconds, then remuxes the retained packets at normal speed. It rotates
+independently decodable segments and preserves a shared video/audio timeline.
 The clip library and account sharing live outside this directory. Game rules,
 rendering, model loading and calibration remain independently owned.
 

@@ -1,12 +1,11 @@
 import {createConversationCapture} from './conversation.js';
-import {startVideoRecorder,recordedBlob} from '../video-format.js';
+import {startRollingRecorder,REPLAY_SECONDS} from './rolling-media.js';
 import {BRAND_NAME,SITE_URL} from '../brand.js';
 import {recordingSize,drawClipFrame} from '../clip-compositor.js';
-import {createShareCopy} from '../share-copy.js';
-import {saveClip,updateClip,listClips,MAX_BYTES} from '../local-clips.js';
+import {saveClip,listClips} from '../local-clips.js';
 import {mountClipCard} from '../clips.js';
 export function mountRecording(game,runtime,{panel,result}){
- panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. Only your two latest videos stay on this device. Videos over 30 seconds are saved at 2× speed.</p><p class="record-note">Game + enabled camera · game sound when available · optional conversation track · nothing shared automatically</p></div><a href="/library">My clips →</a>';
+ panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. Only your two latest videos stay on this device. Replays keep the latest 90 seconds at normal speed.</p><p class="record-note">Game + enabled camera · game sound when available · optional conversation track · nothing shared automatically</p></div><a href="/library">My clips →</a>';
  const status=panel.querySelector('#record-status');
  let conversationControls=null;
  const conversation=createConversationCapture({onChange:state=>{
@@ -47,7 +46,7 @@ export function mountRecording(game,runtime,{panel,result}){
   revealResult();
  }
  function start(snapshot){
-  const session={round:snapshot.round,createdAt:Date.now(),phase:'recording',hadCamera:cameraLive(snapshot.video),cameraTime:snapshot.video?.currentTime,lastCameraAt:performance.now(),startAt:performance.now(),raf:0,endTimer:0,bytes:0,chunks:[],capture:null,recorder:null,failed:false};
+  const session={round:snapshot.round,createdAt:Date.now(),phase:'recording',hadCamera:cameraLive(snapshot.video),cameraTime:snapshot.video?.currentTime,lastCameraAt:performance.now(),startAt:performance.now(),raf:0,endTimer:0,capture:null,recorder:null,failed:false};
   sessions.add(session);active=session;handledRound=snapshot.round;
   session.conversation=conversation.begin(session.startAt);
   function stopTracks(){session.conversationResult??=session.conversation.finish();cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
@@ -56,8 +55,20 @@ export function mountRecording(game,runtime,{panel,result}){
    cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';session.stoppedAt=performance.now();
    if(active===session)active=null;
    if(!active)setState('saving','Saving your clip on this device…');
-   if(session.recorder?.state!=='inactive')session.recorder?.stop();
+   if(session.recorder?.state!=='inactive')session.recorder?.stop().then(saveRecording).catch(error=>{sessions.delete(session);if(!active)setState('idle',error.message);});
    stopTracks();
+  }
+  async function saveRecording(recorded){
+   sessions.delete(session);
+   const clip={id:crypto.randomUUID(),title:`${game.title} · my replay`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,blob:recorded.blob};
+   clip.conversation=await session.conversationResult;
+   if(clip.conversation)clip.conversation.offsetSeconds-=recorded.startSeconds;
+   let message=session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the latest camera replay below.':'Saved on this device. Your replay is ready below.';
+   try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
+   readyRounds.set(session.round,clip.id);
+   while(readyRounds.size>2)readyRounds.delete(readyRounds.keys().next().value);
+   if(!active)setState(sessions.size?'finishing':'idle',message);
+   if(clip.unsaved||(await listClips().catch(()=>[clip])).some(item=>item.id===clip.id))showResult(clip);
   }
   function finish(score,reason='Round complete'){
    if(session.phase!=='recording')return;
@@ -73,43 +84,7 @@ export function mountRecording(game,runtime,{panel,result}){
    for(const track of snapshot.audio?.getAudioTracks()||[])if(track.readyState==='live')session.capture.addTrack(track.clone());
    session.includesAudio=session.capture.getAudioTracks().length>0;
    drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,branded:false});
-   session.recorder=startVideoRecorder(session.capture,recorder=>{
-   session.recorder=recorder;
-   session.recorder.ondataavailable=e=>{
-    if(!e.data.size)return;
-    session.bytes+=e.data.size;
-    if(session.bytes>MAX_BYTES){session.failed=true;session.chunks=[];saveNow();return;}
-    session.chunks.push(e.data);
-    if(session.bytes>=MAX_BYTES-2*1024*1024&&session.phase==='recording'){
-     session.limited=true;finish('Recording file limit reached');
-     if(!active)setState('finishing','Recording reached the device file limit. Saving what you played so far…');
-    }
-   };
-   session.recorder.onerror=()=>{session.failed=true;saveNow();};
-   session.recorder.onstop=async()=>{
-    stopTracks();sessions.delete(session);
-    if(session.failed){session.chunks=[];if(!active)setState('idle','This replay could not be saved. Your next round will record automatically.');return;}
-    let blob;
-    try{blob=await recordedBlob(session.chunks,session.recorder.mimeType);}
-    catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
-    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
-    clip.conversation=await session.conversationResult;
-    let message=session.limited?'File limit reached. The replay up to that point is saved below.':session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the camera replay captured so far below.':'Saved on this device. Your replay is ready below.';
-    try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
-    if(clip.duration>30&&!unloading&&!document.hidden){
-     if(!active)setState('saving','Saving your replay at 2× speed on this device…');
-     try{
-      const fast=await createShareCopy(clip,{fullLength:true,playbackRate:2});
-      clip.sourceDuration=clip.duration;clip.duration=fast.duration;clip.blob=fast.blob;clip.playbackRate=2;clip.endingSeconds=fast.endingSeconds;
-      if(!clip.unsaved)await updateClip(clip);
-     }catch{message+=' The 2× copy could not finish. This replay is kept at its original speed.';}
-    }else if(clip.duration>30){message+=' The 2× copy could not finish while this tab was hidden. This replay is kept at its original speed.';}
-    readyRounds.set(session.round,clip.id);
-    while(readyRounds.size>2)readyRounds.delete(readyRounds.keys().next().value);
-    if(!active)setState(sessions.size?'finishing':'idle',message);
-    if(clip.unsaved||(await listClips().catch(()=>[clip])).some(item=>item.id===clip.id))showResult(clip);
-   };
-   });
+   session.recorder=startRollingRecorder(session.capture,{onError:()=>saveNow()});
    setState('recording','Recording your game · stays on this device');
    function paint(){
     if(session.phase!=='recording')return;
@@ -128,7 +103,7 @@ export function mountRecording(game,runtime,{panel,result}){
      if(session.hadCamera&&now.video?.srcObject&&now.video.readyState>=2){const cache=session.lastCamera;cache.width=640;cache.height=Math.round(640*now.video.videoHeight/now.video.videoWidth);cache.getContext('2d').drawImage(now.video,0,0,cache.width,cache.height);}
      if(now.phase==='ending'&&!now.video?.srcObject&&session.lastCamera.height)now.video=session.lastCamera;
      drawClipFrame(session.context,{...now,includesCamera:session.hadCamera,title:game.title,branded:false});snapshot=now;
-     setState('recording',`Recording ${Math.floor((performance.now()-session.startAt)/1000)} seconds · ${session.hadCamera?'game + camera':'synthetic game preview'} · stays on this device`);
+     setState('recording',`Recording ${Math.min(REPLAY_SECONDS,Math.floor((performance.now()-session.startAt)/1000))} / 90 seconds${performance.now()-session.startAt>=REPLAY_SECONDS*1000?' · keeping the latest 90 seconds':''} · ${session.hadCamera?'game + camera':'synthetic game preview'} · stays on this device`);
      session.raf=requestAnimationFrame(paint);
     }catch{finish('Game closed');}
    }

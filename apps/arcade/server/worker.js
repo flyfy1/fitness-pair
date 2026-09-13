@@ -14,7 +14,7 @@ export function validateUpload(request,url){
  const mime=(request.headers.get('Content-Type')||'').split(';')[0];
  if(!title||title.length>90||/[\x00-\x1f]/.test(title))throw fail(400,'Use a title of 1–90 characters.');
  if(!['replay','synthetic'].includes(source)||!isPlayableGame(game))throw fail(400,'Unknown game or recording source.');
- if(!Number.isFinite(duration)||duration<=0||duration>60)throw fail(400,'Record a clip of 60 seconds or less.');
+ if(!Number.isFinite(duration)||duration<=0||duration>90)throw fail(400,'Record a clip of 90 seconds or less.');
  if(!['video/mp4','video/webm'].includes(mime))throw fail(415,'Use an MP4 or WebM recording.');
  const length=request.headers.get('Content-Length');if(length!==null&&(!Number.isSafeInteger(Number(length))||Number(length)<=0||Number(length)>MAX_BYTES))throw fail(413,'Clip must be nonempty and no larger than 20 MiB.');
  return {title,source,game,duration,mime};
