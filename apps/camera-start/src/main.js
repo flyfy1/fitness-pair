@@ -12,6 +12,9 @@ const $ = id => document.getElementById(id);
 const gameMode = new URLSearchParams(location.search).get('mode') !== 'detect';
 const runner = new AnimatedRunner({ onEvent: (event, detail) => log(event, detail) }); runner.setControlMode('motion');
 let pauseReason = null, lastGameFrame = 0, lastPassed = 0, clearedAt = -Infinity;
+$('setup').classList.toggle('game-mode', gameMode);
+$('movement-settings').hidden = gameMode;
+$('show-settings').hidden = !gameMode;
 $('mode-link').textContent = gameMode ? 'Jump detection only' : 'Play Dino';
 $('mode-link').href = gameMode ? '?mode=detect' : './';
 $('range-title').textContent = gameMode ? 'Movement for a jump trigger' : 'Movement for a full jump';
@@ -137,7 +140,7 @@ function gamePresentation(now) {
     detail: 'Stand upright, then click Resume or raise both hands.', reason: 'manual-pause' };
   const approaching = runner.obstacles.some(o => o.x > 70 && o.x - 116 < runner.speed * .95);
   const confirmed = detectedAt !== null && now - detectedAt < 1800;
-  return { ...base, status: `${runner.score} POINTS · ${runner.passed} CLEARED`,
+  return { ...base, status: 'RUNNING',
     title: approaching ? 'Jump!' : now - clearedAt < 1200 ? 'Cleared!' : confirmed ? 'Jump detected!' : 'Keep going!',
     detail: approaching ? 'Lift your dinosaur over the cactus.' : confirmed ? `Jump ${jumpCount} confirmed.` : 'Your jump triggers a smooth dinosaur jump.',
     reason: approaching ? 'obstacle-approaching' : confirmed ? 'jump-detected' : 'running' };
@@ -168,6 +171,7 @@ function observeJump(input) {
   }
 }
 function finish(reason = 'user-finish') {
+  setSettingsOpen(false);
   log(gameMode ? 'round-finished' : 'jump-test-finished', { reason, count: jumpCount, score: runner.score, cleared: runner.passed });
   complete = true;
   if (gameMode) runner.command('pause');
@@ -288,6 +292,20 @@ function paintLog() {
 }
 $('primary').addEventListener('click', () => { if (camera.running && testing) { if (gameMode) toggleGame('button'); else finish(); } else if (camera.running && action?.canConfirmMaximum) confirm('button'); else if (!camera.active) start(); });
 $('end-run').addEventListener('click', () => finish());
+function setSettingsOpen(open) {
+  if (!gameMode) return;
+  $('movement-settings').hidden = !open;
+  $('show-settings').setAttribute('aria-expanded', String(open));
+}
+$('show-settings').addEventListener('click', () => setSettingsOpen($('movement-settings').hidden));
+document.addEventListener('click', event => {
+  if (!$('movement-settings').contains(event.target) && !$('show-settings').contains(event.target)) setSettingsOpen(false);
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && gameMode && !$('movement-settings').hidden) {
+    setSettingsOpen(false); $('show-settings').focus();
+  }
+});
 $('show-body').addEventListener('change', () => {
   $('body-overlay').hidden = !$('show-body').checked;
   drawBody($('body-overlay'), null);

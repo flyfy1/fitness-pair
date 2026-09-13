@@ -171,7 +171,12 @@ and the motion-mode rules from `apps/dino-run/src/engine.js`.
 
 The left playfield shows the dinosaur, ground and incoming cacti. Large cues
 announce **Jump!**, **Cleared!** and confirmed jumps; the controls show score,
-cacti cleared, confirmed jumps and the live movement meter. Score advances with
+cacti cleared, confirmed jumps and the live movement meter. Score and cleared
+count stay in a compact top-right HUD. The larger settings panel is hidden by
+default in game mode; click **Settings** to show the slider, skeleton toggle,
+movement meter and **Finish run**. Click Settings again, outside the panel, or
+press Escape to close it. Hiding settings does not hide the skeleton or resize
+the game world. Score advances with
 running distance; jump counts come only from explicit completed movement events.
 The full-camera background and default skeleton stay live during play.
 

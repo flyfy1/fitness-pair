@@ -33,6 +33,7 @@ test('camera setup controls the existing Dino game: animated jump, cactus clear,
   await page.screenshot({path:'test-results/game-over.png'});
   await startGame(page,'Play again');
   expect((await state(page)).game.passed).toBe(0); expect((await state(page)).jumpCount).toBe(0);
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('button',{name:'Finish run',exact:true}).click();
   const logs=await page.evaluate(()=>window.cameraSetup.getLog());
   expect(logs.some(e=>e.event==='obstacle-cleared')).toBe(true);
@@ -62,6 +63,7 @@ test('buttons and both-hand gestures pause and resume without scoring paused mov
   await expect.poll(async()=>(await state(page)).gesture.latched,{intervals:[25]}).toBe(false);
   await page.evaluate(()=>{window.poseTest.hand='both';});
   await expect.poll(async()=>(await state(page)).game.status).toBe('paused');
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('button',{name:'Finish run',exact:true}).click();
   expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
@@ -91,11 +93,24 @@ test('tracking loss freezes the game; camera restart rebinds controls and preser
   for(const [width,height] of [[390,844],[844,390],[1440,960]]) {
     await page.setViewportSize({width,height});
     await expect(page.getByRole('button',{name:'Resume run',exact:true})).toBeInViewport();
-    await expect(page.getByRole('button',{name:'Finish run',exact:true})).toBeInViewport();
+    await expect(page.locator('#movement-settings')).toBeHidden();
+    await expect(page.locator('#game-stats')).toBeInViewport();
+    const hud=await page.locator('#game-stats').boundingBox();
+    expect(hud.y).toBeLessThan(60);expect(hud.x+hud.width).toBeGreaterThan(width*.8);
+    const runway=await page.locator('#game-world').boundingBox();
+    expect(runway.width).toBe(width);
+    await page.screenshot({path:`test-results/compact-hud-${width}.png`});
+    await page.getByRole('button',{name:'Settings',exact:true}).click();
     await expect(page.getByLabel('Skeleton debug view',{exact:true})).toBeInViewport();
+    expect((await page.locator('#game-world').boundingBox()).width).toBe(runway.width);
+    await page.getByRole('button',{name:'Finish run',exact:true}).scrollIntoViewIfNeeded();
+    await expect(page.getByRole('button',{name:'Finish run',exact:true})).toBeInViewport();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button',{name:'Settings',exact:true})).toBeFocused();
     expect(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight)).toBe(true);
     await page.screenshot({path:`test-results/game-layout-${width}.png`});
   }
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('button',{name:'Finish run',exact:true}).click();
   for(const [width,height] of [[390,844],[844,390],[1440,960]]) {
     await page.setViewportSize({width,height});
