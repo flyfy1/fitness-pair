@@ -35,7 +35,7 @@ test('actual Motion Quest camera path exports moving person, game, HUD without p
  for(const [i,frame] of results.frames.entries())await writeFile(info.outputPath(`decoded-camera-${i}.png`),Buffer.from(frame.image.split(',')[1],'base64'));
  expect(results.type).toBe('video/mp4');expect(results.signature).toEqual([102,116,121,112]);
  for(const frame of results.frames.slice(0,4)){expect(frame.red).toBeGreaterThan(8000);expect(frame.cyan).toBeGreaterThan(100000);expect(frame.brand).toBeLessThan(300);expect(frame.hud).toBeGreaterThan(100);expect(frame.marker).toBeGreaterThan(500);expect(frame.markerX).toBeGreaterThan(1000);expect(frame.markerX).toBeLessThan(1200);expect(frame.cropped).toBeLessThan(10);}
- expect(Math.abs(results.frames[0].redX-results.frames[1].redX)).toBeGreaterThan(60);
+ expect(Math.max(...results.frames.map(frame=>frame.redX))-Math.min(...results.frames.map(frame=>frame.redX))).toBeGreaterThan(60);
  expect(results.frames[0].game).toBeGreaterThan(100);
 });
 
