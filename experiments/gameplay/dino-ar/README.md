@@ -2,7 +2,7 @@
 
 A separate, camera-first alternative to [Dino Run](../../../apps/dino-run/README.md).
 The mirrored video fills the window. The player stays in that video, with a virtual
-runway, incoming cacti, a glowing collision marker, scores and calibration cues
+runway, incoming cacti, a glowing collision marker, scores and entry cues
 drawn over the same scene. **Debug · show body skeleton** toggles named-joint bones
 and points; it is off by default and never hides the person or stops recognition.
 The original Dino app remains the baseline; this experiment is its separate second
@@ -14,8 +14,7 @@ gameplay experience, not a mode switch added to the original app.
 - **Job:** feel present inside the runner rather than control a separate dinosaur.
 - **Riskiest assumption:** an anchored collision marker over the player makes the
   obstacle timing understandable in a full-window video view.
-- **P1 loop:** enable camera → stand still → maximum comfortable jump and landing
-  → three-second countdown → jump to clear cacti → collision → camera off → retry.
+- **P1 loop:** enable camera → jump once → immediately play → jump to clear cacti → collision → camera off → retry.
 - **Success proof:** a browser round calibrates, changes marker height, clears a
   cactus, collides, releases resources and restarts; a human trial must separately
   establish that timing and body placement are understandable.
@@ -41,20 +40,24 @@ the existing checksum-verified Lite model into ignored `public/runtime/`.
 Runtime camera processing stays local; video and landmarks are not saved.
 
 1. Keep the camera fixed, stand centered and leave room above your head. Select
-   **Enable camera**, stand still, then make one maximum comfortable jump and land.
-2. The runway anchors to the feet when full-body tracking is available. If only
-   shoulders and hips are visible, the UI explicitly labels **upper body / torso
-   movement**, and the marker anchors to the waist instead.
-3. After the countdown, jump in place to lift the glowing marker over orange cacti.
-   The marker's filled box is the player's collision area; each cactus's solid
-   central trunk is its collision area. Arms and the glow are decorative.
-4. Toggle **Debug · show body skeleton** to inspect tracking; recognition and
-   gameplay continue whether the skeleton is visible or not. Use the fullscreen
-   button for browser fullscreen, with the existing in-window fallback.
+   **Enable camera**, then **jump once to start**. The host automatically captures
+   a short standing reference (250 ms); a clear upward movement starts play while
+   you are still airborne. There is no maximum-height measurement, landing wait,
+   confirmation button or countdown.
+2. The runway anchors to the pre-jump foot position with full-body tracking. With
+   only shoulders and hips visible, the UI labels **upper body / torso movement**
+   and the marker anchors to the pre-jump waist position instead.
+3. Jump in place to lift the glowing marker over orange cacti. Its filled box is
+   the player's collision area; each cactus's solid central trunk is its collision
+   area. Arms and glow are decorative. Movement level uses a body-proportion scale,
+   not a percentage of your personal maximum.
+4. **Debug · show body skeleton** controls only the bones/points overlay. Use the
+   fullscreen button for browser fullscreen, with the existing in-window fallback.
 5. **Pause**, **Turn camera off**, leaving the page/window, errors and game over
-   release tracks and workers. Restarting the camera requires new calibration.
-   **Recalibrate** freezes the round, clears its anchor and repeats calibration.
-   Short tracking loss/delay freezes the run and requires explicit **Resume run**.
+   release tracks and workers. Restarting the camera requires just another jump.
+   **Reset position** freezes the round and repeats the short reference and jump.
+   Tracking loss/delay freezes the run and requires explicit **Resume run**;
+   prolonged loss or position drift also requires another reference and jump.
 
 ## Geometry and rules
 
@@ -65,18 +68,18 @@ distance, and cleared cacti come from the existing collision engine. The session
 timestamps and camera provenance remain unchanged through recognition.
 
 `scene.js` uses the same mirrored `object-fit: cover` projection as the video.
-It never mirrors recognition inputs. On calibration completion, the grounded
-foot/hip midpoint becomes a fixed runway anchor. The measured image displacement
-scales the existing 165-unit maximum game height, so the marker's vertical travel
-matches the calibrated movement on screen. Renderer collision boxes are the exact
+It never mirrors recognition inputs. When the first lift is detected, the cached pre-jump
+foot/hip midpoint becomes the fixed runway anchor. Half the standing torso length
+(minimum 0.04 image height) scales the existing 165-unit game height. This keeps
+the marker tied to image movement without measuring a personal maximum. Renderer collision boxes are the exact
 affine transforms of the engine's collision boxes. A resize reprojects the same
 anchor and adjusts the spawn boundary; it does not reset the session or score.
 
 This is **2D video-overlay AR**, not world-tracked 3D AR. The camera view is center
 cropped to fill the viewport, which can crop limbs near the edges; stay centered.
 Sideways movement does not steer the lane, and significant position/scale drift
-invalidates calibration. The recognizer may switch from full-body to upper-body
-tracking and require recalibration when legs disappear. The marker is a game proxy,
+invalidates the standing reference. The recognizer may switch from full-body to upper-body
+tracking and require a fresh reference and jump when legs disappear. The marker is a game proxy,
 not whole-body collision or a foot-contact/physical jump measurement. Upper-body
 motion cannot establish that the feet left the floor. No enjoyment, physical
 accuracy, exercise-quality, calorie or latency claim follows from synthetic tests.
@@ -95,17 +98,15 @@ Tests label the generated video **synthetic camera**, replace only the camera/mo
 boundary, and run the real recognizer and game. A separate public still-image
 check runs the real local model and checks that no runtime requests leave localhost.
 
-2026-09-13 local verification on macOS, Node.js 26.7.0 and installed Chrome:
-**3 scene tests, 6 production browser checks, 38 shared/recognizer checks and 15
-existing Dino engine/camera checks passed**, along with the POC production build.
-Browser evidence includes a complete clear/collision/retry loop, portrait full-body
-and upper-body views, fullscreen, skeleton on/off, tracking-loss/recalibration,
-permission denial, late-grant cancellation and track/worker cleanup. Visual review
-confirmed the full-body HUD sits above the foot runway. The initial model download
-timed out; verification reused the locally cached model and rechecked its SHA-256.
-No human camera trial was performed.
+The quick-start browser check uses a synthetic lift of 0.02 image height, below
+our previous maximum-calibration threshold. It asserts that the round is running
+before the fixture lands, then verifies proportional movement, clear/collision,
+retry, full-body/upper-body layouts, debug toggling and resource cleanup. Unit
+checks reject jitter, isolated foot lifts, single-frame spikes and missing poses;
+existing default/manual calibration behavior remains covered separately. This is
+synthetic evidence, not a human detection-accuracy or responsiveness measurement.
 
-For a future human comparison, use the same camera, player and calibration setup
+For a future human comparison, use the same camera, player and starting position
 for the original Dino app and this AR variation. Without recording, observe whether
 the player can identify their collision marker, clear one cactus and explain why
 the round ended. Record rule-comprehension errors and willingness to retry; do not

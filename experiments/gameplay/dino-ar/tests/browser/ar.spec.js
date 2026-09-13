@@ -38,10 +38,13 @@ async function calibrate(page, button = 'Enable camera') {
   await page.getByRole('button',{name:button,exact:true}).click();
   await expect.poll(async()=>(await state(page)).camera.stage).toBe('maximum');
   expect((await state(page)).status).not.toBe('running');
-  await page.evaluate(()=>{window.testRise=.14;}); await page.waitForTimeout(260);
+  // A small lift below the old maximum threshold starts play while still airborne.
+  await page.evaluate(()=>{window.testRise=.02;});
+  await expect.poll(async()=>(await state(page)).status,{timeout:2000,intervals:[30]}).toBe('running');
+  expect((await state(page)).camera.calibrated).toBe(true);
+  expect(await page.evaluate(()=>window.testRise)).toBe(.02);
   await page.evaluate(()=>{window.testRise=0;});
-  await expect.poll(async()=>(await state(page)).camera.calibrated).toBe(true);
-  await expect.poll(async()=>(await state(page)).status,{timeout:6000}).toBe('running');
+  await expect.poll(async()=>(await state(page)).height).toBe(0);
 }
 async function expectStopped(page) {
   expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
@@ -56,7 +59,7 @@ test('AR camera loop: anchored player, optional skeleton, proportional height, c
   const video = await page.locator('#camera').boundingBox(); expect(video).toMatchObject({x:0,y:0,width:1440,height:960});
   await page.getByLabel('Debug · show body skeleton').check(); await expect(page.locator('#skeleton')).toBeVisible();
   for (const ratio of [.5,1,.25,0]) {
-    await page.evaluate(r=>{window.testRise=r*.14;},ratio);
+    await page.evaluate(r=>{window.testRise=r*.115;},ratio);
     await expect.poll(async()=>Math.abs((await state(page)).height-ratio*165)).toBeLessThan(8);
   }
   await page.getByLabel('Debug · show body skeleton').uncheck();
@@ -67,7 +70,7 @@ test('AR camera loop: anchored player, optional skeleton, proportional height, c
   await expect.poll(async()=>(await state(page)).passed).toBeGreaterThan(0);
   await expect.poll(async()=>(await state(page)).status,{timeout:10000}).toBe('over');
   await expectStopped(page);
-  await calibrate(page,'Calibrate & run again'); expect((await state(page)).passed).toBe(0);
+  await calibrate(page,'Jump & run again'); expect((await state(page)).passed).toBe(0);
   await page.getByRole('button',{name:'Turn camera off'}).click(); await expectStopped(page);
   expect(errors).toEqual([]);
 });
@@ -93,14 +96,14 @@ test('stale/missing tracking freezes the round and requires explicit resume; rec
   const score=(await state(page)).score; await page.waitForTimeout(500); expect((await state(page)).score).toBe(score);
   expect((await state(page)).height).toBe(0);
   await page.evaluate(()=>{window.testDelay=0;window.testRise=0;});
-  // A >750 ms loss invalidates calibration. Complete a new maximum before resume.
+  // A >750 ms loss invalidates the reference. A new lift unlocks explicit resume.
   await expect.poll(async()=>(await state(page)).camera.stage).toBe('maximum');
   await page.evaluate(()=>{window.testRise=.14;}); await page.waitForTimeout(260);
   await page.evaluate(()=>{window.testRise=0;});
   await expect(page.getByRole('button',{name:'Resume run',exact:true})).toBeEnabled();
   await page.getByRole('button',{name:'Resume run',exact:true}).click();
   await expect.poll(async()=>(await state(page)).status,{timeout:6000}).toBe('running');
-  await page.getByRole('button',{name:'Recalibrate',exact:true}).click();
+  await page.getByRole('button',{name:'Reset position',exact:true}).click();
   expect((await state(page)).anchored).toBe(false); expect((await state(page)).status).toBe('paused');
   await page.evaluate(()=>{window.testMissing=true;}); await page.waitForTimeout(900);
   expect((await state(page)).camera.calibrated).toBe(false);

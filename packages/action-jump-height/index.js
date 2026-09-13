@@ -45,8 +45,9 @@ function geometry(frame, mode) {
 
 /** Relative image displacement only: no camera, recording, or model-specific joints. */
 export class JumpHeightRecognizer {
-  constructor({ manualMaximum = false, preferUpperBody = false } = {}) {
+  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false } = {}) {
     this.manualMaximum = manualMaximum; this.preferUpperBody = preferUpperBody;
+    this.quickStart = quickStart;
   }
 
   get canConfirmMaximum() {
@@ -176,7 +177,7 @@ export class JumpHeightRecognizer {
     const alpha = this.filterTMs === null ? 1 : 1 - Math.exp(-(frame.tMs - this.filterTMs) / 35);
     this.filteredRise += alpha * (rawRise - this.filteredRise);
     this.filterTMs = frame.tMs;
-    const liftThreshold = Math.max(.008, baseline.torso * .035);
+    const liftThreshold = Math.max(this.quickStart ? .012 : .008, baseline.torso * .035);
     const landThreshold = Math.max(.005, baseline.torso * .025);
     const airborne = rawRise > liftThreshold;
     const grounded = leftRise <= landThreshold && rightRise <= landThreshold && hipRise <= liftThreshold;
@@ -205,6 +206,13 @@ export class JumpHeightRecognizer {
     if (this.flight) {
       this.flight.peak = Math.max(this.flight.peak, this.filteredRise);
       if (airborne) this.flight.samples++;
+      if (this.quickStart && this.stage === 'maximum' && airborne && this.flight.samples >= 2
+        && frame.tMs - this.flight.started >= 60) {
+        // A coherent lift opens the game immediately. Scale gameplay from body
+        // geometry, not a personal maximum or an unfinished jump's peak.
+        this.peakRise = Math.max(.04, baseline.torso * .5); this.stage = 'ready';
+        return this.output(frame, { phase: 'active', cue: 'jumping', ratio: this.filteredRise / this.peakRise });
+      }
       if (this.stage === 'maximum' && this.manualMaximum && this.flight.samples >= 2
         && frame.tMs - this.flight.started >= 60) {
         this.measuredRise = Math.max(this.measuredRise, this.flight.peak);
@@ -216,7 +224,7 @@ export class JumpHeightRecognizer {
         this.flight = null; this.landingSince = null; this.filteredRise = 0;
         const validFlight = flight.samples >= 2 && frame.tMs - LANDING_MS - flight.started >= 60;
         if (this.stage === 'maximum') {
-          if (!this.manualMaximum && validFlight && flight.peak >= Math.max(.025, baseline.torso * .12)) {
+          if (!this.quickStart && !this.manualMaximum && validFlight && flight.peak >= Math.max(.025, baseline.torso * .12)) {
             this.peakRise = flight.peak; this.stage = 'ready';
             return this.output(frame, { phase: 'ready', cue: 'ready' });
           }
@@ -236,12 +244,12 @@ export class JumpHeightRecognizer {
       }
     }
     if (this.stage === 'maximum') {
-      if (!this.manualMaximum && !this.flight && frame.tMs - this.maximumSince > MAXIMUM_WAIT_MS) {
+      if (!this.quickStart && !this.manualMaximum && !this.flight && frame.tMs - this.maximumSince > MAXIMUM_WAIT_MS) {
         this.recalibrate();
         return this.output(frame, { phase: 'calibrating', cue: 'rebaseline', quality: 'calibration-timeout', calibrationProgress: 0 });
       }
       return this.output(frame, { phase: 'calibrating',
-        cue: this.manualMaximum && this.canConfirmMaximum ? 'confirm-maximum' : this.flight ? 'land-and-hold' : this.retryMaximum ? 'jump-higher-and-retry' : 'jump-maximum',
+        cue: this.manualMaximum && this.canConfirmMaximum ? 'confirm-maximum' : this.flight ? 'land-and-hold' : this.quickStart ? 'jump-to-start' : this.retryMaximum ? 'jump-higher-and-retry' : 'jump-maximum',
         quality: this.retryMaximum && !this.canConfirmMaximum ? 'insufficient-height' : 'tracked', calibrationProgress: this.canConfirmMaximum ? 1 : this.flight ? .75 : .5 });
     }
     // Grounded jitter and post-loss airborne fragments must not move the game.
@@ -267,15 +275,16 @@ export class JumpHeightRecognizer {
     this.standingAnchor ??= pose;
     this.standingSamples.push(pose);
     const elapsed = frame.tMs - this.standingSince;
-    if (elapsed >= STANDING_MS) {
+    const standingMs = this.quickStart ? 250 : STANDING_MS;
+    if (elapsed >= standingMs) {
       const keys = ['hipY', 'shoulderY', 'shoulderWidth', 'hipWidth', 'torso', 'centerX'];
       if (this.trackingMode === 'full-body') keys.push('leftAnkleY', 'rightAnkleY');
       this.baseline = Object.fromEntries(keys
         .map(key => [key, average(this.standingSamples.map(sample => sample[key]))]));
       this.standingSamples = []; this.stage = 'maximum'; this.armed = true;
       this.maximumSince = frame.tMs;
-      return this.output(frame, { phase: 'calibrating', cue: 'jump-maximum', calibrationProgress: .5 });
+      return this.output(frame, { phase: 'calibrating', cue: this.quickStart ? 'jump-to-start' : 'jump-maximum', calibrationProgress: .5 });
     }
-    return this.output(frame, { phase: 'calibrating', cue: 'stand-still', calibrationProgress: clamp(elapsed / STANDING_MS) * .5 });
+    return this.output(frame, { phase: 'calibrating', cue: 'stand-still', calibrationProgress: clamp(elapsed / standingMs) * .5 });
   }
 }
