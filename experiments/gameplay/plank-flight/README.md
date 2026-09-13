@@ -210,3 +210,13 @@ named-joint overlay. Close-up play shows only visible joints; missing hips or
 limbs are never inferred for display. Stale overlays clear after 250 ms.
 
 Camera entry now asks you to show both shoulders and wrists, raise both hands for one second, then lower them before the flight countdown. After this shared start confirmation, the existing head and one-shoulder view remains sufficient.
+
+
+## English and Chinese resources
+
+The language selector changes Flight's interface, countdown and 18 varied spoken
+encouragement/endings together, and remembers the choice on this origin. Switching
+mid-flight preserves the current game and recording. English and Chinese variants
+share stable voice IDs, timing and musical motifs. Audio is served as committed
+resources without runtime speech API calls. See `resources/README.md` for translation,
+generation, provenance and scope; other arcade interfaces are not yet localized.

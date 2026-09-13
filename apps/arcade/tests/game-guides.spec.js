@@ -6,7 +6,8 @@ for(const game of listed)test(`${game.id}: illustrated instructions before enter
  await page.addInitScript(()=>{window.cameraRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;throw new Error('No camera in instruction tests');};});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/#arcade');
  const card=page.locator('.game-card').filter({has:page.getByRole('heading',{name:game.title,exact:true})});
- await expect(card.locator('svg[role=img]')).toHaveCount(2);
+ await expect(card.locator('canvas[role=img], .game-poster')).toHaveCount(1);
+ await expect(card.locator('.movement-art')).toHaveCount(0);
  if(game.id==='ar-breakout')await page.screenshot({path:info.outputPath('arcade-art.png')});
  const entry=card.getByRole('link',{name:'Play '+game.title,exact:true});await entry.click();
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();await expect(dialog.getByRole('heading',{name:game.title,exact:true})).toBeVisible();
@@ -18,15 +19,34 @@ for(const game of listed)test(`${game.id}: illustrated instructions before enter
  await page.setViewportSize({width:320,height:740});
  await dialog.locator('.guide-pause').scrollIntoViewIfNeeded();await expect(dialog.locator('.guide-pause')).toBeVisible();
  await dialog.locator('.guide-scroll').evaluate(el=>el.scrollTop=0);
- const play=dialog.getByRole('link',{name:'Let’s play'});await expect(play).toBeInViewport();await expect(dialog.getByRole('button',{name:'Close instructions'})).toBeInViewport();
+ const play=dialog.getByRole('link',{name:'Let’s play'}),skip=dialog.getByRole('link',{name:'Skip tutorial'});await expect(play).toBeInViewport();await expect(skip).toBeInViewport();await expect(dialog.getByRole('button',{name:'Close instructions'})).toBeInViewport();
  expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
  const bounds=await dialog.boundingBox();const closeBox=await dialog.locator('.guide-close').boundingBox();expect(closeBox.y).toBeGreaterThanOrEqual(bounds.y);expect(bounds.y).toBeGreaterThanOrEqual(0);expect(bounds.y+bounds.height).toBeLessThanOrEqual(740);
  await page.screenshot({path:info.outputPath('guide-mobile.png')});
- await play.click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('#game-frame')).toHaveAttribute('title',game.title+' game');
+ await skip.click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('#game-frame')).toHaveAttribute('title',game.title+' game');
+ expect(await page.evaluate(id=>localStorage.getItem(`hopmodo:game-guide-skipped:v1:${id}`),game.id)).toBe('1');
+ await page.goto('/#arcade');await card.getByRole('link',{name:'Play '+game.title,exact:true}).click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('dialog[open]')).toHaveCount(0);
  expect(errors).toEqual([]);
 });
 test('title links open matching instructions and close restores page scrolling',async({page})=>{
- await page.goto('/#arcade');await page.getByRole('heading',{name:'Bubble Pop AR',exact:true}).getByRole('link').click();
- const dialog=page.getByRole('dialog');await expect(dialog).toContainText('below shoulder height');await expect(dialog).toContainText('Raise your left wrist');
+ await page.goto('/#arcade');await page.getByRole('heading',{name:'Motion Quest',exact:true}).getByRole('link').click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toContainText('Charge your spell');await expect(dialog).toContainText('Repeat five times');
  await dialog.getByRole('button',{name:'Close instructions'}).click();await expect(dialog).not.toBeVisible();expect(await page.evaluate(()=>document.body.style.overflow)).toBe('');
+});
+test('skipping one game guide does not hide another game guide',async({page})=>{
+ await page.goto('/#arcade');
+ await page.getByRole('link',{name:'Play Motion Quest',exact:true}).click();
+ await page.getByRole('dialog').getByRole('link',{name:'Skip tutorial'}).click();
+ await page.goto('/#arcade');
+ await page.getByRole('link',{name:'Play Push-up Flight',exact:true}).click();
+ await expect(page.getByRole('dialog').getByRole('heading',{name:'Push-up Flight',exact:true})).toBeVisible();
+});
+test('regular play keeps the tutorial available next time',async({page})=>{
+ await page.goto('/#arcade');
+ await page.getByRole('link',{name:'Play Motion Quest',exact:true}).click();
+ await page.getByRole('dialog').getByRole('link',{name:'Let’s play'}).click();
+ expect(await page.evaluate(()=>localStorage.getItem('hopmodo:game-guide-skipped:v1:motion-quest'))).toBeNull();
+ await page.goto('/#arcade');
+ await page.getByRole('link',{name:'Play Motion Quest',exact:true}).click();
+ await expect(page.getByRole('dialog').getByRole('heading',{name:'Motion Quest',exact:true})).toBeVisible();
 });

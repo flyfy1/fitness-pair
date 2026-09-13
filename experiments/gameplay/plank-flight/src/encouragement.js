@@ -1,5 +1,14 @@
 import pack from '../resources/encouragement.json' with {type:'json'};
 export const encouragementPack=pack;
+export function voiceResource(id,language='en'){
+ const clip=[...pack.clips,...pack.cues].find(clip=>clip.id===id);
+ if(!clip)return null;
+ const locale=Object.hasOwn(clip.variants,language)?language:'en';
+ return {...clip,...clip.variants[locale],locale};
+}
+export function voiceResources(language='en'){
+ return [...pack.clips,...pack.cues].map(clip=>voiceResource(clip.id,language));
+}
 
 // Counts completed gates, not frames, movement progress, or inferred exercise reps.
 export function createEncouragementSchedule(random=Math.random){

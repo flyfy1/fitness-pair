@@ -251,3 +251,39 @@ pushed `main` as `20260913T122731Z-43c933460e18`.
   between voice styles remains a playtesting question.
 - Public health matches the source above. GPT Sites still serves
   `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; it was not changed or published.
+
+
+## Paired English and Chinese speech resources
+
+Source `c339e6c7e53b77c31828251ba828b1dec2f11527` was deployed from clean,
+pushed `main` as `20260913T124851Z-c339e6c7e53b`.
+
+- The catalog now resolves stable speech IDs into matching English/Chinese text
+  and audio variants. Eighteen encouragement/endings and four countdown/start
+  cues are paired, alongside six shared music motifs: 50 runtime resources.
+  Twenty-two Mandarin MP3s were generated with the existing pinned GPT speech
+  model; existing English URLs and files are retained. Chinese countdown padding
+  was trimmed to fit the one-second cadence. All output hashes match receipts;
+  generation resume reused all 40 GPT outputs without additional speech calls.
+- Flight's native UI, canvas labels and speech follow Chinese browser locales
+  initially, otherwise English. The selector remembers the choice locally and
+  preserves the game session and recording during a language change. Active or
+  pending old-language speech is stopped. The shared locale preference helper is
+  independent of recognition and game physics; future games can reuse it.
+  The arcade recorder/library and other games are not yet translated.
+- Local validation passed: 75 repository tests, 21 Flight tests, 12 deployment/API
+  tests, the full 11-game build, six resource/language/recording browser checks,
+  and the existing spoken-countdown/mute/cancel browser regression. Chinese
+  320px/390px controls fit without overflow; the 320px screenshot was reviewed.
+  The build was checked for absence of the supplied credential.
+- Four production Chrome checks passed in one minute: all 50 resources decoded
+  with nonzero audio levels; a synthetic pointer run completed real game gates
+  and received spaced varied encouragement; Chinese small-screen controls stayed
+  reachable; Chinese speech and a non-silent saved replay worked, language changes
+  preserved the session, and a saved English preference survived reload.
+  These are synthetic checks, not participant recordings or human voice-preference
+  trials. No clip was published and gameplay made no OpenAI request.
+- Public health reports the exact source above. Browser inspection confirmed
+  GPT Sites still serves `index-D8n_qfSb.js` and `index-BuqiS9ra.css`; no Sites
+  publication was performed. A direct Python fetch there was denied with HTTP 403,
+  so the asset check used a normal browser page instead.

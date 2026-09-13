@@ -29,3 +29,11 @@ to begin, never a scoring ActionFrame. Camera permission still requires a button
 camera routes. Pointer and keyboard previews keep their existing controls.
 Flight needs both shoulders and wrists in view for this initial confirmation;
 afterwards its existing head/one-shoulder framing remains sufficient.
+
+## Language preference
+
+`locale.js` stores a shared `hopmodo.language` preference (`en` or `zh`) on this
+origin. Without a saved choice, Chinese browser locales select Chinese; other
+locales select English. Unavailable storage does not prevent an in-page change.
+The helper owns no game state or UI. Push-up Flight is the first integration;
+other games can independently resolve their own text/audio resources from it.

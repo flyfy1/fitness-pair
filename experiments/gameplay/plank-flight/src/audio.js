@@ -1,13 +1,13 @@
-import {encouragementPack,createEncouragementSchedule} from './encouragement.js';
+import {encouragementPack,createEncouragementSchedule,voiceResource,voiceResources} from './encouragement.js';
 const VOICES=['three','two','one','start','nice','keep-going','finish'];
 const RESOURCES=[...VOICES.map(id=>({id,file:`${id}.wav`})),
-  ...encouragementPack.clips.map(clip=>({id:clip.id,file:`encouragement/${clip.id}.mp3`})),
   ...encouragementPack.styles.map(style=>({id:`music-${style.id}`,file:`encouragement/music-${style.id}.wav`}))];
 
 /** Original synthesized backing track and local prerecorded speech; no microphone input. */
 export class FlightAudio {
-  constructor() {
-    this.encouragement=createEncouragementSchedule();this.lastEncouragement=null;
+  constructor(language='en') {
+    this.language=language;this.loading=new Map();this.speechNodes=new Set();
+    this.encouragement=createEncouragementSchedule();this.lastEncouragement=null;this.lastVoice=null;
     this.muted=false;this.context=null;this.nodes=new Set();this.buffers=new Map();
     this.session=null;this.phase=null;this.count=null;this.passed=0;this.nextBeat=0;this.beat=0;
     this.generation=0;this.voiceSerial=0;this.lastCue=null;this.unavailable=false;
@@ -25,23 +25,45 @@ export class FlightAudio {
         this.recording=c.createMediaStreamDestination();limiter.connect(this.recording);
         this.noise=c.createBuffer(1,c.sampleRate*.3,c.sampleRate);
         const data=this.noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
-        this.ready=Promise.all(RESOURCES.map(async ({id,file})=>{
-          try {
-            const url=new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
-            const response=await fetch(url);if(!response.ok)return;
-            this.buffers.set(id,await c.decodeAudioData(await response.arrayBuffer()));
-          } catch { /* Keep musical cues available if a voice asset cannot load. */ }
-        }));
+        for(const resource of RESOURCES)this.load(resource.id,resource.file);
+        this.loadLanguage();
       }
       if(this.muted)return;
       void this.context.resume().catch(()=>{this.unavailable=true;});
     } catch {this.unavailable=true;}
   }
+  resourceKey(resource){return resource.locale==='en'&&resource.generate===false?resource.id:`${resource.locale}:${resource.id}`;}
+  load(id,file){
+    if(this.loading.has(id))return this.loading.get(id);
+    const context=this.context;
+    const pending=(async()=>{
+      try{
+        const url=new URL(`audio/${file}`,new URL(import.meta.env.BASE_URL,location.href));
+        const response=await fetch(url,{signal:AbortSignal.timeout(10000)});if(!response.ok)return;
+        const buffer=await context.decodeAudioData(await response.arrayBuffer());
+        if(this.context===context&&context.state!=='closed')this.buffers.set(id,buffer);
+      }catch{/* Missing optional speech never blocks the game. */}
+    })();
+    this.loading.set(id,pending);return pending;
+  }
+  loadLanguage(){
+    if(!this.context)return;
+    for(const resource of voiceResources(this.language))this.load(this.resourceKey(resource),`encouragement/${resource.file}`);
+  }
+  setLanguage(language){
+    if(!Object.hasOwn(encouragementPack.locales,language)||language===this.language)return;
+    this.language=language;this.voiceSerial++;this.lastEncouragement=null;this.lastVoice=null;
+    for(const node of this.speechNodes){try{node.stop();}catch{}}
+    this.speechNodes.clear();
+    if(this.context&&this.music){const now=this.context.currentTime;this.music.gain.cancelScheduledValues(now);this.music.gain.setTargetAtTime(.22,now,.12);}
+    this.loadLanguage();
+  }
   getAudioStream(){return this.recording?.stream??null;}
-  snapshot(){return {playing:!this.muted&&this.context?.state==='running'&&this.nodes.size>0,muted:this.muted,state:this.context?.state??'idle',lastCue:this.lastCue,lastEncouragement:this.lastEncouragement,voicesReady:VOICES.filter(id=>this.buffers.has(id)).length,encouragementReady:encouragementPack.clips.filter(clip=>this.buffers.has(clip.id)).length,unavailable:this.unavailable};}
+  snapshot(){return {playing:!this.muted&&this.context?.state==='running'&&this.nodes.size>0,muted:this.muted,state:this.context?.state??'idle',language:this.language,lastVoice:this.lastVoice,lastCue:this.lastCue,lastEncouragement:this.lastEncouragement,voicesReady:VOICES.filter(id=>this.buffers.has(id)).length,encouragementReady:encouragementPack.clips.filter(clip=>this.buffers.has(this.resourceKey(voiceResource(clip.id,this.language)))).length,unavailable:this.unavailable};}
   setMuted(value){this.muted=value;this.stop();if(!value)this.unlock();}
-  track(node,gain){
-    this.nodes.add(node);node.onended=()=>{this.nodes.delete(node);node.disconnect();gain.disconnect();};
+  track(node,gain,speech=false){
+    if(speech)this.speechNodes.add(node);
+    this.nodes.add(node);node.onended=()=>{this.nodes.delete(node);this.speechNodes.delete(node);node.disconnect();gain.disconnect();};
   }
   tone(freq,time,duration,volume=.1,type='sine',end=freq,bus=this.music) {
     if(!this.context||this.muted)return;
@@ -57,21 +79,25 @@ export class FlightAudio {
     n.connect(g);g.connect(this.music);this.track(n,g);n.start(time);n.stop(time+duration);
   }
   voice(name) {
+    const resource=voiceResource(name,this.language),key=resource?this.resourceKey(resource):this.language==='en'?name:null;
+    if(!key)return;
     const generation=this.generation,serial=++this.voiceSerial;
     const play=()=>{
       if(generation!==this.generation||serial!==this.voiceSerial||this.muted||this.context?.state!=='running')return;
-      const buffer=this.buffers.get(name);if(!buffer)return;
+      const buffer=this.buffers.get(key);if(!buffer)return;
       const c=this.context,source=c.createBufferSource(),gain=c.createGain();
+      this.lastVoice={id:name,language:this.language,file:resource?.file??`${name}.wav`,text:resource?.text??name};
       source.buffer=buffer;gain.gain.value=.9;source.connect(gain);gain.connect(this.master);
-      this.track(source,gain);source.start();
+      this.track(source,gain,true);source.start();
       const t=c.currentTime;this.music.gain.cancelScheduledValues(t);this.music.gain.setValueAtTime(.065,t);
       this.music.gain.setTargetAtTime(.22,t+buffer.duration,.12);
     };
-    if(this.buffers.has(name))play();else void this.ready?.then(play);
+    if(this.buffers.has(key))play();else void this.loading.get(key)?.then(play);
   }
   encourage(clip,fallback){
-    if(!this.buffers.has(clip.id)){this.voice(fallback);return;}
-    this.lastEncouragement={id:clip.id,text:clip.text,style:clip.style};
+    const resource=voiceResource(clip.id,this.language);
+    if(!this.buffers.has(this.resourceKey(resource))){this.voice(fallback);return;}
+    this.lastEncouragement={id:clip.id,text:resource.text,style:clip.style,language:this.language};
     const buffer=this.buffers.get(`music-${clip.style}`);
     if(buffer){
       const source=this.context.createBufferSource(),gain=this.context.createGain();

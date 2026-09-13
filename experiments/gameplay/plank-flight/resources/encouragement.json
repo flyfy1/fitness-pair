@@ -1,32 +1,433 @@
 {
   "model": "gpt-4o-mini-tts-2025-12-15",
-  "disclosure": "Encouragement voices are AI-generated.",
   "styles": [
-    {"id":"spark","voice":"coral","direction":"Bright, delighted and energetic, with a smiling upward lilt. Friendly rather than shouting.","notes":[523.25,659.25,783.99,1046.5],"wave":"triangle","step":0.11},
-    {"id":"calm","voice":"sage","direction":"Warm, calm and reassuring. Soft conversational volume, unhurried phrasing and a gentle falling cadence.","notes":[261.63,329.63,392,523.25],"wave":"sine","step":0.24},
-    {"id":"playful","voice":"verse","direction":"Playful and lightly amused, like a friend enjoying a little arcade victory. Bouncy rhythm without exaggeration.","notes":[659.25,523.25,783.99,659.25],"wave":"triangle","step":0.13},
-    {"id":"steady","voice":"cedar","direction":"Grounded, confident and encouraging. Low-key coach energy, clear articulation, no commands or pressure.","notes":[196,293.66,392,587.33],"wave":"sine","step":0.17},
-    {"id":"wonder","voice":"marin","direction":"Airy and quietly amazed, with a small lift of surprise. Intimate, natural, and warmly appreciative.","notes":[392,587.33,739.99,987.77],"wave":"sine","step":0.19},
-    {"id":"celebrate","voice":"ballad","direction":"Joyful and warmly triumphant, like celebrating a small win with a friend. Expressive pitch, never a stadium shout.","notes":[293.66,369.99,440,587.33],"wave":"triangle","step":0.14}
+    {
+      "id": "spark",
+      "voice": "coral",
+      "direction": "Bright, delighted and energetic, with a smiling upward lilt. Friendly rather than shouting.",
+      "notes": [
+        523.25,
+        659.25,
+        783.99,
+        1046.5
+      ],
+      "wave": "triangle",
+      "step": 0.11
+    },
+    {
+      "id": "calm",
+      "voice": "sage",
+      "direction": "Warm, calm and reassuring. Soft conversational volume, unhurried phrasing and a gentle falling cadence.",
+      "notes": [
+        261.63,
+        329.63,
+        392,
+        523.25
+      ],
+      "wave": "sine",
+      "step": 0.24
+    },
+    {
+      "id": "playful",
+      "voice": "verse",
+      "direction": "Playful and lightly amused, like a friend enjoying a little arcade victory. Bouncy rhythm without exaggeration.",
+      "notes": [
+        659.25,
+        523.25,
+        783.99,
+        659.25
+      ],
+      "wave": "triangle",
+      "step": 0.13
+    },
+    {
+      "id": "steady",
+      "voice": "cedar",
+      "direction": "Grounded, confident and encouraging. Low-key coach energy, clear articulation, no commands or pressure.",
+      "notes": [
+        196,
+        293.66,
+        392,
+        587.33
+      ],
+      "wave": "sine",
+      "step": 0.17
+    },
+    {
+      "id": "wonder",
+      "voice": "marin",
+      "direction": "Airy and quietly amazed, with a small lift of surprise. Intimate, natural, and warmly appreciative.",
+      "notes": [
+        392,
+        587.33,
+        739.99,
+        987.77
+      ],
+      "wave": "sine",
+      "step": 0.19
+    },
+    {
+      "id": "celebrate",
+      "voice": "ballad",
+      "direction": "Joyful and warmly triumphant, like celebrating a small win with a friend. Expressive pitch, never a stadium shout.",
+      "notes": [
+        293.66,
+        369.99,
+        440,
+        587.33
+      ],
+      "wave": "triangle",
+      "step": 0.14
+    }
   ],
   "clips": [
-    {"id":"spark-01","kind":"milestone","style":"spark","text":"Yes! You found your rhythm."},
-    {"id":"spark-02","kind":"milestone","style":"spark","text":"Look at you fly! Nicely done."},
-    {"id":"calm-01","kind":"milestone","style":"calm","text":"Nice and steady. Make it your own."},
-    {"id":"calm-02","kind":"milestone","style":"calm","text":"A lovely little moment. Enjoy it."},
-    {"id":"playful-01","kind":"milestone","style":"playful","text":"Well, hello there, sky explorer!"},
-    {"id":"playful-02","kind":"milestone","style":"playful","text":"A little swoop, a little sparkle. Nice!"},
-    {"id":"steady-01","kind":"milestone","style":"steady","text":"A few more gates behind you. Well played."},
-    {"id":"steady-02","kind":"milestone","style":"steady","text":"That's a satisfying run. Your pace, your flight."},
-    {"id":"wonder-01","kind":"milestone","style":"wonder","text":"Oh, that was a lovely flight through."},
-    {"id":"wonder-02","kind":"milestone","style":"wonder","text":"There's a little magic in that rhythm."},
-    {"id":"celebrate-01","kind":"milestone","style":"celebrate","text":"What a little victory! Beautifully played."},
-    {"id":"celebrate-02","kind":"milestone","style":"celebrate","text":"That deserves a smile. Nice flying!"},
-    {"id":"spark-end","kind":"finish","style":"spark","text":"What a flight! Enjoy a well-earned pause."},
-    {"id":"calm-end","kind":"finish","style":"calm","text":"A gentle landing. Take your time and rest."},
-    {"id":"playful-end","kind":"finish","style":"playful","text":"Our little helicopter gets a break. So do you!"},
-    {"id":"steady-end","kind":"finish","style":"steady","text":"You made time to play. That counts. Rest easy."},
-    {"id":"wonder-end","kind":"finish","style":"wonder","text":"That was your little moment in the sky. Thank you."},
-    {"id":"celebrate-end","kind":"finish","style":"celebrate","text":"A little celebration for your flight. Time to relax."}
+    {
+      "id": "spark-01",
+      "kind": "milestone",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "Yes! You found your rhythm.",
+          "file": "spark-01.mp3"
+        },
+        "zh": {
+          "text": "太棒了！你找到自己的节奏了。",
+          "file": "zh/spark-01.mp3"
+        }
+      }
+    },
+    {
+      "id": "spark-02",
+      "kind": "milestone",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "Look at you fly! Nicely done.",
+          "file": "spark-02.mp3"
+        },
+        "zh": {
+          "text": "看，你飞得多好！真不错。",
+          "file": "zh/spark-02.mp3"
+        }
+      }
+    },
+    {
+      "id": "calm-01",
+      "kind": "milestone",
+      "style": "calm",
+      "variants": {
+        "en": {
+          "text": "Nice and steady. Make it your own.",
+          "file": "calm-01.mp3"
+        },
+        "zh": {
+          "text": "稳稳地来，按自己的节奏就好。",
+          "file": "zh/calm-01.mp3"
+        }
+      }
+    },
+    {
+      "id": "calm-02",
+      "kind": "milestone",
+      "style": "calm",
+      "variants": {
+        "en": {
+          "text": "A lovely little moment. Enjoy it.",
+          "file": "calm-02.mp3"
+        },
+        "zh": {
+          "text": "这小小的美好时刻，好好享受吧。",
+          "file": "zh/calm-02.mp3"
+        }
+      }
+    },
+    {
+      "id": "playful-01",
+      "kind": "milestone",
+      "style": "playful",
+      "variants": {
+        "en": {
+          "text": "Well, hello there, sky explorer!",
+          "file": "playful-01.mp3"
+        },
+        "zh": {
+          "text": "嗨，你好呀，天空探险家！",
+          "file": "zh/playful-01.mp3"
+        }
+      }
+    },
+    {
+      "id": "playful-02",
+      "kind": "milestone",
+      "style": "playful",
+      "variants": {
+        "en": {
+          "text": "A little swoop, a little sparkle. Nice!",
+          "file": "playful-02.mp3"
+        },
+        "zh": {
+          "text": "轻轻一飞，闪闪发光。真不错！",
+          "file": "zh/playful-02.mp3"
+        }
+      }
+    },
+    {
+      "id": "steady-01",
+      "kind": "milestone",
+      "style": "steady",
+      "variants": {
+        "en": {
+          "text": "A few more gates behind you. Well played.",
+          "file": "steady-01.mp3"
+        },
+        "zh": {
+          "text": "又穿过了几个障碍，玩得真好。",
+          "file": "zh/steady-01.mp3"
+        }
+      }
+    },
+    {
+      "id": "steady-02",
+      "kind": "milestone",
+      "style": "steady",
+      "variants": {
+        "en": {
+          "text": "That's a satisfying run. Your pace, your flight.",
+          "file": "steady-02.mp3"
+        },
+        "zh": {
+          "text": "这一段飞得不错。你的节奏，你的飞行。",
+          "file": "zh/steady-02.mp3"
+        }
+      }
+    },
+    {
+      "id": "wonder-01",
+      "kind": "milestone",
+      "style": "wonder",
+      "variants": {
+        "en": {
+          "text": "Oh, that was a lovely flight through.",
+          "file": "wonder-01.mp3"
+        },
+        "zh": {
+          "text": "哇，刚才飞过去的那一下真漂亮。",
+          "file": "zh/wonder-01.mp3"
+        }
+      }
+    },
+    {
+      "id": "wonder-02",
+      "kind": "milestone",
+      "style": "wonder",
+      "variants": {
+        "en": {
+          "text": "There's a little magic in that rhythm.",
+          "file": "wonder-02.mp3"
+        },
+        "zh": {
+          "text": "这个节奏里，藏着一点小魔法。",
+          "file": "zh/wonder-02.mp3"
+        }
+      }
+    },
+    {
+      "id": "celebrate-01",
+      "kind": "milestone",
+      "style": "celebrate",
+      "variants": {
+        "en": {
+          "text": "What a little victory! Beautifully played.",
+          "file": "celebrate-01.mp3"
+        },
+        "zh": {
+          "text": "一个小小的胜利！玩得真漂亮。",
+          "file": "zh/celebrate-01.mp3"
+        }
+      }
+    },
+    {
+      "id": "celebrate-02",
+      "kind": "milestone",
+      "style": "celebrate",
+      "variants": {
+        "en": {
+          "text": "That deserves a smile. Nice flying!",
+          "file": "celebrate-02.mp3"
+        },
+        "zh": {
+          "text": "值得给自己一个微笑。飞得真好！",
+          "file": "zh/celebrate-02.mp3"
+        }
+      }
+    },
+    {
+      "id": "spark-end",
+      "kind": "finish",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "What a flight! Enjoy a well-earned pause.",
+          "file": "spark-end.mp3"
+        },
+        "zh": {
+          "text": "飞得真棒！现在，好好休息一下吧。",
+          "file": "zh/spark-end.mp3"
+        }
+      }
+    },
+    {
+      "id": "calm-end",
+      "kind": "finish",
+      "style": "calm",
+      "variants": {
+        "en": {
+          "text": "A gentle landing. Take your time and rest.",
+          "file": "calm-end.mp3"
+        },
+        "zh": {
+          "text": "轻轻落地，慢慢来，好好休息。",
+          "file": "zh/calm-end.mp3"
+        }
+      }
+    },
+    {
+      "id": "playful-end",
+      "kind": "finish",
+      "style": "playful",
+      "variants": {
+        "en": {
+          "text": "Our little helicopter gets a break. So do you!",
+          "file": "playful-end.mp3"
+        },
+        "zh": {
+          "text": "小直升机要休息啦，你也歇一会儿吧！",
+          "file": "zh/playful-end.mp3"
+        }
+      }
+    },
+    {
+      "id": "steady-end",
+      "kind": "finish",
+      "style": "steady",
+      "variants": {
+        "en": {
+          "text": "You made time to play. That counts. Rest easy.",
+          "file": "steady-end.mp3"
+        },
+        "zh": {
+          "text": "你给自己留了玩耍的时间，这就很棒。安心休息吧。",
+          "file": "zh/steady-end.mp3"
+        }
+      }
+    },
+    {
+      "id": "wonder-end",
+      "kind": "finish",
+      "style": "wonder",
+      "variants": {
+        "en": {
+          "text": "That was your little moment in the sky. Thank you.",
+          "file": "wonder-end.mp3"
+        },
+        "zh": {
+          "text": "这是属于你的天空时刻。谢谢你来玩。",
+          "file": "zh/wonder-end.mp3"
+        }
+      }
+    },
+    {
+      "id": "celebrate-end",
+      "kind": "finish",
+      "style": "celebrate",
+      "variants": {
+        "en": {
+          "text": "A little celebration for your flight. Time to relax.",
+          "file": "celebrate-end.mp3"
+        },
+        "zh": {
+          "text": "为这次飞行小小庆祝一下吧。现在，放松休息。",
+          "file": "zh/celebrate-end.mp3"
+        }
+      }
+    }
+  ],
+  "locales": {
+    "en": {
+      "label": "English",
+      "speechLanguage": "English",
+      "disclosure": "AI-generated voices"
+    },
+    "zh": {
+      "label": "中文",
+      "speechLanguage": "Mandarin Chinese",
+      "disclosure": "AI 生成语音"
+    }
+  },
+  "cues": [
+    {
+      "id": "three",
+      "kind": "cue",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "Three",
+          "file": "../three.wav",
+          "generate": false
+        },
+        "zh": {
+          "text": "三",
+          "file": "zh/three.mp3"
+        }
+      }
+    },
+    {
+      "id": "two",
+      "kind": "cue",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "Two",
+          "file": "../two.wav",
+          "generate": false
+        },
+        "zh": {
+          "text": "二",
+          "file": "zh/two.mp3"
+        }
+      }
+    },
+    {
+      "id": "one",
+      "kind": "cue",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "One",
+          "file": "../one.wav",
+          "generate": false
+        },
+        "zh": {
+          "text": "一",
+          "file": "zh/one.mp3"
+        }
+      }
+    },
+    {
+      "id": "start",
+      "kind": "cue",
+      "style": "spark",
+      "variants": {
+        "en": {
+          "text": "Start!",
+          "file": "../start.wav",
+          "generate": false
+        },
+        "zh": {
+          "text": "开始！",
+          "file": "zh/start.mp3"
+        }
+      }
+    }
   ]
 }
