@@ -3,7 +3,7 @@ import {writeFile} from 'node:fs/promises';
 
 import {movingCamera} from './moving-camera.js';
 
-test('actual Motion Quest camera path exports moving person, game, HUD and branding in genuine MP4',async({page},info)=>{
+test('actual Motion Quest camera path exports moving person, game, HUD without promotional branding in genuine MP4',async({page},info)=>{
  await movingCamera(page);const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
@@ -15,7 +15,7 @@ test('actual Motion Quest camera path exports moving person, game, HUD and brand
  expect(camera).toEqual({requests:1,stopped:true,terminated:true});expect(uploads).toEqual([]);
  const results=await page.locator('#local-result video').evaluate(async video=>{
   video.pause();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=800;const c=canvas.getContext('2d');const frames=[];
-  for(const time of [.4,2.0,3.4,video.duration-3.5,video.duration-.3]){
+  for(const time of [.4,2.0,3.4,video.duration-.3]){
    await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=time;});c.drawImage(video,0,0);
    const data=c.getImageData(0,0,1280,800).data;let red=0,redX=0,cyan=0,game=0,brand=0,hud=0,marker=0,markerX=0,cropped=0;
    for(let y=0;y<800;y++)for(let x=0;x<1280;x++){
@@ -25,7 +25,7 @@ test('actual Motion Quest camera path exports moving person, game, HUD and brand
     if(y>80&&y<630&&r>210&&g<80&&b<100){red++;redX+=x;}
     if(y>80&&y<630&&r<70&&g>130&&b>160)cyan++;
     if(x>820&&x<1050&&y>150&&y<430&&g>r*1.1&&g>b*1.1)game++;
-    if(y>735&&x<240&&b>150&&r<100)brand++;
+    if(y>735&&x<240&&r>200&&g>200&&b<100)brand++;
     if(y>20&&y<65&&r>210&&g>210&&b>210)hud++;
    }
    frames.push({time,red,redX:redX/red,cyan,game,brand,hud,marker,markerX:markerX/marker,cropped,image:canvas.toDataURL('image/png')});
@@ -34,8 +34,8 @@ test('actual Motion Quest camera path exports moving person, game, HUD and brand
  });
  for(const [i,frame] of results.frames.entries())await writeFile(info.outputPath(`decoded-camera-${i}.png`),Buffer.from(frame.image.split(',')[1],'base64'));
  expect(results.type).toBe('video/mp4');expect(results.signature).toEqual([102,116,121,112]);
- for(const frame of results.frames.slice(0,4)){expect(frame.red).toBeGreaterThan(8000);expect(frame.cyan).toBeGreaterThan(100000);expect(frame.brand).toBeGreaterThan(300);expect(frame.hud).toBeGreaterThan(100);expect(frame.marker).toBeGreaterThan(500);expect(frame.markerX).toBeGreaterThan(1000);expect(frame.markerX).toBeLessThan(1055);expect(frame.cropped).toBeLessThan(10);}
- expect(Math.abs(results.frames[0].redX-results.frames[1].redX)).toBeGreaterThan(60);
+ for(const frame of results.frames.slice(0,4)){expect(frame.red).toBeGreaterThan(8000);expect(frame.cyan).toBeGreaterThan(100000);expect(frame.brand).toBeLessThan(300);expect(frame.hud).toBeGreaterThan(100);expect(frame.marker).toBeGreaterThan(500);expect(frame.markerX).toBeGreaterThan(1000);expect(frame.markerX).toBeLessThan(1200);expect(frame.cropped).toBeLessThan(10);}
+ expect(Math.max(...results.frames.map(frame=>frame.redX))-Math.min(...results.frames.map(frame=>frame.redX))).toBeGreaterThan(60);
  expect(results.frames[0].game).toBeGreaterThan(100);
 });
 

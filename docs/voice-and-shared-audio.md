@@ -9,7 +9,7 @@ the player enables it; blue means ready and red means actively recording.
 Voice is stored independently from the game video. Replay now listens to it by
 default, scheduling decoded audio against the video clock so recorded WebM needs
 no seek index. Pause, seek, volume, playback rate and the listening toggle stay in
-sync. The original video is preserved; including voice in a downloaded/shared
+sync, including replays encoded at 2× speed. The original video is preserved; including voice in a downloaded/shared
 video is explicit, and never uploads it automatically.
 
 `soundtrack.js` contains Push-up Flight's original backing pattern. The three demo

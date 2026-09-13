@@ -11,7 +11,7 @@ export function mountGame(container,game){
  const frame=container.querySelector('#game-frame');
  let recorder=null;const reload=()=>recorder?.onGameReload();frame.addEventListener('load',reload);
  const runtime=game.createAdapter(frame);
- runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Conversation recording is optional. Nothing is uploaded unless you choose to share.'});
+ runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; videos over 30 seconds are saved at 2× speed. Conversation recording is optional. Nothing is uploaded unless you choose to share.'});
  recorder=mountRecording(game,runtime,{panel:container.querySelector('#record-panel'),result:container.querySelector('#local-result')});
  let disposeControls=()=>{};
  function controls(){
