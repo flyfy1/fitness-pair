@@ -1,10 +1,10 @@
 import {test,expect} from '@playwright/test';
 test('landing has a direct arcade path and a factual build story',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
- await expect(page.getByRole('heading',{name:'YOUR BODY. THE CONTROLLER.'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'GAMES THAT GET YOU MOVING.'})).toBeVisible();
  await page.getByRole('link',{name:'Take me to the arcade',exact:true}).first().click();await expect(page).toHaveURL(/#arcade$/);
  await expect(page.getByRole('link',{name:'Play Dino Run',exact:true})).toBeInViewport();
- await page.getByRole('link',{name:'How we built it',exact:true}).click();await expect(page.getByRole('heading',{name:'BIG IDEAS. SMALL TEAM. MEET ASTRA.'})).toBeInViewport();
+ await page.getByRole('link',{name:'How we built it',exact:true}).click();await expect(page.getByRole('heading',{name:'BUILDING THE ARCADE WITH ASTRA.'})).toBeInViewport();
  expect(errors).toEqual([]);
 });
 test('mobile layout fits and reduced motion starts paused',async({page})=>{
@@ -36,10 +36,10 @@ test('synthetic Motion Quest recording saves locally, survives reload, and never
  await expect(page.locator('#local-result video')).toBeVisible();
  await page.goto('/library');await expect(page.getByRole('heading',{name:'Motion Quest · my move'})).toBeVisible();
  await page.reload();await expect(page.locator('video')).toHaveCount(1);await page.locator('video').evaluate(v=>v.play());await expect.poll(()=>page.locator('video').evaluate(v=>v.currentTime)).toBeGreaterThan(0);
- await page.getByRole('button',{name:'Share to gallery'}).click();await expect(page.getByText(/Community publishing is being connected/)).toBeVisible();expect(uploads).toEqual([]);
+ await page.getByRole('button',{name:'Share to gallery'}).click();await expect(page.getByText(/Gallery sharing isn’t available yet/)).toBeVisible();expect(uploads).toEqual([]);
  await page.getByRole('button',{name:'Delete local clip'}).click();await expect(page.locator('video')).toHaveCount(0);
 });
 test('gallery and missing clips have usable honest states',async({page})=>{
- await page.goto('/gallery');await expect(page.getByRole('heading',{name:'GOOD MOVES ARE ON THEIR WAY.'})).toBeVisible();await expect(page.locator('video')).toHaveCount(0);
- await page.goto('/clips/550e8400-e29b-41d4-a716-446655440000');await expect(page.getByRole('heading',{name:'THAT MOMENT HAS MOVED ON.'})).toBeVisible();
+ await page.goto('/gallery');await expect(page.getByRole('heading',{name:'SHARING IS COMING SOON.'})).toBeVisible();await expect(page.locator('video')).toHaveCount(0);
+ await page.goto('/clips/550e8400-e29b-41d4-a716-446655440000');await expect(page.getByRole('heading',{name:'CLIP UNAVAILABLE.'})).toBeVisible();
 });

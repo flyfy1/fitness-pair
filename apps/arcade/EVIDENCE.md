@@ -13,3 +13,11 @@
 The owner deferred the GCP project and bucket. No live bucket upload, lifecycle, production credentials, public gallery traffic or mobile social-browser playback is claimed. The gateway is gated off until configured. A private Sites deployment restricts viewers; it does not establish a public sharing loop.
 
 Human motion quality, tracking accuracy, physical comfort, enjoyment, performance on mid-range phones and health outcomes remain unverified. API duration metadata is client-declared; deeper codec validation, player authentication and durable upload quotas remain required before unrestricted public uploads.
+
+## Plain-language copy checkpoint — 2026-09-13
+
+- Updated landing, game summaries, setup, recording, gallery, and error copy for kids and adults seeking active play. No game mechanics, recognition contracts, storage identifiers, or sharing permissions changed.
+- Pulled main through `74b65ff`, preserving the teammate's standalone Dino AR experiment.
+- Production arcade build, 5 gateway tests, and all 6 existing Chrome browser checks passed. The synthetic recording check still saved locally, survived reload, played back, and made no upload request.
+- Inspected the revised headline and primary play action at 1440px and 390px; both fit and remain visible. This is layout/software evidence, not human movement validation.
+- A separate logo agent generated the proposed Hopmodo identity in `design/`. The live name remains unchanged pending the owner's choice.
