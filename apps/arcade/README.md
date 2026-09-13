@@ -122,12 +122,16 @@ is not upload consent; publication still requires login and explicit confirmatio
 
 ## Illustrated game instructions
 
-Every listed game card displays code-native movement illustrations. Clicking its
-art, title or Play now opens a matching instruction dialog before navigation.
+Every listed game card uses its game preview or bold poster art to invite play.
+Clicking its art, title or Play now opens a matching instruction dialog before navigation.
 The guide covers the goal, camera setup, three specific control steps, pause and
 finish behavior, and a labeled movement sequence. Let’s play enters the existing
 AR game without changing its controls or recording lifecycle. Direct `/play/`
 links remain available for shared game links and returning players.
+
+Skip tutorial enters the game and remembers that choice in localStorage for that
+game on that browser. Later card clicks go straight to the skipped game while
+other games continue to show their own guides. Storage denial keeps guides visible.
 
 The dialog does not open a camera or mount a game. Escape, its close button, and
 the backdrop dismiss it and restore focus/scrolling. Long guides scroll inside
