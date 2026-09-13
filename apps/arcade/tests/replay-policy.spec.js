@@ -8,7 +8,7 @@ async function pixels(video){return video.evaluate(async v=>{
  if(v.readyState<2)await new Promise(r=>v.addEventListener('loadeddata',r,{once:true}));
  const c=document.createElement('canvas');c.width=1280;c.height=800;const ctx=c.getContext('2d');
  const sample=async time=>{await new Promise(r=>{v.addEventListener('seeked',r,{once:true});v.currentTime=time;});ctx.drawImage(v,0,0,1280,800);return [...ctx.getImageData(10,750,1,1).data];};
- return {duration:v.duration,first:await sample(.2),last:await sample(v.duration-.15)};
+ return {width:v.videoWidth,height:v.videoHeight,duration:v.duration,first:await sample(.2),last:await sample(v.duration-.15)};
 });}
 const yellow=p=>p[0]>200&&p[1]>200&&p[2]<100;
 
@@ -34,7 +34,9 @@ test('native replay keeps the game in view; only Share scrolls; three rounds ret
  await game.locator('[data-replay-share]').click();
  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
  const card=page.locator(`[data-clip-id="${ids.at(-1)}"]`),video=card.locator('video');
- const raw=await pixels(video);expect(yellow(raw.first)).toBe(false);expect(yellow(raw.last)).toBe(false);
+ const raw=await pixels(video);expect(raw.height).toBeGreaterThan(raw.width);
+ const box=await video.boundingBox();expect(box.height).toBeGreaterThan(box.width);
+ expect(yellow(raw.first)).toBe(false);expect(yellow(raw.last)).toBe(false);
  const originalBytes=await video.evaluate(async v=>[...new Uint8Array(await(await fetch(v.src)).arrayBuffer())]);
  let uploaded=null;
  await page.route('**/api/config',r=>r.fulfill({json:{sharingEnabled:true}}));
@@ -51,15 +53,16 @@ test('native replay keeps the game in view; only Share scrolls; three rounds ret
  const file=await download;const filePath=info.outputPath('branded-download.mp4');await file.saveAs(filePath);
  const bytes=await readFile(filePath);
  await video.evaluate((v,bytes)=>{v.src=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'video/mp4'}));},[...bytes]);
- const branded=await pixels(video);expect(yellow(branded.first)).toBe(true);expect(yellow(branded.last)).toBe(true);expect(branded.duration).toBeGreaterThan(raw.duration+2.5);
+ const branded=await pixels(video);expect([branded.width,branded.height]).toEqual([raw.width,raw.height]);expect(yellow(branded.first)).toBe(true);expect(yellow(branded.last)).toBe(true);expect(branded.duration).toBeGreaterThan(raw.duration+2.5);
  expect((await stored(page)).map(c=>c.id).sort()).toEqual(before);
  await page.goto('/library');await expect(page.locator('.clip-card')).toHaveCount(2);
  const persisted=await pixels(page.locator('.clip-card video').first());expect(yellow(persisted.first)).toBe(false);expect(yellow(persisted.last)).toBe(false);
  expect(errors).toEqual([]);
 });
 
-test('a real recording over 30 seconds is saved at 2x with audio and no promotional ending',async({page},info)=>{
+test('a real portrait recording over 30 seconds is saved at 2x with audio and no promotional ending',async({page},info)=>{
  test.setTimeout(90000);
+ await page.setViewportSize({width:390,height:844});
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#demo').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  // Keep a real browser recorder running, then finish through the real five-action UI.
@@ -74,6 +77,7 @@ test('a real recording over 30 seconds is saved at 2x with audio and no promotio
  const [clip]=await stored(page);expect(clip.playbackRate).toBe(2);expect(clip.sourceDuration).toBeGreaterThan(30);
  expect(clip.duration).toBeGreaterThan(clip.sourceDuration/2-1);expect(clip.duration).toBeLessThan(clip.sourceDuration/2+1);
  const video=page.locator('#local-result video'),result=await pixels(video);
+ expect(result.height).toBeGreaterThan(result.width);expect([result.width,result.height]).toEqual([clip.width,clip.height]);
  expect(result.duration).toBeGreaterThan(clip.sourceDuration/2-1);expect(result.duration).toBeLessThan(clip.sourceDuration/2+1);
  expect(yellow(result.first)).toBe(false);expect(yellow(result.last)).toBe(false);
  const audio=await video.evaluate(async v=>{const context=new AudioContext();try{const buffer=await context.decodeAudioData(await(await fetch(v.src)).arrayBuffer());const values=buffer.getChannelData(0);return Math.sqrt(values.reduce((n,x)=>n+x*x,0)/values.length);}finally{await context.close();}});
@@ -111,4 +115,21 @@ test('Replay cancels a Share request while the previous recording is still savin
  await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:4000});
  expect(await page.evaluate(()=>scrollY)).toBe(0);await expect(game.locator('[data-replay-share]')).toBeHidden();
+});
+
+
+test('recording orientation is fixed per round and changes for the next round after rotation',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(700);
+ await page.setViewportSize({width:844,height:390});
+ await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:15000});
+ const portrait=await pixels(page.locator('#local-result video'));expect(portrait.height).toBeGreaterThan(portrait.width);
+ await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:15000});
+ const landscape=await pixels(page.locator('#local-result video').last());expect(landscape.width).toBeGreaterThan(landscape.height);
+ await page.goto('/library');await expect(page.locator('.clip-card video')).toHaveCount(2);
+ const recent=await pixels(page.locator('.clip-card video').first()),previous=await pixels(page.locator('.clip-card video').last());
+ expect([recent.width,recent.height]).toEqual([landscape.width,landscape.height]);
+ expect([previous.width,previous.height]).toEqual([portrait.width,portrait.height]);
 });

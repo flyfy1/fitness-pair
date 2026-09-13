@@ -39,3 +39,12 @@ test('streams with game sound try explicit AAC and Opus while preserving silent 
   assert.ok(attempts[0].includes('mp4a.40.2'));
   assert.ok(attempts.every(mime=>!mime.includes('codecs=')||/mp4a|opus/.test(mime)));
 });
+
+
+test('portrait recording follows the viewport ratio using bounded even encoder dimensions', async () => {
+  const {recordingSize}=await import('../apps/arcade/src/clip-compositor.js');
+  assert.deepEqual(recordingSize({width:390,height:844}),{width:592,height:1280});
+  assert.deepEqual(recordingSize({width:720,height:1280}),{width:720,height:1280});
+  assert.deepEqual(recordingSize({width:844,height:390}),{width:1280,height:800});
+  assert.deepEqual(recordingSize(),{width:1280,height:800});
+});

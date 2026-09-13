@@ -1,5 +1,12 @@
 import {BRAND_NAME,SITE_HOST,SITE_URL,LOGO_URL} from './brand.js';
 export const CLIP_WIDTH=1280,CLIP_HEIGHT=800,PLAY_HEIGHT=720;
+// Keep encoder dimensions even and lock orientation for the lifetime of a clip.
+export function recordingSize({width,height}={}){
+ if(Number.isFinite(width)&&Number.isFinite(height)&&width>0&&height>width)
+  return {width:Math.max(2,Math.round(CLIP_WIDTH*width/height/2)*2),height:CLIP_WIDTH};
+ return {width:CLIP_WIDTH,height:CLIP_HEIGHT};
+}
+const footerHeight=c=>c.canvas.height>c.canvas.width?160:80;
 export async function loadRecordingLogo(){
  const img=new Image();img.src=LOGO_URL;
  await img.decode();return img;
@@ -12,11 +19,12 @@ function coverVideo(c,video,x,y,w,h){
  c.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h);c.restore();
 }
 export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,isAR,layout,includesCamera,title,score,logo,hud,branded=true}){
- c.fillStyle='#182346';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
+ const {width,height}=c.canvas;
+ c.fillStyle='#182346';c.fillRect(0,0,width,height);
  const sourceWidth=layout?.width||canvas.width,sourceHeight=layout?.height||canvas.height;
- const playHeight=branded?PLAY_HEIGHT:CLIP_HEIGHT;
- const scale=Math.min(CLIP_WIDTH/sourceWidth,playHeight/sourceHeight);
- const w=sourceWidth*scale,h=sourceHeight*scale,x=(CLIP_WIDTH-w)/2,y=(playHeight-h)/2;
+ const playHeight=height-(branded?footerHeight(c):0);
+ const scale=Math.min(width/sourceWidth,playHeight/sourceHeight);
+ const w=sourceWidth*scale,h=sourceHeight*scale,x=(width-w)/2,y=(playHeight-h)/2;
  const videoReady=video&&(video.readyState>=2||video instanceof HTMLCanvasElement&&video.width>0);
  if(isAR&&includesCamera&&videoReady)coverVideo(c,video,x,y,w,h);
  if(isAR&&skeleton?.width){
@@ -27,7 +35,11 @@ export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,is
  }
  if(layout)c.drawImage(canvas,x+layout.x*scale,y+layout.y*scale,layout.canvasWidth*scale,layout.canvasHeight*scale);
  else c.drawImage(canvas,x,y,w,h);
- if(!isAR&&includesCamera&&videoReady){c.fillStyle='#fff';c.fillRect(990,486,266,200);coverVideo(c,video,994,490,258,192);}
+ if(!isAR&&includesCamera&&videoReady){
+  const insetWidth=Math.min(258,width*.32),insetHeight=insetWidth*192/258;
+  const insetX=width-insetWidth-28,insetY=height>width?playHeight-insetHeight-38:490;
+  c.fillStyle='#fff';c.fillRect(insetX-4,insetY-4,insetWidth+8,insetHeight+8);coverVideo(c,video,insetX,insetY,insetWidth,insetHeight);
+ }
  if(hud)drawGameHUD(c,hud,x,y,w,h);
  if(branded)drawWatermark(c,{title,score,includesCamera,logo});
 }
@@ -40,6 +52,14 @@ function drawGameHUD(c,hud,x,y,w,h){
  c.font='16px Arial';c.fillText(`Charge ${hud.charge||'0%'} · Active time ${hud.elapsed||'00:00'}`,x+26,y+h-27,w-52);c.restore();
 }
 export function drawWatermark(c,{title,score,includesCamera,logo}){
+ if(c.canvas.height>c.canvas.width){
+  const width=c.canvas.width,top=c.canvas.height-footerHeight(c),padding=20;
+  c.save();c.fillStyle='#eeff41';c.fillRect(0,top,width,footerHeight(c));
+  c.drawImage(logo,padding,top+16,42,42);c.fillStyle='#2347ee';c.font='900 28px Arial';c.textAlign='left';
+  c.fillText(BRAND_NAME.toLowerCase(),padding+54,top+47,width-padding*2-54);
+  c.fillStyle='#182346';c.font='bold 21px Arial';c.fillText(`${title} · ${score}`,padding,top+88,width-padding*2);
+  c.font='18px Arial';c.fillText(`Play at ${SITE_HOST}`,padding,top+130,width-padding*2);c.restore();return;
+ }
  c.fillStyle='#eeff41';c.fillRect(0,PLAY_HEIGHT,CLIP_WIDTH,80);
  c.drawImage(logo,20,736,48,48);
  c.fillStyle='#2347ee';c.font='900 30px Arial';c.fillText(BRAND_NAME.toLowerCase(),78,766);
@@ -49,6 +69,20 @@ export function drawWatermark(c,{title,score,includesCamera,logo}){
  c.font='16px Arial';c.fillText(SITE_HOST,1254,776,470);c.textAlign='left';
 }
 export function drawClipEnding(c,title,score,logo,includesCamera,reason='Round complete'){
+ if(c.canvas.height>c.canvas.width){
+  const {width,height}=c.canvas,padding=32,contentWidth=width-padding*2;
+  c.save();c.setTransform(1,0,0,1,0,0);c.textBaseline='alphabetic';c.textAlign='center';
+  c.fillStyle='#eeff41';c.fillRect(0,0,width,height);c.drawImage(logo,width/2-44,height*.14,88,88);
+  c.fillStyle='#2347ee';c.font='900 48px Arial';c.fillText(BRAND_NAME.toLowerCase(),width/2,height*.28,contentWidth);
+  c.font='900 64px Arial';
+  for(const [i,line] of ['GAMES THAT','GET YOU','MOVING.'].entries())c.fillText(line,width/2,height*.40+i*78,contentWidth);
+  c.fillStyle='#182346';c.font='25px Arial';c.fillText('Movement games',width/2,height*.62,contentWidth);c.fillText('for kids and adults',width/2,height*.65,contentWidth);
+  c.fillStyle='#2347ee';c.beginPath();c.roundRect(padding,height*.70,contentWidth,130,20);c.fill();
+  c.fillStyle='#fff';c.font='bold 21px Arial';c.fillText('Play your next game at',width/2,height*.70+43,contentWidth-24);
+  c.font='bold 23px Arial';c.fillText(SITE_URL,width/2,height*.70+88,contentWidth-24);
+  c.fillStyle='#182346';c.font='bold 24px Arial';c.fillText(title,width/2,height*.88,contentWidth);
+  c.font='20px Arial';c.fillText(score,width/2,height*.92,contentWidth);c.restore();return;
+ }
  c.save();c.setTransform(1,0,0,1,0,0);c.textBaseline='alphabetic';
  c.fillStyle='#eeff41';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
  c.fillStyle='#2347ee';c.font='900 48px Arial';c.textAlign='left';
@@ -67,9 +101,10 @@ export function drawClipEnding(c,title,score,logo,includesCamera,reason='Round c
 
 // Add branding only to an explicitly requested download, keeping all source pixels.
 export function drawDownloadFrame(c,video,clip,logo){
- c.fillStyle='#182346';c.fillRect(0,0,CLIP_WIDTH,CLIP_HEIGHT);
- const scale=Math.min(CLIP_WIDTH/video.videoWidth,PLAY_HEIGHT/video.videoHeight);
+ const {width,height}=c.canvas,playHeight=height-footerHeight(c);
+ c.fillStyle='#182346';c.fillRect(0,0,width,height);
+ const scale=Math.min(width/video.videoWidth,playHeight/video.videoHeight);
  const w=video.videoWidth*scale,h=video.videoHeight*scale;
- c.drawImage(video,(CLIP_WIDTH-w)/2,(PLAY_HEIGHT-h)/2,w,h);
+ c.drawImage(video,(width-w)/2,(playHeight-h)/2,w,h);
  drawWatermark(c,{title:clip.gameTitle||clip.title,score:clip.finalScore||'Replay',includesCamera:clip.includesCamera,logo});
 }

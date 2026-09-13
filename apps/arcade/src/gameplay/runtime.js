@@ -12,6 +12,7 @@ export function createFrameRuntime(frame, connect) {
  frame.addEventListener('load',bind);
  if(frame.contentDocument?.readyState==='complete')bind();
  return {
+  getViewport:()=>({width:frame.contentWindow?.innerWidth||frame.clientWidth,height:frame.contentWindow?.innerHeight||frame.clientHeight}),
   readFrame:()=>disposed?null:provider?.getFrame()||null,
   subscribe(callback){listeners.add(callback);return()=>listeners.delete(callback);},
   configureHost(value){options=value;provider?.configureHost?.(options);},

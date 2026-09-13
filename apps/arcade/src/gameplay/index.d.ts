@@ -22,6 +22,7 @@ export interface GamePresentation {
  dispose?():void;
 }
 export interface GameplayRuntime {
+ getViewport?():{width:number;height:number};
  readFrame():GameplayFrame|null;
  subscribe(changed:()=>void):()=>void;
  configureHost(options:{homeURL:string;recordingNote:string}):void;

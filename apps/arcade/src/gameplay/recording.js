@@ -1,7 +1,7 @@
 import {createConversationCapture} from './conversation.js';
 import {startVideoRecorder,recordedBlob} from '../video-format.js';
 import {BRAND_NAME,SITE_URL} from '../brand.js';
-import {CLIP_WIDTH,CLIP_HEIGHT,drawClipFrame} from '../clip-compositor.js';
+import {recordingSize,drawClipFrame} from '../clip-compositor.js';
 import {createShareCopy} from '../share-copy.js';
 import {saveClip,updateClip,listClips,MAX_BYTES} from '../local-clips.js';
 import {mountClipCard} from '../clips.js';
@@ -64,7 +64,7 @@ export function mountRecording(game,runtime,{panel,result}){
   session.saveNow=saveNow;session.finish=finish;
   try{
    session.lastCamera=document.createElement('canvas');
-   const canvas=document.createElement('canvas');canvas.width=CLIP_WIDTH;canvas.height=CLIP_HEIGHT;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
+   const canvas=document.createElement('canvas');const size=recordingSize(runtime.getViewport?.()||snapshot.layout||snapshot.canvas);canvas.width=size.width;canvas.height=size.height;session.context=canvas.getContext('2d');session.capture=canvas.captureStream(24);
    // Own only cloned game-audio tracks; never stop the game's audio bus.
    for(const track of snapshot.audio?.getAudioTracks()||[])if(track.readyState==='live')session.capture.addTrack(track.clone());
    session.includesAudio=session.capture.getAudioTracks().length>0;
@@ -88,7 +88,7 @@ export function mountRecording(game,runtime,{panel,result}){
     let blob;
     try{blob=await recordedBlob(session.chunks,session.recorder.mimeType);}
     catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
-    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
+    const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
     clip.conversation=await session.conversationResult;
     let message=session.limited?'File limit reached. The replay up to that point is saved below.':session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the camera replay captured so far below.':'Saved on this device. Your replay is ready below.';
     try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
