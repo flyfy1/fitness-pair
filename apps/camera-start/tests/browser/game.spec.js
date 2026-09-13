@@ -3,8 +3,10 @@ import { syntheticCamera } from './synthetic-camera.js';
 const state = page => page.evaluate(()=>window.cameraSetup.getState());
 async function startGame(page, button='Enable camera') {
   await page.getByRole('button',{name:button,exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
-  await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  if (button !== 'Resume with camera') {
+    await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
+    await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();
+  }
   await expect.poll(async()=>(await state(page)).game.status,{timeout:6000}).toBe('running');
 }
 
@@ -80,7 +82,7 @@ test('tracking loss freezes the game; camera restart rebinds controls and preser
   await syntheticCamera(page);await page.goto('/'); await startGame(page);
   await page.waitForTimeout(300);
   const round=(await state(page)).game.roundId;
-  // A brief dropout freezes the world without discarding the calibrated range.
+  // Sustained dropout holds the world without discarding the confirmed reference.
   await page.evaluate(()=>{window.poseTest.missing=true;});
   await expect.poll(async()=>(await state(page)).game.status,{intervals:[20]}).toBe('paused');
   await page.evaluate(()=>{window.poseTest.missing=false;});
@@ -91,12 +93,18 @@ test('tracking loss freezes the game; camera restart rebinds controls and preser
   const score=(await state(page)).game.score;
   await page.waitForTimeout(1100); expect((await state(page)).game.score).toBe(score);
   expect((await state(page)).jumpCount).toBe(0);
+  expect((await state(page)).heightConfirmed).toBe(true);
+  expect((await state(page)).stage).toBe('recovering');
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
   expect(await page.evaluate(()=>window.testWorker.terminated)).toBe(true);
   await page.evaluate(()=>{window.poseTest.missing=false;});
   await startGame(page,'Resume with camera');
   expect((await state(page)).game.roundId).toBe(round);
   expect((await state(page)).game.score).toBeGreaterThanOrEqual(score);
+  const recoveredLog=await page.evaluate(()=>window.cameraSetup.getLog());
+  expect(recoveredLog.filter(e=>e.event==='setup-completed')).toHaveLength(1);
+  expect(recoveredLog.filter(e=>e.event==='countdown-started')).toHaveLength(1);
+  expect(recoveredLog.some(e=>e.event==='game-baseline-recovered')).toBe(true);
   await page.getByRole('button',{name:'Pause',exact:true}).click();
   for(const [width,height] of [[390,844],[844,390],[1440,960]]) {
     await page.setViewportSize({width,height});
@@ -126,4 +134,52 @@ test('tracking loss freezes the game; camera restart rebinds controls and preser
     expect(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight)).toBe(true);
     await page.screenshot({path:`test-results/game-result-${width}.png`});
   }
+});
+
+
+test('jump noise stays smooth; sustained loss and delayed inference recover the same round without setup',async({page})=>{
+  await syntheticCamera(page);await page.goto('/');await startGame(page);
+  const round=(await state(page)).game.roundId;
+  await page.evaluate(()=>{window.originalTestStream=window.testStream;window.originalTestWorker=window.testWorker;window.poseTest.rise=.04;});
+  await expect.poll(async()=>(await state(page)).game.height,{intervals:[20]}).toBeGreaterThan(15);
+  const before=(await state(page)).game;
+  await page.evaluate(()=>{window.poseTest.noiseFrames=4;});
+  await expect.poll(()=>page.evaluate(()=>window.poseTest.noiseFrames),{intervals:[20]}).toBe(0);
+  expect((await state(page)).game.status).toBe('running');
+  expect((await state(page)).game.distance).toBeGreaterThan(before.distance);
+  expect((await state(page)).game.height).toBeGreaterThan(before.height);
+  await page.evaluate(()=>{window.poseTest.missing=true;});
+  await expect(page.locator('#status')).toHaveText('TRACKING RECOVERING');
+  const score=(await state(page)).game.score;
+  await page.waitForTimeout(1200);
+  const held=await state(page);
+  expect(held.game.score).toBe(score);expect(held.game.height).toBe(0);
+  expect(held.heightConfirmed).toBe(true);expect(held.testing).toBe(true);
+  expect(held.game.roundId).toBe(round);
+  await expect(page.getByRole('button',{name:'Confirm & continue',exact:true})).toBeHidden();
+  // Returning while still elevated is not a landing or an automatic new jump.
+  await page.evaluate(()=>{window.poseTest.missing=false;});await page.waitForTimeout(400);
+  expect((await state(page)).game.status).toBe('paused');
+  await page.evaluate(()=>{window.poseTest.rise=0;});
+  await expect.poll(async()=>(await state(page)).game.status).toBe('running');
+  expect((await state(page)).jumpCount).toBe(0);
+  // A slow worker result used to tear down the camera after one second.
+  await page.evaluate(()=>{window.poseTest.delay=1400;});
+  await expect(page.locator('#status')).toHaveText('TRACKING RECOVERING');
+  await page.waitForTimeout(1600);
+  expect(await page.evaluate(()=>window.testStream===window.originalTestStream && window.testWorker===window.originalTestWorker && !window.testWorker.terminated)).toBe(true);
+  await page.evaluate(()=>{window.poseTest.delay=0;});
+  await expect.poll(async()=>(await state(page)).game.status,{timeout:6000}).toBe('running');
+  expect((await state(page)).game.roundId).toBe(round);
+  await page.evaluate(()=>{window.poseTest.rise=.04;});
+  await expect.poll(async()=>(await state(page)).game.jumpAnimation.triggerCount).toBe(2);
+  await page.evaluate(()=>{window.poseTest.rise=0;});
+  await expect.poll(async()=>(await state(page)).jumpCount).toBe(1);
+  const logs=await page.evaluate(()=>window.cameraSetup.getLog());
+  expect(logs.filter(e=>e.event==='setup-completed')).toHaveLength(1);
+  expect(logs.filter(e=>e.event==='countdown-started')).toHaveLength(1);
+  expect(logs.filter(e=>e.event==='game-paused'&&e.reason==='tracking').length).toBe(2);
+  expect(logs.some(e=>e.event==='camera-error')).toBe(false);
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('button',{name:'Finish run',exact:true}).click();
 });

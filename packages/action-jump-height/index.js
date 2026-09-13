@@ -46,9 +46,10 @@ function geometry(frame, mode) {
 
 /** Relative image displacement only: no camera, recording, or model-specific joints. */
 export class JumpHeightRecognizer {
-  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false, robustTracking = false } = {}) {
+  constructor({ manualMaximum = false, preferUpperBody = false, quickStart = false, robustTracking = false, retainCalibration = false } = {}) {
     this.manualMaximum = manualMaximum; this.preferUpperBody = preferUpperBody;
     this.quickStart = quickStart; this.robustTracking = robustTracking;
+    this.retainCalibration = retainCalibration;
     this.configuredRange = null;
   }
 
@@ -92,6 +93,17 @@ export class JumpHeightRecognizer {
     this.maximumSince = null; this.retryMaximum = false; this.armed = false; this.rearmSince = null;
   }
 
+  invalidateTracking() {
+    if (!this.retainCalibration || this.stage !== 'ready' || !this.baseline) {
+      this.recalibrate(); return;
+    }
+    // Gameplay keeps its confirmed reference, but unseen motion never completes
+    // a jump. Require an observed landing before accepting another takeoff.
+    this.flight = null; this.landingSince = null; this.armed = false; this.rearmSince = null;
+    this.confirmGroundedSince = null; this.filteredRise = 0; this.filterTMs = null;
+    this.riseSamples = [0, 0]; this.lastValidTMs = null; this.driftSince = null;
+  }
+
   output(frame, { phase, cue, quality = 'tracked', ratio = 0, calibrationProgress = null, completion = null }) {
     const calibrated = this.stage === 'ready';
     const heightRatio = calibrated && phase !== 'missing' ? clamp(ratio) : 0;
@@ -121,7 +133,7 @@ export class JumpHeightRecognizer {
     this.flight = null; this.armed = false; this.rearmSince = null;
     this.filteredRise = 0; this.filterTMs = null; this.riseSamples = [0, 0];
     this.standingSince = null; this.standingAnchor = null; this.standingSamples = [];
-    if (frame.tMs - this.rejectedSince > LOSS_MS) this.recalibrate();
+    if (frame.tMs - this.rejectedSince > LOSS_MS) this.invalidateTracking();
     return this.output(frame, { phase: 'missing', cue: 'move-back-into-frame', quality: reason });
   }
 
@@ -172,7 +184,7 @@ export class JumpHeightRecognizer {
       // cropped pose merely because full-body tracking timed out.
       if (this.lowerAbsentSince !== null) {
         this.baseline = null; this.peakRise = null; this.stage = 'standing';
-      } else this.recalibrate();
+      } else this.invalidateTracking();
     }
     if (this.trackingMode === null || this.stage === 'standing' && this.lowerAbsentSince === null
       && this.trackingMode === 'upper-body' && fullPose) {
@@ -220,7 +232,7 @@ export class JumpHeightRecognizer {
       this.driftSince ??= frame.tMs;
       this.flight = null; this.landingSince = null; this.armed = false;
       this.filterTMs = null; this.filteredRise = 0;
-      if (frame.tMs - this.driftSince >= 400) this.recalibrate();
+      if (frame.tMs - this.driftSince >= 400) this.invalidateTracking();
       return this.output(frame, { phase: 'missing', cue: 'rebaseline', quality: 'position-changed' });
     }
     if (this.robustTracking) this.recoverNoise(frame);
@@ -256,8 +268,8 @@ export class JumpHeightRecognizer {
       }
       if (!this.armed) {
         if (frame.tMs - this.rearmSince > FLIGHT_TIMEOUT_MS) {
-          this.recalibrate();
-          return this.output(frame, { phase: 'calibrating', cue: 'rebaseline', quality: 'position-changed', calibrationProgress: 0 });
+          this.invalidateTracking();
+          return this.output(frame, { phase: this.stage === 'ready' ? 'missing' : 'calibrating', cue: 'rebaseline', quality: 'position-changed', calibrationProgress: this.stage === 'ready' ? null : 0 });
         }
         return this.output(frame, { phase: 'missing', cue: 'land-and-hold', quality: 'tracking-lost' });
       }
@@ -302,8 +314,8 @@ export class JumpHeightRecognizer {
         // Keep a measured range while the player returns and confirms it.
         this.flight = null; this.landingSince = null;
       } else if (frame.tMs - this.flight.started > FLIGHT_TIMEOUT_MS) {
-        this.recalibrate();
-        return this.output(frame, { phase: 'calibrating', cue: 'rebaseline', quality: 'position-changed', calibrationProgress: 0 });
+        this.invalidateTracking();
+        return this.output(frame, { phase: this.stage === 'ready' ? 'missing' : 'calibrating', cue: 'rebaseline', quality: 'position-changed', calibrationProgress: this.stage === 'ready' ? null : 0 });
       }
     }
     if (preparingJump) return this.output(frame, {

@@ -47,7 +47,8 @@ Unlike Dino's prior start gate, this POC does **not** require wrists to reappear
 below the shoulders after confirmation. Confirmation is the intent to continue;
 only fresh, valid, steady torso tracking gates the three-second countdown.
 Interrupted tracking clearly states why the countdown stopped and restarts it
-when steady tracking returns. Long torso loss/position drift still recalibrates.
+when steady tracking returns. Setup and detection-only mode still recalibrate
+on long torso loss; an active game retains its confirmed reference.
 
 Camera tracks and the model worker stop on cancellation, errors, page exit,
 hidden tabs, collision and **Finish run** / **Finish test**. Finishing setup keeps
@@ -114,7 +115,8 @@ left untouched. This POC registers no Service Worker.
 The setup POC now opts into debounced recognition. A brief missing-joint or
 geometry rejection keeps the existing step visible for 350 ms, retains the
 baseline and movement scale, and pauses countdown time. Sustained loss shows
-tracking guidance; after 750 ms of rejected observations calibration resets.
+tracking guidance; before gameplay or in detection-only mode, 750 ms of rejected
+observations resets calibration. An active game uses the recovery policy below.
 Rejected frames never contribute height, landing evidence or confirmation.
 Three-sample median filtering rejects isolated height spikes, while a 180 ms
 instruction debounce prevents jump/confirm prompts from rapidly alternating.
@@ -184,18 +186,31 @@ The full-camera background and default skeleton stay live during play.
 Raise **both hands for one second** to pause or resume, lowering them between
 commands. **Pause** and **Resume run** buttons provide the same controls. Resume
 requires fresh tracking at the standing baseline, so movement made while paused
-does not score. Tracking loss immediately freezes obstacles and score; brief loss
-resumes when valid tracking returns. Sustained loss requires setup again, keeping
-the current round and score. **Stop camera** releases the camera; **Resume with
-camera** starts a new tracking session, repeats setup and continues that round.
+does not score. During a game, tracking interruptions up to 450 ms do not pause
+the world or
+cut off its jump animation. Longer loss holds obstacles and score, lets an
+already-triggered jump land, and shows **Tracking recovering**. The standing
+reference and confirmed scale survive missing frames, rejected geometry and
+flight timeouts. Return to the starting spot; a fresh grounded pose resumes the
+same round automatically, without confirmation or another countdown. Unseen
+landings never award a jump, and recovered airborne fragments cannot trigger one.
+
+**Stop camera** releases the camera; **Resume with camera** starts a fresh camera
+capture, automatically acquires and confirms a standing baseline, then continues
+the saved round. Changed camera dimensions also require a fresh baseline but no
+new round. Camera inference allows up to eight seconds without a result in game
+mode, so a brief slow response does not close the session. A genuinely stalled
+worker or disconnected device is still released; Retry camera preserves the
+round. Detection-only mode retains its original one-second inference timeout.
 
 A collision or **Finish run** shows the results and stops owned camera tracks and
 the model worker. **Play again** resets the score and counts and returns to setup.
 Local diagnostics also include `dino-jump-triggered`, `dino-body-returned`,
 `dino-jump-landed` and `dino-jump-ignored`. The observed duration excludes the
 recognizer's landing confirmation hold. It measures a tracked torso cycle, not
-verified physical airtime. Pauses or lost tracking discard the in-progress
-duration measurement and freeze animation along with the world.
+verified physical airtime. Manual pause freezes animation and world. A tracking
+recovery pause discards
+the in-progress duration measurement while allowing the current arc to land.
 
 Local diagnostics include `game-started`, `game-paused`, `game-resume-blocked`,
 `game-resumed`, `obstacle-cleared` and `round-finished`, alongside the existing
@@ -256,3 +271,15 @@ or unavailable voice files leave the visual game usable. The local log includes
 `prepare:assets` copies the existing local voice WAVs into ignored `public/audio/`
 for standalone and arcade builds. Their source and synthesis provenance remain in
 `experiments/gameplay/plank-flight/README.md`; no private recording is introduced.
+
+## Session recovery evidence
+
+Local trial logs showed a 158 ms `position-changed` interval immediately pausing
+the game, plus re-entry through standing/confirmation/countdown in the same round.
+The game now logs `game-tracking-gap` / `game-tracking-recovered` with duration,
+and `game-baseline-recovered` only when a new capture or changed dimensions need
+a reference. Synthetic browser coverage injects mixed jump noise, sustained loss,
+an elevated return and 1.4-second worker latency; it checks retained round,
+score, camera stream/worker, no repeated countdown and a subsequent valid jump.
+Recognizer tests cover long gaps, drift, flight timeouts, no invented completion
+and explicit fresh-session reset. Camera tests retain bounded failure cleanup.

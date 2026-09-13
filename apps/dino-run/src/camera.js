@@ -6,7 +6,9 @@ const FRAME_INTERVAL_MS = 1000 / 30;
 
 /** A single local camera session; the host explicitly starts each new attempt. */
 export class PoseCamera {
-  constructor({ video, onPose = () => {}, onStatus = () => {}, onError = () => {}, onStop = () => {} }) {
+  constructor({ video, onPose = () => {}, onStatus = () => {}, onError = () => {}, onStop = () => {}, inferenceTimeoutMs = INFERENCE_TIMEOUT_MS }) {
+    if (!Number.isFinite(inferenceTimeoutMs) || inferenceTimeoutMs < 1000 || inferenceTimeoutMs > 10000) throw new RangeError('Inference timeout must be between 1000 and 10000 ms');
+    this.inferenceTimeoutMs = inferenceTimeoutMs;
     this.video = video;
     this.onPose = onPose;
     this.onStatus = onStatus;
@@ -76,7 +78,7 @@ export class PoseCamera {
       attempt.ready = true;
       attempt.lastResultAt = performance.now();
       attempt.watchdog = setInterval(() => {
-        if (performance.now() - attempt.lastResultAt > INFERENCE_TIMEOUT_MS) {
+        if (performance.now() - attempt.lastResultAt > this.inferenceTimeoutMs) {
           this.fail(attempt, new Error('Camera tracking stalled. Check the camera and start again.'));
         }
       }, 100);

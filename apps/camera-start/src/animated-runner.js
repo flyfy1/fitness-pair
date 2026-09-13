@@ -85,6 +85,16 @@ export class AnimatedRunner extends Runner {
       remaining -= slice;
     }
   }
+  settleJump(dt) {
+    // On tracking recovery, let an already-triggered arc land while the runway
+    // waits. Manual pause still freezes the entire scene.
+    if (this.status !== 'paused' || !Number.isFinite(dt) || dt <= 0) return;
+    let remaining = Math.min(dt, .1);
+    while (remaining > 1e-8) {
+      const slice = Math.min(remaining, 1 / 120);
+      this.animate(slice); this.y = this.arc.height; remaining -= slice;
+    }
+  }
   animate(dt) {
     const arc = this.arc;
     if (arc.pending !== null) {

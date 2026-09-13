@@ -559,3 +559,37 @@ test('range preview changes with the slider without charging or pretending a mea
   h.recognizer.recalibrate(); assert.equal(h.recognizer.canConfirmMaximum, false);
   assert.equal(h.recognizer.configuredRange, .8, 'preference survives recalibration, the old baseline does not');
 });
+
+test('gameplay retention survives prolonged noise and gaps without crediting an unseen landing', () => {
+  const h = harness(()=>{}, {manualMaximum:true, preferUpperBody:true, robustTracking:true, retainCalibration:true});
+  h.recognizer.setJumpRange(.15); h.hold(50); assert.equal(h.recognizer.confirmMaximum(),true);
+  const baseline = {...h.recognizer.baseline};
+  h.hold(5,.04); h.hold(8);
+  const rep = h.recognizer.repIndex;
+  h.hold(5,.04);
+  const lost = h.hold(50,0,f=>{f.joints={};});
+  assert.ok(lost.every(f=>f.calibrated && f.phase==='missing' && !f.completion));
+  assert.deepEqual(h.recognizer.baseline,baseline);
+  const air=h.hold(80,.04); // Returning still elevated cannot re-arm or reset setup.
+  assert.ok(air.every(f=>f.calibrated && !f.completion));
+  assert.deepEqual(h.recognizer.baseline,baseline);
+  h.recognizer.update(h.pose(0,()=>{},1500));h.hold(8);
+  assert.equal(h.recognizer.repIndex,rep);
+  h.hold(6,.04);
+  assert.equal(h.hold(10).filter(f=>f.completion).length,1);
+  assert.equal(h.recognizer.repIndex,rep+1);
+  h.recognizer.reset({...session,sessionId:'new-round'});
+  assert.equal(h.recognizer.stage,'standing');assert.equal(h.recognizer.baseline,null);
+});
+
+test('retained gameplay reference survives position rejection and flight timeout', () => {
+  const h = harness(()=>{}, {manualMaximum:true, preferUpperBody:true, robustTracking:true, retainCalibration:true});
+  h.recognizer.setJumpRange(.15);h.hold(50);h.recognizer.confirmMaximum();
+  const baseline={...h.recognizer.baseline};
+  const drift=h.hold(35,0,f=>{for(const joint of Object.values(f.joints))joint.x+=.2;});
+  assert.ok(drift.every(f=>f.calibrated && f.phase==='missing'));
+  h.hold(8); const held=h.hold(80,.04);
+  assert.ok(held.every(f=>f.calibrated && !f.completion));
+  assert.deepEqual(h.recognizer.baseline,baseline);h.hold(10);
+  assert.equal(h.recognizer.repIndex,0);
+});

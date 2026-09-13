@@ -9,7 +9,7 @@ const deferred = () => {
 };
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 
-function environment(t, { media, bitmap } = {}) {
+function environment(t, { media, bitmap, inferenceTimeoutMs } = {}) {
   const track = new EventTarget();
   track.stops = 0;
   track.stop = () => { track.stops += 1; };
@@ -38,7 +38,7 @@ function environment(t, { media, bitmap } = {}) {
     restoreGlobals.push(() => descriptor ? Object.defineProperty(globalThis, name, descriptor) : delete globalThis[name]);
   }
   const poses = [], statuses = [], errors = [], stops = [];
-  const camera = new PoseCamera({ video, onPose: pose => poses.push(pose), onStatus: status => statuses.push(status),
+  const camera = new PoseCamera({ video, inferenceTimeoutMs, onPose: pose => poses.push(pose), onStatus: status => statuses.push(status),
     onError: error => errors.push(error), onStop: stop => stops.push(stop) });
   t.after(() => { camera.stop(); restoreGlobals.forEach(restore => restore()); });
   return { camera, track, stream, video, workers, document, poses, statuses, errors, stops,
@@ -193,4 +193,19 @@ test('stalled inference errors after one second and releases camera and worker',
   assert.equal(env.camera.active, false);
   assert.equal(env.workers[0].terminated, true);
   assert.equal(env.track.stops, 1);
+});
+
+
+test('game timeout tolerates a slow result but still bounds a stalled worker', async t => {
+  t.mock.timers.enable({apis:['setTimeout','setInterval']});
+  const env=environment(t,{inferenceTimeoutMs:8000});let clock=0;
+  t.mock.method(performance,'now',()=>clock);
+  const ready=env.camera.start();await flush();env.workers[0].emit({type:'ready'});await ready;
+  env.frame(40);await flush();clock=1500;t.mock.timers.tick(1500);
+  assert.equal(env.camera.active,true);assert.equal(env.errors.length,0);
+  env.workers[0].emit({type:'pose',landmarks:[],time:40});
+  assert.equal(env.poses.length,1);
+  clock=9499;t.mock.timers.tick(100);assert.equal(env.camera.active,true);
+  clock=9501;t.mock.timers.tick(100);assert.equal(env.camera.active,false);
+  assert.equal(env.workers[0].terminated,true);assert.equal(env.track.stops,1);
 });

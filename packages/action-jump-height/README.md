@@ -185,3 +185,13 @@ Configured outputs add `rangeSource: slider` and `previewHeightRatio` (0–1) fo
 host's live response meter. Preview is zero on missing tracking; during calibration
 it never changes contract `progress` or emits a completion. Camera Start opts into
 this path; the standalone Dino host keeps its own start policy.
+
+### Retained game calibration
+
+`retainCalibration: true` opts a game into keeping a confirmed standing reference
+and response scale across tracking rejection, silent gaps and flight timeouts.
+Use it with `robustTracking` for noisy live input. Lost motion is discarded; an
+observed grounded hold re-arms recognition before a new rise can count. Returning
+to the original position is required. Explicit `reset` / `recalibrate`, changed
+image dimensions and a tracking-mode change still acquire a fresh reference.
+The default is false, preserving calibration behavior in other hosts.

@@ -160,3 +160,8 @@ backend or deployment is added. Human calibration reliability remains unverified
 ## Arcade replay integration
 
 When embedded in Hopmodo, the arcade host automatically composites and stores a local replay after game start. The standalone game does not create recordings. The host shows a notice before play; enabled camera imagery stays device-local until the player chooses to share. A round identifier lets replays distinguish a restart from pause/resume without changing movement-event semantics.
+
+The shared `PoseCamera` accepts an optional `inferenceTimeoutMs` (1000–10000 ms).
+Dino Run keeps the one-second default; camera-start game mode uses eight seconds
+to tolerate temporary slow inference while its round waits. The watchdog still
+releases owned tracks and the worker on a sustained stall.

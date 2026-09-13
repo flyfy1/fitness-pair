@@ -28,7 +28,8 @@ $('mode-link').href = gameMode ? '?mode=detect' : './';
 const MOVEMENT_SCALE = .15;
 const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true, robustTracking: true });
 recognizer.setJumpRange(MOVEMENT_SCALE);
-let bodyFrame = null;
+let bodyFrame = null, gameTrackingSince = null;
+const GAME_TRACKING_GRACE_MS = 450;
 const gestures = new BodyGestures();
 const diagnostics = createDiagnostics();
 let countdownSerial = 0;
@@ -52,7 +53,7 @@ function visibleFrame(frame) {
 }
 
 const camera = new PoseCamera({
-  video: $('camera'),
+  video: $('camera'), inferenceTimeoutMs: gameMode ? 8000 : 1000,
   onStatus(status) {
     cameraState = status.state; log('camera-state', { state: cameraState });
     if (cameraState === 'requesting') {
@@ -71,10 +72,12 @@ const camera = new PoseCamera({
     if (!next) return;
     action = next; hands = gestures.update(frame);
     if (gameMode && testing) {
-      if (stale || action.phase === 'missing' || !action.calibrated) pauseGame('tracking');
-      else if (runner.status === 'paused' && pauseReason === 'tracking') {
-        runner.command('resume'); pauseReason = null; log('game-resumed', { via: 'tracking-recovered' });
+      // A new camera/resolution can need a fresh baseline, without a new round,
+      // confirmation gesture or countdown. Ordinary dropouts retain calibration.
+      if (!action.calibrated && action.canConfirmMaximum && recognizer.confirmMaximum()) {
+        log('game-baseline-recovered');
       }
+      updateGameTracking(performance.now());
     }
     observeJump(input);
     if (gameMode && testing && runner.status === 'running') runner.applyMotion(action);
@@ -92,8 +95,8 @@ const camera = new PoseCamera({
     }
     if (hands?.event) {
       log('gesture', { kind: hands.event.kind, inputSeq: input.seq });
-      if (gameMode && testing && hands.event.kind === 'both-hands') toggleGame('gesture');
-      if (hands.event.kind === 'one-hand' && !action.calibrated) confirm('gesture');
+      if (gameMode && testing && pauseReason !== 'tracking' && hands.event.kind === 'both-hands') toggleGame('gesture');
+      if (hands.event.kind === 'one-hand' && !action.calibrated && !(gameMode && testing)) confirm('gesture');
     }
     paint();
   },
@@ -120,7 +123,10 @@ function start() {
     runner.setControlMode('motion'); lastPassed = 0; clearedAt = -Infinity;
   }
   complete = false; error = ''; countdownAt = null;
-  testing = false; jumpPeak = 0; returning = false; detectedAt = null;
+  testing = resumeRound; gameTrackingSince = null;
+  recognizer.retainCalibration = resumeRound;
+  if (resumeRound) pauseReason = 'tracking';
+  jumpPeak = 0; returning = false; detectedAt = null;
   log('setup-start-requested', { resumeRound }); void camera.start();
 }
 function pauseGame(reason) {
@@ -128,6 +134,29 @@ function pauseGame(reason) {
   pauseReason = reason;
   if (reason !== 'tracking') { jumpPeak = 0; returning = false; }
   log('game-paused', { reason, score: runner.score });
+}
+function updateGameTracking(now) {
+  if (!gameMode || !testing) return;
+  const valid = camera.running && lastPoseAt && now - lastPoseAt < 250
+    && action?.calibrated && action.phase !== 'missing';
+  if (!valid) {
+    if (gameTrackingSince === null) {
+      gameTrackingSince = now;
+      log('game-tracking-gap', { reason: !lastPoseAt || now - lastPoseAt >= 250 ? 'stale-frame' : action?.quality, roundId: runner.roundId });
+    }
+    if (now - gameTrackingSince >= GAME_TRACKING_GRACE_MS) pauseGame('tracking');
+    return;
+  }
+  if (runner.status === 'paused' && pauseReason === 'tracking'
+    && (!['ready', 'completed'].includes(action.phase) || action.heightRatio >= .03 || action.cue === 'prepare-jump')) return;
+  if (gameTrackingSince !== null) {
+    log('game-tracking-recovered', { durationMs: Math.round(now - gameTrackingSince) });
+    gameTrackingSince = null;
+  }
+  if (runner.status === 'paused' && pauseReason === 'tracking') {
+    runner.command('resume'); pauseReason = null;
+    log('game-resumed', { via: 'tracking-recovered', score: runner.score });
+  }
 }
 function toggleGame(via) {
   if (runner.status === 'running') pauseGame('manual');
@@ -146,6 +175,11 @@ function toggleGame(via) {
 function gamePresentation(now) {
   const base = { stage: 'playing', step: 'ready', button: runner.status === 'paused' ? 'Resume run' : 'Pause',
     feedback: 'Raise BOTH hands for 1 second to pause or resume. Lower them between commands.' };
+  if (runner.status === 'paused' && pauseReason === 'tracking') return { ...base,
+    stage: 'recovering', status: 'TRACKING RECOVERING', title: 'Stand in your starting spot.',
+    detail: 'Your run is saved. Tracking will resume automatically.',
+    feedback: 'Keep your shoulders and hips visible. No setup or hand gesture needed.',
+    button: undefined, reason: 'tracking-recovery' };
   if (runner.status === 'paused') return { ...base, status: 'GAME PAUSED', title: 'Ready to continue?',
     detail: 'Stand upright, then click Resume or raise both hands.', reason: 'manual-pause' };
   const approaching = runner.obstacles.some(o => o.x > 70 && o.x - 116 < runner.speed * .70);
@@ -158,8 +192,10 @@ function gamePresentation(now) {
 function observeJump(input) {
   if (!testing) return;
   if (!action.calibrated) {
-    testing = false; jumpPeak = 0; returning = false; detectedAt = null;
-    log('jump-test-paused', { reason: 'baseline-lost', count: jumpCount });
+    if (!gameMode) {
+      testing = false; log('jump-test-paused', { reason: 'baseline-lost', count: jumpCount });
+    }
+    jumpPeak = 0; returning = false; detectedAt = null;
     return;
   }
   if (action.phase === 'missing' || gameMode && runner.status !== 'running') return;
@@ -216,6 +252,7 @@ function presentation(now) {
   if (cameraState === 'off') return { stage: 'off', status: 'LET’S GET YOU READY', title: 'Stand back.\nWe’ll guide you.', detail: 'One step at a time. Follow the big words.', feedback: window.self===window.top?'Camera stays on your device. No recording.':'Your game records on this device. Share only when you choose.', button: 'Enable camera' };
   if (cameraState === 'requesting') return { stage: 'loading', status: 'CAMERA PERMISSION', title: 'Allow your camera.', detail: 'Choose Allow in the browser prompt.', feedback: 'Then step back where you can see the screen.' };
   if (cameraState === 'loading') return { stage: 'loading', status: 'GETTING READY', title: 'One moment…', detail: 'Starting your camera tracking.', feedback: 'Keep your shoulders and hips in view.' };
+  if (gameMode && testing) return gamePresentation(now);
   const unavailable = !lastPoseAt || now - lastPoseAt >= 250 || !action || action.phase === 'missing';
   if (unavailable) {
     if (trackingHoldAt === null) {
@@ -347,13 +384,12 @@ window.cameraSetup = Object.freeze({ getState: () => ({ stage: view.stage, reaso
 function tick() {
   const now = performance.now(), dt = lastGameFrame ? (now - lastGameFrame) / 1000 : 0;
   lastGameFrame = now;
+  updateGameTracking(now);
+  if (gameMode && testing && runner.status === 'paused' && pauseReason === 'tracking') runner.settleJump(dt);
   if (gameMode && testing && runner.status === 'running') {
-    if (!lastPoseAt || now - lastPoseAt >= 250) pauseGame('tracking');
-    else {
-      runner.step(dt);
-      if (runner.passed > lastPassed) { clearedAt = now; lastPassed = runner.passed; log('obstacle-cleared', { count: runner.passed, score: runner.score }); }
-      if (runner.status === 'over') finish('collision');
-    }
+    runner.step(dt);
+    if (runner.passed > lastPassed) { clearedAt = now; lastPassed = runner.passed; log('obstacle-cleared', { count: runner.passed, score: runner.score }); }
+    if (runner.status === 'over') finish('collision');
   }
   if (!$('game-world').hidden) drawWorld($('game-world'), runner, $('show-body').checked);
   drawBody($('body-overlay'), camera.running && bodyFrame && performance.now() - bodyFrame.tMs < 250 ? bodyFrame : null);
@@ -363,6 +399,7 @@ function tick() {
       countdownAt = null; testing = true; jumpPeak = 0; returning = false; detectedAt = null;
       log('setup-completed');
       if (gameMode) {
+        recognizer.retainCalibration = true;
         const resuming = runner.status === 'paused';
         runner.command(resuming ? 'resume' : 'start'); pauseReason = null;
         runner.applyMotion({ ...action, completion: null });

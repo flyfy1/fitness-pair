@@ -123,3 +123,12 @@ test('even a sustained body rise lands within one second of the trigger',()=>{
   assert.equal(g.arc.pending,null);assert.equal(g.y,0);
   assert.ok(g.arc.peak>90 && g.arc.peak<105);assert.equal(g.triggerCount,1);
 });
+
+test('tracking recovery finishes the existing arc while score and obstacles wait',()=>{
+  const {g,tick}=fixture();for(let i=0;i<8;i++)tick(.5);
+  g.command('pause');const score=g.score,elapsed=g.elapsed;
+  assert.ok(g.y>0);
+  for(let i=0;i<40;i++)g.settleJump(1/30);
+  assert.equal(g.y,0);assert.equal(g.score,score);assert.equal(g.elapsed,elapsed);
+  assert.equal(g.triggerCount,1);assert.equal(g.jumps,0);
+});
