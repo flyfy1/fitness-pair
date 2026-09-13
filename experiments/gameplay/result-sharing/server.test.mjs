@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, readdir, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { createApp } from './server.mjs';
 const code='test-only-upload-code';
 async function setup(t, extra={}) {
@@ -59,4 +59,16 @@ test('expiry rejects all reads and startup removes expired and abandoned files',
   const response=await upload(s.base(),video());const clip=await response.json();now=2001;
   for(const prefix of ['s','media','poster','api/clips'])assert.equal((await fetch(s.base()+`/${prefix}/`+clip.id)).status,404);
   await writeFile(path.join(s.dataDir,'a'.repeat(32)+'.part'),'incomplete');await s.restart();assert.deepEqual(await readdir(s.dataDir),[]);
+});
+
+test('CLI entry starts when launched through a release symlink',async t=>{
+  const dir=await mkdtemp(path.join(tmpdir(),'fitness-sharing-cli-'));
+  const link=path.join(dir,'server.mjs');await symlink(new URL('./server.mjs',import.meta.url),link);
+  const child=spawn(process.execPath,[link],{env:{...process.env,UPLOAD_CODE:code,DATA_DIR:path.join(dir,'data'),PORT:'0'}});
+  t.after(async()=>{child.kill('SIGTERM');await new Promise(resolve=>child.once('close',resolve));await rm(dir,{recursive:true,force:true});});
+  await new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>reject(new Error('CLI did not start')),5000);
+    child.stdout.once('data',chunk=>{clearTimeout(timeout);assert.match(String(chunk),/listening on loopback/);resolve();});
+    child.once('exit',exit=>{clearTimeout(timeout);reject(new Error('CLI exited early: '+exit));});
+  });
 });

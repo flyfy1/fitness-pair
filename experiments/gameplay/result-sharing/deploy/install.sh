@@ -51,11 +51,10 @@ install -m 0644 "$base/releases/$release/deploy/fitness-sharing-proxy.service" /
 install -m 0644 "$base/releases/$release/deploy/Caddyfile" /etc/fitness-sharing.Caddyfile
 ln -sfn "$base/releases/$release" "$base/current"
 systemctl daemon-reload
-systemctl enable --now fitness-sharing.service
+systemctl enable fitness-sharing.service
 systemctl restart fitness-sharing.service
-sleep 1
-curl --fail --silent http://127.0.0.1:8410/healthz
-systemctl enable --now fitness-sharing-proxy.service
+curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 --max-time 5 http://127.0.0.1:8410/healthz
+systemctl enable fitness-sharing-proxy.service
 systemctl restart fitness-sharing-proxy.service
 systemctl is-active --quiet fitness-sharing.service fitness-sharing-proxy.service
 rm -f /tmp/fitness-sharing-upload.env "$archive"

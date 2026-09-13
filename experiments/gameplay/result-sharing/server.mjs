@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readFile, writeFile, readdir, rm, rename, stat, open } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, readdir, rm, rename, stat, open, realpath } from 'node:fs/promises';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -208,7 +208,7 @@ export async function createApp(options = {}) {
   server.on('close',()=>clearInterval(timer));
   return server;
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && await realpath(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const server=await createApp();
   server.listen(Number(process.env.PORT||8410),'127.0.0.1',()=>console.log('Fitness Result Sharing listening on loopback'));
   for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{ server.close(()=>process.exit(0)); setTimeout(()=>process.exit(1),10000).unref(); });
