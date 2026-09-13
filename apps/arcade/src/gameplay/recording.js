@@ -1,4 +1,5 @@
 import {createConversationCapture} from './conversation.js';
+import {captureClipThumbnail} from '../clip-thumbnail.js';
 import {startVideoRecorder,recordedBlob} from '../video-format.js';
 import {BRAND_NAME,SITE_URL} from '../brand.js';
 import {recordingSize,drawClipFrame} from '../clip-compositor.js';
@@ -73,6 +74,7 @@ export function mountRecording(game,runtime,{panel,result}){
    for(const track of snapshot.audio?.getAudioTracks()||[])if(track.readyState==='live')session.capture.addTrack(track.clone());
    session.includesAudio=session.capture.getAudioTracks().length>0;
    drawClipFrame(session.context,{...snapshot,includesCamera:session.hadCamera,title:game.title,branded:false});
+   session.thumbnail=captureClipThumbnail(canvas);
    session.recorder=startVideoRecorder(session.capture,recorder=>{
    session.recorder=recorder;
    session.recorder.ondataavailable=e=>{
@@ -94,6 +96,7 @@ export function mountRecording(game,runtime,{panel,result}){
     catch(error){if(!active)setState('idle',error.message);return;}finally{session.chunks=[];}
     const clip={id:crypto.randomUUID(),title:`${game.title} · my replay${session.limited?' (file limit)':''}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:(session.stoppedAt-session.startAt)/1000,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:!!session.hasEnding,finalScore:session.finalScore,stopReason:session.stopReason,blob};
     clip.conversation=await session.conversationResult;
+    clip.thumbnail=await session.thumbnail;
     let message=session.limited?'File limit reached. The replay up to that point is saved below.':session.stopReason==='Camera interrupted'?'Camera interrupted. Saved the camera replay captured so far below.':'Saved on this device. Your replay is ready below.';
     try{await saveClip(clip);}catch(error){clip.unsaved=true;message=`${error.message||'Could not save on this device.'} Download the clip below before leaving.`;}
     if(clip.duration>30&&!unloading&&!document.hidden){

@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
 
@@ -13,6 +14,7 @@ test('actual Motion Quest camera path exports moving person, game, HUD without p
  await expect(page.locator('#local-result')).toContainText('Player recording');
  const camera=await page.evaluate(()=>{const w=document.querySelector('#game-frame').contentWindow;return {requests:w.cameraRequests,stopped:w.testStream.getTracks().every(t=>t.readyState==='ended'),terminated:w.testWorker.terminated};});
  expect(camera).toEqual({requests:1,stopped:true,terminated:true});expect(uploads).toEqual([]);
+ await openReplay(page.locator('#local-result video'));
  const results=await page.locator('#local-result video').evaluate(async video=>{
   video.pause();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=800;const c=canvas.getContext('2d');const frames=[];
   for(const time of [.4,2.0,3.4,video.duration-.3]){

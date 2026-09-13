@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import {movingCamera} from './moving-camera.js';
@@ -5,7 +6,7 @@ import {movingCamera} from './moving-camera.js';
 async function stored(page){return page.evaluate(()=>new Promise((resolve,reject)=>{
  const r=indexedDB.open('fitness-pair-clips',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,q=db.transaction('clips').objectStore('clips').getAll();q.onsuccess=()=>{db.close();resolve(q.result.map(({blob,conversation,...clip})=>({...clip,size:blob.size})));};};
 }));}
-async function pixels(video){return video.evaluate(async v=>{
+async function pixels(video){await openReplay(video);return video.evaluate(async v=>{
  if(v.readyState<2)await new Promise(r=>v.addEventListener('loadeddata',r,{once:true}));
  const c=document.createElement('canvas');c.width=1280;c.height=800;const ctx=c.getContext('2d');
  const sample=async time=>{await new Promise(r=>{v.addEventListener('seeked',r,{once:true});v.currentTime=time;});ctx.drawImage(v,0,0,1280,800);return [...ctx.getImageData(10,750,1,1).data];};
@@ -141,6 +142,7 @@ test('portrait camera gameplay fills a portrait replay with the moving camera im
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
  await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:25000});
+ await game.locator('[data-replay-share]').click();
  const video=page.locator('#local-result video');const result=await pixels(video);
  expect(result.height).toBeGreaterThan(result.width);expect(result.width/result.height).toBeCloseTo(390/844,2);
  const coverage=await video.evaluate(async video=>{
@@ -155,6 +157,6 @@ test('portrait camera gameplay fills a portrait replay with the moving camera im
   return {person:personCoverage,camera:cameraCoverage};
  });
  expect(coverage.person).toBeGreaterThan(.02);expect(coverage.camera).toBeGreaterThan(.25);
- await game.locator('[data-replay-share]').click();await expect(video).toBeInViewport();
+ await expect(video).toBeInViewport();
  await video.screenshot({path:info.outputPath('portrait-camera-preview.png')});
 });

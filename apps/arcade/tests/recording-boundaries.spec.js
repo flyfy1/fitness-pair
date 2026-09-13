@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
 import {movingCamera} from './moving-camera.js';
@@ -62,6 +63,7 @@ test('calibrated synthetic camera round retains charge, final projectile, impact
  await expect(page.locator('#local-result video')).toBeVisible({timeout:8000});
  expect(samples.map(s=>s.phase)).toEqual(['idle','charge','projectile','impact','impact']);
  expect(await page.evaluate(()=>window.recordStarts.length)).toBe(1);expect(uploads).toEqual([]);
+ await openReplay(page.locator('#local-result video'));
  const decoded=await page.locator('#local-result video').evaluate(async(video,samples)=>{
   if(video.readyState<2)await new Promise(r=>video.addEventListener('loadeddata',r,{once:true}));
   video.pause();const c=document.createElement('canvas');c.width=1280;c.height=800;const ctx=c.getContext('2d');
@@ -95,6 +97,7 @@ test('calibrated synthetic camera round retains charge, final projectile, impact
  await page.getByRole('button',{name:'Make short share copy'}).click();
  await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:30000});
  const copy=page.locator('#local-result .clip-card').nth(1);
+ await openReplay(copy.locator('video'));
  expect(await copy.locator('video').evaluate(async video=>{
   const context=new AudioContext(),buffer=await context.decodeAudioData(await(await fetch(video.src)).arrayBuffer());
   const values=buffer.getChannelData(0);let sum=0;for(const value of values)sum+=value*value;await context.close();return Math.sqrt(sum/values.length);

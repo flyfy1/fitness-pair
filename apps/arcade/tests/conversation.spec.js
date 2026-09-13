@@ -1,3 +1,4 @@
+import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 test.use({launchOptions:{args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream',`--use-file-for-fake-audio-capture=${new URL('../../../experiments/gameplay/plank-flight/public/audio/three.wav',import.meta.url).pathname}`]}});
@@ -47,6 +48,7 @@ test('conversation is a separate local track; selected export includes it and or
  await page.goto('/library');await page.reload();
  const card=page.locator('.clip-card').first(),video=card.locator('video');
  await expect(card.getByLabel('Include conversation in video')).not.toBeChecked();
+ await openReplay(video);
  expect(await energy(video)).toBe(0);
  expect(await energy(card.locator('[data-conversation-download]'))).toBeGreaterThan(.01);
  await expect(card.getByLabel('Listen to recorded voice in replay')).toBeChecked();
@@ -60,6 +62,7 @@ test('conversation is a separate local track; selected export includes it and or
  const originalURL=await video.getAttribute('src');
  await card.getByLabel('Include conversation in video').check();
  await expect(card.getByText('With conversation. Preview this version before sharing.')).toBeVisible({timeout:25000});
+ await expect(video).not.toHaveAttribute('src');await openReplay(video);
  expect(await energy(video)).toBeGreaterThan(.01);
  await expect.poll(()=>video.evaluate(v=>[v.videoWidth,v.videoHeight])).toEqual(originalSize);
  const leading=await video.evaluate(async video=>{const context=new AudioContext();try{const buffer=await context.decodeAudioData(await(await fetch(video.src)).arrayBuffer());const samples=buffer.getChannelData(0).subarray(0,Math.floor(buffer.sampleRate*.3));return Math.sqrt(samples.reduce((sum,x)=>sum+x*x,0)/samples.length);}finally{await context.close();}});
@@ -69,6 +72,7 @@ test('conversation is a separate local track; selected export includes it and or
  expect(await page.evaluate(()=>window.sharedConversationFile.name)).toContain('-with-conversation.mp4');
  await expect(card.locator('.clip-actions [download]')).toHaveAttribute('download',/with-conversation\.mp4$/);
  await card.getByLabel('Include conversation in video').uncheck();
+ await expect(video).not.toHaveAttribute('src');await openReplay(video);
  await expect(video).toHaveAttribute('src',originalURL);expect(await energy(video)).toBe(0);
  expect(uploads).toEqual([]);
  await page.reload();await expect(page.locator('.clip-card')).toHaveCount(2);
