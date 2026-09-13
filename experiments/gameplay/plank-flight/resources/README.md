@@ -4,7 +4,7 @@
 
 Player: a solo Push-up Flight player. Job: hear occasional varied encouragement
 without repetitive commentary. Risk: extra audio becomes intrusive or misses the
-recorder. Loop: generate 18 short GPT voice resources + six original musical
+recorder. Loop: resolve paired English/Chinese voice resources + six shared original musical
 stingers → complete a random group of gates → play one local voice/music pair →
 retain it in replay. Proof: decoded resource audio, deterministic cadence tests,
 real browser playback and recording. No runtime API, microphone input, task system
@@ -33,7 +33,9 @@ Reference: [OpenAI text-to-speech guide](https://developers.openai.com/api/docs/
 
 ## Resource and playback behavior
 
-All 18 speech clips were generated with the pinned GPT model in the catalog.
+The 18 English encouragement clips and 22 Chinese clips were generated with the
+pinned GPT model in the catalog. Four existing English countdown/start WAVs are
+retained. There are 22 paired speech IDs and six shared music resources (50 files).
 The manifest records request hashes, output hashes, model/voice, generation time
 and duration. Six original musical stingers pair with the six speech styles.
 Speech is normalized to -18 LUFS with a -2 dB true-peak target.
@@ -48,3 +50,31 @@ selected ending speech before the branded replay ending.
 
 Use `--env-name` when an existing secret uses a different environment variable
 name. Only the named variable is read; the secret is never written to a resource.
+
+## Language variants
+
+Stable clip IDs represent meaning and reward timing. Each `variants.en` / `variants.zh`
+entry provides the matching text and audio path; styles and musical motifs are shared.
+`voiceResource(id, language)` resolves text and audio together, with an English fallback
+for unsupported languages. A translated variant never silently speaks an English line.
+The `cues` group covers three, two, one and start; `clips` covers encouragement/endings.
+
+Generate or resume one language at a time:
+
+```sh
+python3 scripts/generate-encouragement.py --generate --language en
+python3 scripts/generate-encouragement.py --generate --language zh
+```
+
+Use the credential options above as needed. Matching request/output hashes reuse
+existing files without a speech request. Generated receipts use `language/id` keys;
+legacy English cue files set `generate: false`. Chinese countdown silence is trimmed
+to fit one-second steps. Existing English files keep their original URLs.
+
+`ui.zh.json` pairs the game's English source copy with Chinese. The language selector
+updates native Flight UI, canvas labels and audio without restarting gameplay or
+recording. It follows the browser language initially, then the locally saved choice.
+Only the selected speech language is loaded, alongside shared music and legacy effects.
+Switching stops an active old-language voice and cancels its pending playback.
+The arcade recorder/library and other games retain their current UI language; their
+future integrations can reuse `packages/gameplay/locale.js` and this resource format.

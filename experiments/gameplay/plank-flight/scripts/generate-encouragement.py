@@ -66,6 +66,7 @@ def stinger(style, path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--generate', action='store_true')
+    parser.add_argument('--language', choices=['en','zh'], default='en')
     parser.add_argument('--music-only', action='store_true')
     parser.add_argument('--env-file')
     parser.add_argument('--env-name', default='OPENAI_API_KEY')
@@ -76,8 +77,10 @@ def main():
     output = ROOT/'public/audio/encouragement'
     receipt_path = output/'manifest.json'
     receipt = json.loads(receipt_path.read_text()) if receipt_path.exists() else {'clips': {}}
+    receipt['clips'] = {(name if '/' in name else 'en/'+name): entry for name, entry in receipt['clips'].items()}
     styles = {s['id']: s for s in pack['styles']}
-    print(f"Pack: {len(pack['clips'])} GPT speech clips, {len(styles)} original musical stingers", flush=True)
+    count = sum(clip['variants'][args.language].get('generate') is not False for clip in pack['clips'] + pack['cues'])
+    print(f"Pack ({args.language}): {count} GPT speech clips, {len(styles)} shared original musical stingers", flush=True)
     if not args.generate and not args.music_only:
         print('Pass --generate to create missing resources. Existing matching resources are reused.')
         return
@@ -91,16 +94,21 @@ def main():
         print('Six original musical stingers generated; no speech API called.',flush=True)
         return
     key = key_for(args)
-    for clip in pack['clips']:
+    for clip in pack['clips'] + pack['cues']:
+        variant = clip['variants'][args.language]
+        if variant.get('generate') is False:
+            continue
+        resource_id = args.language + '/' + clip['id']
         style = styles[clip['style']]
-        payload = {'model': pack['model'], 'voice': style['voice'], 'input': clip['text'],
-                   'instructions': 'Speak only the supplied English line, naturally and clearly. No added words, music or sound effects. ' + style['direction'],
+        payload = {'model': pack['model'], 'voice': style['voice'], 'input': variant['text'],
+                   'instructions': ('Speak only the supplied English line, naturally and clearly. No added words, music or sound effects. ' if args.language == 'en' else 'Speak only the supplied Mandarin Chinese line in natural standard Mandarin, with clear Chinese pronunciation. No English, added words, music or sound effects. ') + style['direction'],
                    'response_format': 'mp3'}
         fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
-        target = output/(clip['id']+'.mp3')
-        prior = receipt['clips'].get(clip['id'], {})
+        target = output/variant['file']
+        target.parent.mkdir(parents=True, exist_ok=True)
+        prior = receipt['clips'].get(resource_id, {})
         if target.exists() and prior.get('requestSHA256') == fingerprint and prior.get('sha256') == digest(target):
-            print('Reused', clip['id'], flush=True)
+            print('Reused', resource_id, flush=True)
             continue
         request = urllib.request.Request('https://api.openai.com/v1/audio/speech',
                   data=json.dumps(payload).encode(), headers={'Authorization':'Bearer '+key, 'Content-Type':'application/json'})
@@ -114,18 +122,21 @@ def main():
         with tempfile.TemporaryDirectory(prefix='fitness-voice-') as tmp:
             raw = Path(tmp)/'speech.mp3'; normalized = Path(tmp)/'normalized.mp3'
             raw.write_bytes(data)
-            subprocess.run(['ffmpeg','-v','error','-i',str(raw),'-af','loudnorm=I=-18:TP=-2:LRA=7',
+            filters = 'loudnorm=I=-18:TP=-2:LRA=7'
+            if clip['kind'] == 'cue':
+                filters += ',silenceremove=start_periods=1:start_threshold=-40dB:stop_periods=-1:stop_duration=0.12:stop_threshold=-40dB'
+            subprocess.run(['ffmpeg','-v','error','-i',str(raw),'-af',filters,
                             '-ar','24000','-ac','1','-b:a','64k',str(normalized)],check=True)
             duration = float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration',
                             '-of','default=noprint_wrappers=1:nokey=1',str(normalized)],text=True))
-            if not .5 <= duration <= 9:
+            if not (.15 if clip['kind'] == 'cue' else .5) <= duration <= 9:
                 raise SystemExit(f'{clip["id"]}: speech duration needs review ({duration:.2f}s).')
             target.write_bytes(normalized.read_bytes())
-        receipt['clips'][clip['id']] = {'requestSHA256':fingerprint,'sha256':digest(target),
-                    'model':pack['model'],'voice':style['voice'],'duration':round(duration,3),
+        receipt['clips'][resource_id] = {'requestSHA256':fingerprint,'sha256':digest(target),
+                    'model':pack['model'],'language':args.language,'voice':style['voice'],'duration':round(duration,3),
                     'generatedAt':datetime.datetime.now(datetime.timezone.utc).isoformat()}
         receipt_path.write_text(json.dumps(receipt,indent=2)+'\n')
-        print('Generated',clip['id'],f'{duration:.2f}s',flush=True)
+        print('Generated',resource_id,f'{duration:.2f}s',flush=True)
     print('Pack complete.',flush=True)
 
 if __name__ == '__main__':

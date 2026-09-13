@@ -1,3 +1,4 @@
+import {t} from './i18n.js';
 import { gateOpening } from './difficulty.js';
 import { FRAME_FRESH_MS } from './tracking-gate.js';
 import { projectHead, helicopterScale } from './projection.js';
@@ -25,7 +26,7 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
     for (const [y,height] of [[0,gapTop],[gapBottom,h-gapBottom]]) {
       ctx.fillRect(x-17,y,34,height);ctx.strokeRect(x-17,y,34,height);
     }
-    ctx.fillStyle='#e4ffea';ctx.font='12px system-ui';ctx.fillText('FLY THROUGH',x-48,gapTop+22);
+    ctx.fillStyle='#e4ffea';ctx.font='12px system-ui';ctx.fillText(t('FLY THROUGH'),x-48,gapTop+22);
   }
   const x=state.x*w,y=Math.min(state.y,1.12)*h;
   const size=helicopterScale(w);

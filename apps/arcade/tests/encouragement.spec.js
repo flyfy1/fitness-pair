@@ -8,7 +8,7 @@ test('all GPT speech and music resources decode from the mounted game',async({pa
  const levels=await page.evaluate(async pack=>{
   const audio=new AudioContext(),results=[];
   try{
-   const files=[...pack.clips.map(x=>`${x.id}.mp3`),...pack.styles.map(x=>`music-${x.id}.wav`)];
+   const files=[...[...pack.clips,...pack.cues].flatMap(x=>Object.values(x.variants).map(variant=>variant.file)),...pack.styles.map(x=>`music-${x.id}.wav`)];
    for(const file of files){
     const response=await fetch(`/games/plank-flight/audio/encouragement/${file}`);
     if(!response.ok)throw new Error(`Missing resource: ${file}`);
@@ -19,7 +19,7 @@ test('all GPT speech and music resources decode from the mounted game',async({pa
   }finally{await audio.close();}
   return results;
  },pack);
- expect(levels).toHaveLength(24);
+ expect(levels).toHaveLength(50);
  for(const level of levels){expect(level.rms,level.file).toBeGreaterThan(.005);expect(level.duration).toBeLessThan(9);}
 });
 
@@ -55,4 +55,45 @@ test('completed gate groups trigger spaced varied encouragement and retain rando
  });
  expect(recorded.duration).toBeGreaterThan(heard[1].time);expect(recorded.rms).toBeGreaterThan(.005);
  expect(external).toEqual([]);
+});
+
+
+test.describe('Chinese voices and interface',()=>{
+ test.use({locale:'zh-CN'});
+ test('Chinese controls fit narrow screens',async({page},info)=>{
+  for(const width of [390,320]){
+   await page.setViewportSize({width,height:740});await page.goto('/play/plank-flight');
+   const game=page.frameLocator('#game-frame');
+   for(const selector of ['#start','#demo','#language','#sound','#fullscreen'])await expect(game.locator(selector)).toBeInViewport();
+   expect(await game.locator('html').evaluate(el=>el.scrollWidth<=innerWidth)).toBe(true);
+   await page.screenshot({path:info.outputPath(`chinese-${width}.png`)});
+  }
+ });
+ test('browser language selects Chinese speech; switching language keeps the round and persists',async({page})=>{
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
+  await expect(game.locator('#language')).toHaveValue('zh');
+  await expect(game.getByRole('button',{name:'开启摄像头',exact:true})).toBeVisible();
+  await expect(game.locator('.privacy')).toContainText('游戏过程中会自动录下');
+  await game.getByRole('button',{name:'试玩演示',exact:true}).click();
+  await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastVoice?.language)).toBe('zh');
+  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+  await expect(game.getByRole('button',{name:'结束并休息',exact:true})).toBeVisible();
+  const session=await game.locator('#scene').evaluate(()=>window.plankFlight.getState().sessionId);
+  await game.locator('#language').selectOption('en');
+  await expect(game.getByRole('button',{name:'Finish & rest',exact:true})).toBeVisible();
+  expect(await game.locator('#scene').evaluate(()=>window.plankFlight.getState().sessionId)).toBe(session);
+  await game.locator('#language').selectOption('zh');
+  await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.encouragementReady)).toBe(18);
+  await game.getByRole('button',{name:'结束并休息',exact:true}).click();
+  await expect.poll(()=>game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastVoice?.id)).toMatch(/-end$/);
+  const voice=await game.locator('#scene').evaluate(()=>window.plankFlight.getState().audio.lastVoice);
+  expect(voice.language).toBe('zh');expect(voice.file).toMatch(/^zh\//);expect(voice.text).toMatch(/[\u4e00-\u9fff]/);
+  await expect(page.locator('#local-result video')).toBeVisible({timeout:18000});
+  expect(await page.locator('#local-result video').evaluate(async video=>{const a=new AudioContext();try{const b=await a.decodeAudioData(await(await fetch(video.src)).arrayBuffer());const d=b.getChannelData(0);return Math.sqrt(d.reduce((s,x)=>s+x*x,0)/d.length);}finally{await a.close();}})).toBeGreaterThan(.005);
+  await game.locator('#language').selectOption('en');await page.reload();
+  await expect(page.frameLocator('#game-frame').locator('#language')).toHaveValue('en');
+  await expect(page.frameLocator('#game-frame').getByRole('button',{name:'Enable camera',exact:true})).toBeVisible();
+  expect(errors).toEqual([]);
+ });
 });
