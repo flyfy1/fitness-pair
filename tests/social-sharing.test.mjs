@@ -12,7 +12,9 @@ test('private message preserves access token and expiry but excludes management 
 test('public platform links contain the viewer URL without private or management tokens',()=>{
  const message=shareMessage({...clip,visibility:'public'},{origin:'https://example.test'});
  for(const [name,href] of socialLinks(message)){
-  const parsed=new URL(href);assert.equal(parsed.searchParams.get(name==='Facebook'?'u':'url'),'https://example.test/clips/fixture');
+  const parsed=new URL(href);
+  if(name==='X (Twitter)')assert.equal(parsed.searchParams.get('text'),message.text);
+  else assert.equal(parsed.searchParams.get(name==='Facebook'?'u':'url'),'https://example.test/clips/fixture');
   assert.ok(!href.includes('token'));assert.ok(!href.includes('manage'));
  }
 });

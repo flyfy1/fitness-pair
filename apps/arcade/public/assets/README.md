@@ -7,3 +7,5 @@ Prompt: Wide 2:1 panorama; acid-yellow empty top space; polished sculptural game
 `anton.ttf` comes from the Google Fonts Anton directory and is distributed under `anton-license.txt`. All controls and headings remain semantic text.
 
 `hopmodo-mark.svg` is the padded production version of the logo agent’s code-native jumping-player mark. Its native-imagegen concept sheet and provenance are in `../../design/`. The symbol is reused in the interface, favicon, and burned-in recording footer.
+
+`social/linkedin.svg`, `social/twitter-x.svg`, and `social/facebook.svg` are unmodified brand icons from [Bootstrap Icons](https://github.com/twbs/icons/tree/main/icons), retrieved on 2026-09-14. Their MIT license is included in `social/LICENSE.txt`. The icon-only share links retain accessible platform names and hover titles.
