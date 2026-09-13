@@ -63,15 +63,18 @@ test.describe('Chinese voices and interface',()=>{
  test('Chinese controls fit narrow screens',async({page},info)=>{
   for(const width of [390,320]){
    await page.setViewportSize({width,height:740});await page.goto('/play/plank-flight');
-   const game=page.frameLocator('#game-frame');
+   const game=page.frameLocator('#game-frame');await game.locator('#language').selectOption('zh');
    for(const selector of ['#start','#demo','#language','#sound','#fullscreen'])await expect(game.locator(selector)).toBeInViewport();
    expect(await game.locator('html').evaluate(el=>el.scrollWidth<=innerWidth)).toBe(true);
    await page.screenshot({path:info.outputPath(`chinese-${width}.png`)});
   }
  });
- test('browser language selects Chinese speech; switching language keeps the round and persists',async({page})=>{
+ test('Chinese browsers default to English; explicit language choices persist without resetting the round',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
+  await expect(game.locator('#language')).toHaveValue('en');
+  await expect(game.getByRole('button',{name:'Enable camera',exact:true})).toBeVisible();
+  await game.locator('#language').selectOption('zh');await page.reload();
   await expect(game.locator('#language')).toHaveValue('zh');
   await expect(game.getByRole('button',{name:'开启摄像头',exact:true})).toBeVisible();
   await expect(game.locator('.privacy')).toContainText('游戏过程中会自动录下');

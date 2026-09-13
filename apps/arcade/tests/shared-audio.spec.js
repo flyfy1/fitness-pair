@@ -4,8 +4,10 @@ const energy=video=>video.evaluate(async v=>{const context=new AudioContext();tr
 
 test('Ready to Move shares the countdown and now retains its game sound in replay',async({page})=>{
  await guidedCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');
- await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise ONE hand.',{timeout:12000});
- await game.locator('#primary').click();
+ await game.locator('#primary').click();await expect(game.locator('.hands-start')).toBeVisible({timeout:12000});
+ await game.locator('body').evaluate(()=>{window.poseTest.hand='both';});
+ await expect(game.locator('.hands-start-title')).toContainText('lower both');
+ await game.locator('body').evaluate(()=>{window.poseTest.hand='down';});
  for(const [number,cue] of [['3','three'],['2','two'],['1','one']]){
   await expect(game.locator('#instruction')).toHaveText(number);
   await expect.poll(()=>game.locator('body').evaluate(()=>window.cameraSetup.getState().audio.lastCue)).toBe(cue);

@@ -28,10 +28,10 @@ stay checked. Missing or stale tracking cannot finish a step.
 
 The original game stays paused with zero score and no shots during practice.
 Its presentation phase remains `setup`, so the shared recorder does not capture
-the tutorial. Choosing Play after confirmation begins the usual fresh countdown.
+the tutorial. After confirmation, raise both hands for one second, then lower them to begin the fresh countdown.
 Skip tutorial is available before permission and during practice; it still
-requires normal camera setup. Cancellation stops camera/model resources and a
+requires normal camera setup and the two-hand start gesture. Cancellation stops camera/model resources and a
 new camera attempt starts practice again. Completion/skip lasts for this page
-only, and other games keep their existing entry flow.
+only. All six games share the same two-hand start gesture.
 
 See [the bounded prototype and evidence](../../docs/invaders-tutorial-prototype.md).

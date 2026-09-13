@@ -1,4 +1,5 @@
 import './style.css';
+import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import {InvadersTutorial} from './invaders-tutorial.js';
 import {mountTutorial} from './tutorial-view.js';
 import {arGames} from './catalog.js';
@@ -13,6 +14,7 @@ import {createBodyInput} from './input.js';
 const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
 const config = arGames.find(game => selected ? game.slug === selected : location.pathname.split('/').includes(game.id)) || arGames[0];
+const startGate = createHandsStart($('arena'));
 const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures();
 document.title = `${config.title} · Hopmodo`;
 $('game-title').textContent = config.title;
@@ -21,7 +23,7 @@ $('detail').textContent = $('control-help').textContent = config.action;
 $('hand').hidden = !config.primary;
 const tutorial = config.slug === 'invaders' ? new InvadersTutorial() : null;
 let tutorialWanted = !!tutorial;
-const tutorialView = tutorial ? mountTutorial($('arena'), {onStart: () => camera.start(), onSkip: leaveTutorial, onPlay: startAfterPractice, onCancel: () => camera.stop('stopped')}) : null;
+const tutorialView = tutorial ? mountTutorial($('arena'), {onStart: () => camera.start(), onSkip: leaveTutorial, onCancel: () => camera.stop('stopped')}) : null;
 let hosted = false;
 let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
@@ -42,7 +44,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
   onStatus(status) {
     if (status.state === 'requesting') {
       session = {sessionId: status.sessionId, source: status.source};
-      round = status.sessionId; recognizer.reset(session); gestures.reset(session);
+      round = status.sessionId; recognizer.reset(session); gestures.reset(session); startGate.reset(session);
       feed = createBodyInput(session, game); readySince = null; action = null; pose = null;
       game.restart(); game.pause(); tutorial?.reset(session); setPhase('setup');
       $('start').hidden = true; $('stop').hidden = false; $('camera-error').hidden = true;
@@ -62,6 +64,8 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     $('movement').textContent = valid ? `Body ${Math.abs(action.controls.horizontal) < .1 ? 'center' : action.controls.horizontal < 0 ? 'left' : 'right'} · ${Math.round(Math.abs(action.controls.horizontal) * 100)}%` : action.cue;
     $('hand').textContent = action.controls.leftRaised ? 'Left hand raised · lower to rearm' : 'Left hand lowered';
     if (valid) lastValidAt = performance.now();
+    const started = startGate.update(frame, valid && ((!tutorialWanted && phase === 'setup') || (phase === 'tutorial' && tutorial.completed)));
+    if (phase === 'tutorial' && tutorial.completed && started) leaveTutorial();
     if (phase === 'setup') {
       if (tutorialWanted) {
         if (valid) { recognizer.release(); setPhase('tutorial'); }
@@ -70,7 +74,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
         $('instruction').textContent = valid ? 'Get ready' : action.phase === 'missing' ? 'Step into view' : 'Stand still';
         $('detail').textContent = valid ? `${Math.max(1, 3 - Math.floor((frame.tMs - (readySince ?? frame.tMs)) / 1000))} · ${config.action}` : action.cue;
         $('calibration').hidden = valid; $('calibration').value = action.calibrationProgress || 0;
-        if (valid && !action.controls.leftRaised && !action.controls.rightRaised) {
+        if (started && valid && !action.controls.leftRaised && !action.controls.rightRaised) {
           readySince ??= frame.tMs;
           if (frame.tMs - readySince >= 3000) { recognizer.release(); game.resume(); setPhase('playing'); }
         } else readySince = null;
@@ -88,6 +92,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     if (phase === 'paused') $('cue').textContent = valid ? 'Tracking ready. Lower your hands, then resume.' : action.cue;
   },
   onStop({reason}) {
+    startGate.hide();
     pose = null; action = null; drawBody($('skeleton'), null);
     $('tracking').textContent = 'Camera off';
     $('recalibrate').disabled = true;
@@ -121,17 +126,11 @@ function setPhase(next) {
 }
 function friendlyCue(cue) { return cue.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase(); }
 function updatePracticeView(feedback = '') {
-  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'All controls confirmed. Choose Play when you are ready.' : 'Practice is not scored or recorded.'), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
+  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'Raise BOTH hands to start.' : ''), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
 }
 function leaveTutorial() {
   tutorialWanted = false; recognizer.release(); readySince = null;
   setPhase(camera.active ? 'setup' : 'idle');
-}
-function startAfterPractice() {
-  if (!tutorial.completed || !camera.running || performance.now() - lastValidAt > 250 || !action?.controls.leftLowered || action.controls.rightRaised) {
-    updatePracticeView('Return to view with your hands down before starting.'); return;
-  }
-  leaveTutorial();
 }
 function pause(reason = 'manual') {
   if (phase !== 'playing') return;

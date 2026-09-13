@@ -21,7 +21,7 @@ adapter after the base engine's old pose methods were removed.
 
 Local verification uses synthetic inputs only:
 
-- 75 repository tests and 60 game/backend/deployment tests passed.
+- 77 repository tests and 61 game/backend/deployment tests passed.
 - Three demo layouts passed at 1440, 390 and 320 pixels; screenshots were reviewed.
 - Voice capture, permission denial/cancellation, decoded audible replay, explicit
   mixed export and original preservation passed browser checks.
@@ -33,4 +33,5 @@ Local verification uses synthetic inputs only:
   saved replay containing game sound.
 
 These checks do not measure physical microphone quality or human motion accuracy.
-Production verification is recorded with the final release after integration.
+Release acceptance checks the exact public commit, served assets and these same
+recording flows at https://fitness.integ.life.

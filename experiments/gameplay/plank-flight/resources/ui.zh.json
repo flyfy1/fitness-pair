@@ -78,5 +78,13 @@
   "The local pose model failed.": "本地动作模型运行失败。",
   "Camera tracking stalled. Check the camera and start again.": "摄像头跟踪停止响应，请检查摄像头后重新开始。",
   "Your game and camera view record automatically during gameplay, with game sound when available. Conversation recording is optional. Nothing is uploaded unless you choose to share.": "游戏过程中会自动录下游戏和摄像头画面，并包含可用的游戏声音。对话录音由你选择开启，只有主动分享才会上传。",
-  "Back to the Hopmodo arcade": "返回 Hopmodo 游戏大厅"
+  "Back to the Hopmodo arcade": "返回 Hopmodo 游戏大厅",
+  "Now lower both hands.": "现在放下双手。",
+  "Raise BOTH hands to start.": "举高双手，准备开始。",
+  "Get ready to play.": "准备开始游戏。",
+  "Above your shoulders. Hold for one second.": "双手高于肩膀，保持一秒。",
+  "Start with both hands": "双手举高开始",
+  "Hold both hands up": "双手保持举高",
+  "Show both hands and shoulders. Raise both hands to start, then lower them.": "让双手和肩膀入镜。举高双手准备开始，再放下双手。",
+  "Show both hands and shoulders. Raise both hands for one second to start, then lower them and keep your head in view. Move at your own pace and fly through the gates.": "让双手和肩膀入镜。举高双手保持一秒，再放下双手，保持头部可见。按自己的节奏穿过关卡。"
 }

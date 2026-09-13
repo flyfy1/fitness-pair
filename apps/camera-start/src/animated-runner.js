@@ -1,4 +1,4 @@
-import {createRunnerMotionInput} from '../../dino-run/src/motion-input.js';
+import {createActionController} from '../../../packages/gameplay/input.js';
 import { Runner } from '../../dino-run/src/engine.js';
 
 const DELAY_S = .03, GRAVITY = 1000, LIFT = 500, MAX_LIFT_S = .25;
@@ -8,6 +8,7 @@ export class AnimatedRunner extends Runner {
   constructor({ onEvent = () => {}, ...options } = {}) {
     super(options);
     this.onEvent = onEvent;
+    this.input = createActionController({action:'jump-height',accept:f=>this.controlMode==='motion' && ['ready','running'].includes(this.status) && f.calibrated && f.stage==='ready' && f.phase!=='missing' && Number.isFinite(f.heightRatio) && f.heightRatio>=0 && f.heightRatio<=1,apply:(_, {completed})=>{if(completed && this.status==='running')this.jumps++;}});
     this.resetAnimation();
   }
   resetAnimation() {
@@ -15,12 +16,8 @@ export class AnimatedRunner extends Runner {
     this.motion = null; this.armed = false; this.lastObservedMs = null;
     this.lastAirMs = null; this.triggerCount = 0;
   }
-  reset() { super.reset(); this.resetAnimation(); if(this.motionSession)this.motionInput?.reset(this.motionSession); }
-  bindMotionSession(session) {
-    this.motionInput??=createRunnerMotionInput(this);
-    this.motionSession={sessionId:session.sessionId,source:{...session.source}};
-    this.motionInput.reset(this.motionSession);this.y=0;this.resetAnimation();
-  }
+  reset() { super.reset(); this.resetAnimation(); }
+  bindMotionSession(session) { this.input.reset(session); this.resetAnimation(); }
   command(command) {
     const changed = super.command(command);
     if (changed && command === 'pause') {
@@ -32,7 +29,7 @@ export class AnimatedRunner extends Runner {
   }
   applyMotion(frame) {
     const height = this.y;
-    const accepted = this.motionInput?.consume(frame);
+    const accepted = this.input.consume(frame);
     this.y = height;
     if (!accepted) return false;
     if (this.lastObservedMs !== null && frame.tMs - this.lastObservedMs >= 250) {

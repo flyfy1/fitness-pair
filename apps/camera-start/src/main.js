@@ -1,4 +1,5 @@
 import './style.css';
+import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { DinoAudio } from './audio.js';
 import { AnimatedRunner } from './animated-runner.js';
 import { drawWorld, sceneGeometry } from '../../../experiments/gameplay/dino-ar/src/scene.js';
@@ -32,6 +33,7 @@ let bodyFrame = null, gameTrackingSince = null;
 const GAME_TRACKING_GRACE_MS = 450;
 const gestures = new BodyGestures();
 const diagnostics = createDiagnostics();
+const startGate = createHandsStart(document.querySelector('#setup'));
 let countdownSerial = 0;
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
 let trackingHoldAt = null, signalState = null, candidateKey = '', candidateSince = 0;
@@ -58,7 +60,7 @@ const camera = new PoseCamera({
     cameraState = status.state; log('camera-state', { state: cameraState });
     if (cameraState === 'requesting') {
       if (gameMode) runner.bindMotionSession(status);
-      recognizer.reset(status); recognizer.setJumpRange(MOVEMENT_SCALE); gestures.reset(status); action = null; hands = null;
+      startGate.reset(status); recognizer.reset(status); recognizer.setJumpRange(MOVEMENT_SCALE); gestures.reset(status); action = null; hands = null;
       lastPoseAt = 0; countdownAt = null; previousStage = null; trackingHoldAt = null; signalState = null;
     }
     paint();
@@ -71,6 +73,7 @@ const camera = new PoseCamera({
     const next = recognizer.update(frame);
     if (!next) return;
     action = next; hands = gestures.update(frame);
+    if (startGate.update(frame, action.calibrated || action.canConfirmMaximum) && !action.calibrated) confirm('both-hands-start');
     if (gameMode && testing) {
       // A new camera/resolution can need a fresh baseline, without a new round,
       // confirmation gesture or countdown. Ordinary dropouts retain calibration.
@@ -101,6 +104,7 @@ const camera = new PoseCamera({
     paint();
   },
   onStop({ reason }) {
+    startGate.hide();
     bodyFrame = null; drawBody($('body-overlay'), null);
     if (gameMode) pauseGame('camera-stopped');
     testing = false;
@@ -275,11 +279,12 @@ function presentation(now) {
   if (action.cue === 'prepare-jump') return { stage: action.calibrated ? 'ready' : 'maximum', status: 'JUMP PREPARATION', title: 'Ready when you are.', detail: 'Try a small movement, or stand up to confirm.', feedback: 'Your standing baseline is saved.', step: action.calibrated ? 'ready' : 'maximum', reason: 'prepare-jump' };
   if (action.stage === 'maximum') {
     if (action.canConfirmMaximum) {
-      const holding = hands?.kind === 'one-hand' && !hands.latched;
-      return { stage: 'confirm', status: 'MOVEMENT READY', title: holding ? 'Keep your hand up.' : 'Raise ONE hand.', detail: holding ? 'Hold it above your shoulder for one second.' : 'Keep your other hand down. Hold for one second.', feedback: !hands?.tracked ? 'Show both hands — or use the button.' : 'Your baseline is ready. No jump required.', progress: holding ? hands.progress : 0, button: 'Confirm & continue', step: 'confirm', reason: hands?.tracked ? 'awaiting-confirmation' : 'missing-hands' };
+      const holding = hands?.kind === 'both-hands' && !hands.latched;
+      return { stage: 'confirm', status: 'MOVEMENT READY', title: holding ? 'Keep your hand up.' : 'Raise BOTH hands.', detail: holding ? 'Hold it above your shoulder for one second.' : 'Hold both hands above your shoulders for one second.', feedback: !hands?.tracked ? 'Show both hands — or use the button.' : 'Your baseline is ready. No jump required.', progress: holding ? hands.progress : 0, button: 'Confirm & continue', step: 'confirm', reason: hands?.tracked ? 'awaiting-confirmation' : 'missing-hands' };
     }
     return { stage: 'maximum', status: 'STEP 2 OF 3 · GET READY', title: 'Stand steady.', detail: 'Return to your starting posture.', feedback: 'No jump required. Stand upright to confirm.', step: 'maximum', reason: action.cue };
   }
+  if (!startGate.open) return {stage:'ready',status:'READY TO START',title:'Raise BOTH hands.',detail:'Hold above your shoulders for one second.',feedback:'Then lower both hands.',step:'ready'};
   const steady = action.calibrated && action.heightRatio < .03;
   if (!steady) return { stage: 'ready', status: 'MOVEMENT CONFIRMED', title: 'Stand steady.', detail: 'Return to your starting height to begin.', feedback: 'Your baseline is saved. Waiting for a steady pose.', step: 'ready', reason: 'not-grounded' };
   if (countdownAt === null) { countdownAt = now; countdownSerial++; log('countdown-started'); }

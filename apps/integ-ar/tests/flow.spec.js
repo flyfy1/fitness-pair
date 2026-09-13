@@ -1,3 +1,4 @@
+import {startWithHands} from './start-hands.js';
 import {test, expect} from '@playwright/test';
 import {syntheticCamera} from './synthetic-camera.js';
 const state = page => page.evaluate(() => window.integAR.getState());
@@ -9,7 +10,7 @@ for (const slug of ['breakout', 'invaders', 'stack', 'knife', 'bubble', 'fruit-m
     await syntheticCamera(page); await page.goto('/?game=' + slug);
     if(slug==='invaders')await page.locator('#tutorial-skip').click();
     await page.locator('#start').click();
-    await expect.poll(async () => (await state(page)).phase).toBe('playing');
+    await startWithHands(page); await expect.poll(async () => (await state(page)).phase).toBe('playing');
     await page.waitForTimeout(350);
     if (['breakout', 'invaders', 'fruit-merge'].includes(slug)) {
       const key = {breakout: 'paddle', invaders: 'ship', 'fruit-merge': 'held'}[slug];
@@ -63,7 +64,7 @@ for (const slug of ['breakout', 'invaders', 'stack', 'knife', 'bubble', 'fruit-m
 }
 test('missing tracking pauses physics, clears old bones and needs deliberate recovery', async ({page}) => {
   await syntheticCamera(page); await page.goto('/?game=invaders'); await page.locator('#tutorial-skip').click(); await page.locator('#start').click();
-  await expect.poll(async () => (await state(page)).phase).toBe('playing');
+  await startWithHands(page); await expect.poll(async () => (await state(page)).phase).toBe('playing');
   await pose(page, {missing: true}); await expect.poll(async () => (await state(page)).phase).toBe('paused');
   const frozen = (await state(page)).game;
   await page.waitForTimeout(350); expect((await state(page)).game).toEqual(frozen);
@@ -86,7 +87,7 @@ test('permission failure exposes a retry without starting a game', async ({page}
 
 test('Fruit Orbit accepts higher-tier fruit from body drops without false overflow at spawn', async ({page}) => {
   await syntheticCamera(page); await page.goto('/?game=fruit-merge'); await page.locator('#start').click();
-  await expect.poll(async () => (await state(page)).phase).toBe('playing'); await page.waitForTimeout(350);
+  await startWithHands(page); await expect.poll(async () => (await state(page)).phase).toBe('playing'); await page.waitForTimeout(350);
   await page.evaluate(() => { window.gameRandom = .5; });
   for (let drop = 1; drop <= 3; drop++) {
     await pose(page, {x: (drop - 2) * .08, hand: 'down'}); await page.waitForTimeout(500);

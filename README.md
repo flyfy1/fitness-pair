@@ -163,3 +163,5 @@ recognizer output onto game controls independently of the host and recorder.
 Dino Run demonstrates direct keyboard/height controls plus an optional motion
 adapter. Conversation recording is opt-in and stored as a separate local track;
 players can export the original video or a version including conversation.
+
+Camera games now share a deliberate start: after setup/practice, raise both hands above the shoulders for one second, then lower them. Pixel Defense practice uses large instructions at the top of the AR view. See [the tutorial prototype](docs/invaders-tutorial-prototype.md).

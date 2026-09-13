@@ -1,3 +1,4 @@
+import {startWithHands} from '../../integ-ar/tests/start-hands.js';
 import {test,expect} from '@playwright/test';
 import {syntheticCamera} from '../../integ-ar/tests/synthetic-camera.js';
 import {arGames} from '../../integ-ar/src/catalog.js';
@@ -8,7 +9,7 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
  await expect(game.locator('#game-title')).toHaveText(config.title);
  await expect(page.locator('#record-panel')).not.toHaveAttribute('data-state','recording');
  if(config.slug==='invaders')await game.locator('#tutorial-skip').click();
- await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await game.locator('#start').click();await startWithHands(game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#record-status')).toContainText('game + camera');
  await page.waitForTimeout(900);await game.locator('#pause').click();
  await page.setViewportSize({width:config.slug==='bubble'?320:390,height:844});
@@ -30,7 +31,7 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
  expect(await game.locator('#arena').evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
  expect(uploads).toEqual([]);expect(errors).toEqual([]);
  if(config.slug==='knife'){
-  await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+  await game.locator('#start').click();await startWithHands(game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
   await page.waitForTimeout(400);await game.locator('#finish').click();await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:12000});
  }
  await game.locator('#home').click();await expect(page).toHaveURL('/#arcade');

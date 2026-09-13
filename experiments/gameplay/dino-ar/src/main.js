@@ -1,4 +1,6 @@
+import {createRunnerMotionInput} from '../../../../apps/dino-run/src/motion-input.js';
 import './style.css';
+import {createHandsStart} from '../../../../packages/gameplay/hands-start-view.js';
 import { Runner } from '../../../../apps/dino-run/src/engine.js';
 import { PoseCamera } from '../../../../apps/dino-run/src/camera.js';
 import { setupFullscreen } from '../../../../apps/dino-run/src/fullscreen.js';
@@ -7,7 +9,9 @@ import { KeyboardInput } from './keyboard-input.js';
 import { sceneGeometry, drawSkeleton, drawWorld } from './scene.js';
 
 const $ = id => document.getElementById(id);
+const startGate = createHandsStart($('arena'));
 const runner = new Runner(); runner.setControlMode('motion');
+const motionInput=createRunnerMotionInput(runner);
 const recognizer = new ShoulderMotionRecognizer(), keyboard = new KeyboardInput();
 let inputMode = 'keyboard', action = null, pose = null, cameraState = 'off';
 let awaiting = false, lastPoseAt = 0, lastFrame = 0, lastPaint = 0;
@@ -28,10 +32,10 @@ function consumeAction(next) {
   if (action.phase === 'missing' || !action.calibrated) {
     if (runner.status === 'running') pause('Tracking changed. Stand steady, then choose Resume run.');
   } else {
-    if (awaiting && (runner.status === 'ready' || justReady || action.heightRatio < .03)) {
+    if (awaiting && (inputMode === 'keyboard' || startGate.open) && (runner.status === 'ready' || justReady || action.heightRatio < .03)) {
       runner.command(runner.status === 'paused' ? 'resume' : 'start'); awaiting = false;
     }
-    runner.applyMotion(action);
+    motionInput.consume(action);
   }
 }
 const camera = new PoseCamera({
@@ -40,7 +44,7 @@ const camera = new PoseCamera({
     if (inputMode !== 'camera') return;
     cameraState = status.state;
     if (status.state === 'requesting') {
-      recognizer.reset(status); runner.bindMotionSession(status);
+      startGate.reset(status); recognizer.reset(status); motionInput.reset(status);
       action = null; pose = null; lastPoseAt = 0; bestLift = 0;
     }
     paint();
@@ -50,9 +54,12 @@ const camera = new PoseCamera({
     lastPoseAt = frame.tMs;
     const fresh = performance.now() - frame.tMs < 250;
     pose = fresh ? frame : null;
-    consumeAction(recognizer.update(fresh ? frame : { ...frame, joints: {} }));
+    const next=recognizer.update(fresh ? frame : { ...frame, joints: {} });
+    startGate.update(frame, fresh && next?.calibrated);
+    consumeAction(next);
   },
   onStop() {
+    startGate.hide();
     cameraState = 'off';
     if (inputMode !== 'camera') return;
     action = null; pose = null; awaiting = false;
@@ -80,7 +87,7 @@ function start() {
   error = ''; message = ''; awaiting = true;
   if (inputMode === 'keyboard') {
     if (runner.status === 'ready') {
-      keyboard.reset(`keyboard-${crypto.randomUUID()}`); runner.bindMotionSession(keyboard.session);
+      keyboard.reset(`keyboard-${crypto.randomUUID()}`); motionInput.reset(keyboard.session);
       action = null; bestLift = 0;
       consumeAction(keyboard.update(performance.now()));
     } else { runner.command('resume'); awaiting = false; }
@@ -144,7 +151,7 @@ function paint() {
       detail = action.cue === 'face-the-camera' ? 'Face the camera so both shoulders can be seen.' : 'Your waist and feet do not need to be visible.';
     } else if (!action || action.stage === 'standing') {
       phase = 'FINDING YOUR POSITION'; cue = 'Stand comfortably for a moment.';
-      detail = 'Keep both shoulders visible. The run starts automatically.'; button = 'Finding your position…';
+      detail = 'Keep both shoulders visible. Then raise both hands for one second and lower them to start.'; button = 'Finding your position…';
     } else if (awaiting) {
       cue = 'Return to your starting position.'; detail = 'The run resumes when tracking is steady.';
     } else {
