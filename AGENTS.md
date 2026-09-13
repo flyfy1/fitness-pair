@@ -81,8 +81,17 @@ review pass. Do not invent team members or assign people without their agreement
 - Report each checkpoint's branch, commit, checks, push result, and remaining
   work. If validation or push fails, report the blocker and do not claim delivery.
 - Use `codex/<short-task>` for agent branches unless the user specifies otherwise.
-- Push checkpoints to the task branch; pushing does not authorize merging into
-  `main`. Never overwrite teammates' history to resolve a rejected push.
+- Push checkpoints to the task branch. When the agreed task is complete, merge
+  its verified commits into the agreed integration branch (default: `main`) and
+  push that branch. This routine integration of task-owned work is authorized;
+  do not stop at a pushed worktree branch or request another reminder.
+- Before integration, fetch the latest target, review the complete merge diff,
+  and run relevant checks on the integrated result in a clean worktree. Preserve
+  concurrent work and never overwrite teammates' history to resolve a rejected push.
+- Verify the remote integration branch contains the completed commits and report
+  the result. Remove only task-owned temporary worktrees after confirming they
+  contain no uncommitted work or local data to preserve. If integration is blocked,
+  report the blocker and outstanding merge instead of claiming the task complete.
 - Keep PRs narrow: problem, changed behavior, evidence, remaining limitations.
 - Do not merge another contributor's work or publish a public service unless
   authorized. Ordinary local development and validation should proceed directly.

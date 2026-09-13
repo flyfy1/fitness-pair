@@ -58,8 +58,8 @@ evidence. Keep each commit coherent; unfinished work stays outside that commit.
    work so teammates can fetch the checkpoint. Open or update a narrow PR when
    the checkpoint is ready for review; use a draft if integration is unfinished.
 
-These routine commits and pushes are authorized within the agreed task. A push
-shares progress; merging into `main` remains a separate integration decision.
+These routine commits and pushes are authorized within the agreed task. Checkpoint
+pushes share progress; task completion also requires the integration below.
 Breaking contracts still require agreement from affected owners. Do not merge
 another contributor's work without authorization.
 
@@ -67,3 +67,31 @@ If a check fails, fix it or report the blocker before declaring the checkpoint
 verified. If a push fails, retain the local commit, report that it is unpushed,
 and resolve authentication or remote divergence without overwriting teammates'
 history. Do not force-push a shared branch or silently claim the team has the work.
+
+## Finish by integrating the worktree
+
+A completed task must not remain only on its worktree branch. Merge its verified,
+task-owned commits into the agreed integration branch (default: `main`) and push
+that branch before reporting completion. The user authorizes this routine final
+integration; no additional reminder or approval is needed. Respect repository
+branch protection and any required reviews, and report an outstanding merge if
+those requirements block completion.
+
+1. Fetch the latest target branch and inspect the full difference from the task
+   branch. Include only the agreed work; a branch that also contains unrelated
+   contributions needs a clean integration branch containing the intended commits.
+2. Integrate in a clean worktree. Preserve other contributors' active worktrees,
+   uncommitted changes, and local data. Resolve conflicts within the agreed scope;
+   coordinate any conflict that requires changing another owner's contract.
+3. Review and validate the integrated result with the relevant checks above.
+   Push the integration branch without forcing. If the remote advances, fetch,
+   integrate its new commits, and validate the resulting changes before retrying.
+4. Verify that the remote integration branch contains the delivered commits.
+   Report the target branch, integrated commit, checks, and push result. A pushed
+   task branch or an open PR alone does not mean integration is complete.
+5. Remove task-owned temporary worktrees only after verifying integration and
+   checking for uncommitted, untracked, or ignored local data that must be retained.
+   Never force-remove a worktree or clean up another contributor's active workspace.
+
+If validation, conflicts, branch protection, or access prevent integration, keep
+the work available and report the exact blocker and remaining merge explicitly.
