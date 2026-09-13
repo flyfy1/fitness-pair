@@ -189,7 +189,7 @@ test('a single coherent height spike cannot start setup or inflate the live resp
 
 test('slider changes live response and confirms without any jump; skeleton clears on loss and toggle', async({page})=>{
   await syntheticCamera(page); await page.goto('/');
-  await page.getByLabel('Show body movement',{exact:true}).check();
+  await expect(page.getByLabel('Skeleton debug view',{exact:true})).toBeChecked();
   await standingSetup(page);
   await expect(page.getByRole('slider')).toBeEnabled();
   await page.getByRole('slider').fill('10');
@@ -205,7 +205,7 @@ test('slider changes live response and confirms without any jump; skeleton clear
   await expect.poll(hasInk).toBe(false);
   await page.evaluate(()=>{window.poseTest.missing=false;window.poseTest.rise=0;});
   await expect.poll(hasInk).toBe(true);
-  await page.getByLabel('Show body movement',{exact:true}).uncheck();
+  await page.getByLabel('Skeleton debug view',{exact:true}).uncheck();
   await expect(page.locator('#body-overlay')).toBeHidden();
   await expect(page.locator('#instruction')).toHaveText('Raise ONE hand.');
   await page.getByRole('button',{name:'Confirm & continue',exact:true}).click();

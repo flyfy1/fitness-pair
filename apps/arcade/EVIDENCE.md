@@ -21,3 +21,19 @@ Human motion quality, tracking accuracy, physical comfort, enjoyment, performanc
 - Production arcade build, 5 gateway tests, and all 6 existing Chrome browser checks passed. The synthetic recording check still saved locally, survived reload, played back, and made no upload request.
 - Inspected the revised headline and primary play action at 1440px and 390px; both fit and remain visible. This is layout/software evidence, not human movement validation.
 - A separate logo agent generated the proposed Hopmodo identity in `design/`. The live name remains unchanged pending the owner's choice.
+
+## Hopmodo replay prototype — 2026-09-13
+
+The public-facing name and jumping-player mark are applied to navigation, footer, page title, favicon, and new recordings. Repository/package names, Sites app identity, current public URL, existing game names, and the `fitness-pair-clips` database are preserved.
+
+The player opts in for one round. Recording starts when that game is ready and automatically stops/saves at completion; it can also be cancelled before starting or stopped manually. New 1280×800 clips include a permanent logo, Hopmodo name, game score, source label, and website footer. A short end card is part of the encoded video. Existing saved clips remain playable.
+
+Verification in this checkout:
+
+- Production build and 46 shared/recognition tests passed; the 5 gateway tests passed with mocked GCP storage.
+- Browser checks cover the name and mobile CTA, concept gameplay, no automatic recording, local recording/reload/playback/deletion, decoded watermark pixels, automatic Motion Quest/Dino completion, cancellation before play, native-share payload/cancellation/unsupported fallback, actual file download, and no upload without publication.
+- A generated red/green video fixture verifies mirrored AR camera compositing and that recorder cleanup ends only its capture tracks. No participant camera or private footage was used.
+- Desktop/mobile identity and replay UI were inspected. A decoded synthetic video frame confirmed the logo, name, game details, and canonical site address are readable in the exported file.
+- One bounded independent read-only review found no blocking issues in the new identity, recorder, compositor, sharing, or test flow.
+
+Native sharing is exercised through a browser API mock; a real messaging-app handoff on each target mobile platform is not claimed. Download is the fallback when file sharing is unsupported. Copy game link invites friends to the game and does not expose a private local recording. GCP configuration remains deferred by the owner; live gallery publication is still disabled. The Site remains public as requested.
