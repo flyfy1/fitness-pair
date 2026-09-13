@@ -19,7 +19,7 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
     if (pose.head) { const [x,y]=point(pose.head);ctx.strokeStyle='#fff3ac';ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(x,y,pose.head.sizePx*scale/2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]); }
   }
   for (const o of state.obstacles) {
-    const gap=gateOpening(o,state.difficulty);
+    const gap=gateOpening(o,state.difficulty,{width:w,height:h});
     const x=o.x*w, gapTop=gap.top*h, gapBottom=gap.bottom*h;
     ctx.fillStyle='#d8f4da40';ctx.strokeStyle='#d7ffe3';ctx.lineWidth=2;
     for (const [y,height] of [[0,gapTop],[gapBottom,h-gapBottom]]) {
