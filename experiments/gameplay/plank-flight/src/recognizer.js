@@ -1,5 +1,7 @@
 import { assertPoseFrame, sameSource } from '../../../../contracts/index.js';
 
+import { FRAME_FRESH_MS } from './tracking-gate.js';
+
 const visible = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) &&
   Number.isFinite(p.confidence) && p.confidence >= .6 && p.confidence <= 1 && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
 export const TAKEOFF_MS = 800;
@@ -17,7 +19,7 @@ export class HeadFlightController {
     if (frame.sessionId !== this.session.sessionId || !sameSource(frame.source, this.session.source)) return null;
     if (frame.seq <= this.seq || frame.tMs <= this.tMs) return null;
     if (this.model && frame.modelId !== this.model) throw new Error('Model changed; start a new session.');
-    if (frame.tMs - this.tMs > 250) this.since = null;
+    if (frame.tMs - this.tMs > FRAME_FRESH_MS) this.since = null;
     this.seq = frame.seq; this.tMs = frame.tMs; this.model = frame.modelId;
     const headFound = visible(frame.head);
     const shoulderFound = ['leftShoulder', 'rightShoulder'].some(name => visible(frame.joints[name]));

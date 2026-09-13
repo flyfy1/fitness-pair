@@ -36,7 +36,7 @@ async function followsHead(page,x,y){
   await page.evaluate(({x,y})=>{window.testHeadX=x;window.testHeadY=y;},{x,y});
   await expect.poll(()=>page.evaluate(({x,y})=>{
     const r=document.querySelector('#scene').getBoundingClientRect(),s=window.plankFlight.getState();
-    const scale=Math.min(r.width/640,r.height/480);
+    const scale=Math.max(r.width/640,r.height/480);
     return Math.max(Math.abs(s.x*r.width-((r.width-640*scale)/2+(1-x)*640*scale)),
       Math.abs(s.y*r.height-((r.height-480*scale)/2+y*480*scale)));
   },{x,y})).toBeLessThan(1);
@@ -49,27 +49,38 @@ test('close-up camera automatically starts; helicopter follows head down/up and 
   await page.waitForTimeout(400);await followsHead(page,.25,.4); // no elapsed-time lift
   await page.screenshot({path:'test-results/close-up-ar.png',fullPage:true});
   const geometry=await page.evaluate(()=>{const a=document.querySelector('video').getBoundingClientRect(),b=document.querySelector('canvas').getBoundingClientRect();return {aligned:a.x===b.x&&a.y===b.y&&a.width===b.width&&a.height===b.height,mirror:getComputedStyle(document.querySelector('video')).transform};});
-  expect(geometry.aligned).toBe(true);expect(geometry.mirror).toContain('-1');
+  expect(geometry.aligned).toBe(true);expect(await page.locator('video').evaluate(el=>getComputedStyle(el).objectFit)).toBe('cover');expect(geometry.mirror).toContain('-1');
   await followsHead(page,.15,.8);
+  const held=await state(page);await page.evaluate(()=>{window.testMissing=true;});
+  await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
+  await page.waitForTimeout(500);expect((await state(page)).status).toBe('flying');
+  expect((await state(page)).x).toBe(held.x);expect((await state(page)).y).toBe(held.y);
+  expect((await state(page)).flightSeconds).toBeGreaterThan(held.flightSeconds+.3);
   await expect.poll(async()=>(await state(page)).status,{timeout:14000}).toBe('crashing');
   expect((await state(page)).reason).toBe('obstacle');await page.screenshot({path:'test-results/crash.png'});
   await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();await cleaned(page);
   expect((await state(page)).headVisible).toBe(false);expect(errors).toEqual([]);
-  await page.evaluate(()=>{window.testHeadY=.3;});await page.getByRole('button',{name:'Fly again with camera'}).click();
+  await page.evaluate(()=>{window.testHeadY=.3;window.testMissing=false;});await page.getByRole('button',{name:'Fly again with camera'}).click();
   await expect.poll(async()=>(await state(page)).status).toBe('flying');
   await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
   await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
 });
-test('missing head cannot start; head return starts automatically; tracking loss pauses and delayed input earns no time',async({page})=>{
+test('brief loss and delayed frames hold position and automatically recover in the same round',async({page})=>{
   await syntheticCamera(page);await page.goto('/');await page.evaluate(()=>{window.testHeadMissing=true;});
   await page.getByRole('button',{name:'Enable camera'}).click();await expect(page.locator('#cue')).toContainText('Bring your head');
   expect((await state(page)).status).toBe('waiting');
   await page.evaluate(()=>{window.testHeadMissing=false;});await expect.poll(async()=>(await state(page)).status).toBe('flying');
-  await page.keyboard.press('ArrowUp');await followsHead(page,.35,.3);
-  await page.evaluate(()=>{window.testMissing=true;});await expect.poll(async()=>(await state(page)).status).toBe('paused');await cleaned(page);
-  expect((await state(page)).reason).toBe(null);
-  await page.evaluate(()=>{window.testMissing=false;window.testDelay=400;});await page.getByRole('button',{name:'Start a fresh flight'}).click();
-  await expect(page.getByRole('heading',{name:'Let’s find you again.'})).toBeVisible();expect((await state(page)).flightSeconds).toBe(0);await cleaned(page);
+  const initial=await state(page);await page.evaluate(()=>{window.testMissing=true;});
+  await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
+  await page.waitForTimeout(400);expect((await state(page)).status).toBe('flying');expect((await state(page)).cameraActive).toBe(true);
+  expect((await state(page)).flightSeconds).toBeGreaterThan(initial.flightSeconds);expect((await state(page)).x).toBe(initial.x);
+  await page.evaluate(()=>{window.testMissing=false;});await followsHead(page,.45,.3);
+  await expect.poll(async()=>(await state(page)).trackingHeld).toBe(false);expect((await state(page)).sessionId).toBe(initial.sessionId);
+  await page.evaluate(()=>{window.testDelay=650;});await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
+  expect((await state(page)).status).toBe('flying');
+  await page.evaluate(()=>{window.testDelay=0;});await expect.poll(async()=>(await state(page)).trackingHeld).toBe(false);
+  expect((await state(page)).sessionId).toBe(initial.sessionId);
+  await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
 });
 test('permission denial and late permission cancellation are recoverable',async({page})=>{
   await page.addInitScript(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError');};});await page.goto('/');await page.getByRole('button',{name:'Enable camera'}).click();await expect(page.locator('#message')).toContainText('permission was denied');
@@ -107,7 +118,7 @@ test('full-window and head alignment survive portrait and landscape resizing',as
   await syntheticCamera(page);await page.goto('/');
   for(const viewport of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]){
     await page.setViewportSize(viewport);await fillsWindow(page);
-    for(const id of ['start','demo','fullscreen']){
+    for(const id of ['start','demo','fullscreen','opening','speed','acceleration']){
       const box=await page.locator(`#${id}`).boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.y).toBeGreaterThanOrEqual(0);
       expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);
     }
@@ -131,4 +142,22 @@ test('embedded fullscreen fallback and Escape preserve flight',async({page})=>{
   await page.getByRole('button',{name:'Enter fullscreen'}).click();await expect(page.locator('#view-status')).toContainText('still fills this window');await fillsWindow(page);
   await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Enter fullscreen'})).toBeVisible();expect((await state(page)).status).toBe('flying');
   await expect(page.locator('#view-status')).toBeEmpty();await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
+});
+
+test('three difficulty sliders work during flight and do not steer the demo',async({page})=>{
+  await page.goto('/');await page.getByRole('button',{name:'Try a demo'}).click();
+  await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await page.mouse.move(650,350);
+  await expect.poll(()=>page.evaluate(()=>window.plankFlight.getState().x*document.querySelector('#scene').getBoundingClientRect().width)).toBeCloseTo(650,0);
+  const before=await state(page);
+  await page.locator('#opening').press('End');await expect(page.locator('#opening-value')).toHaveText('70%');
+  await page.locator('#speed').press('End');await expect(page.locator('#speed-value')).toHaveText('1.8×');
+  await page.locator('#acceleration').press('Home');await expect(page.locator('#acceleration-value')).toHaveText('+0.0×/min');
+  const changed=await state(page);expect(changed.difficulty).toEqual({opening:.7,speed:1.8,acceleration:0});
+  expect(changed.status).toBe('flying');expect(changed.sessionId).toBe(before.sessionId);expect(changed.x).toBeCloseTo(before.x,3);expect(changed.y).toBeCloseTo(before.y,3);
+  const gain=changed.speedGain;await page.waitForTimeout(250);expect((await state(page)).speedGain).toBe(gain);
+  await page.locator('#acceleration').press('End');await page.waitForTimeout(250);expect((await state(page)).speedGain).toBeGreaterThan(gain);
+  await page.getByRole('button',{name:'Finish & rest'}).click();await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
+  await page.getByRole('button',{name:'Try a demo'}).click();expect((await state(page)).difficulty).toEqual({opening:.7,speed:1.8,acceleration:1.5});
+  await page.screenshot({path:'test-results/difficulty-sliders.png'});
 });

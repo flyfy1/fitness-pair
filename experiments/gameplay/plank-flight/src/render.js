@@ -1,13 +1,14 @@
-import { helicopterScale } from './projection.js';
+import { gateOpening } from './difficulty.js';
+import { FRAME_FRESH_MS } from './tracking-gate.js';
+import { projectHead, helicopterScale } from './projection.js';
 const links = [['Shoulder','Elbow'],['Elbow','Wrist'],['Shoulder','Hip'],['Hip','Knee'],['Knee','Ankle']];
 export function render(ctx, state, { width: w, height: h, pose, pilot, time, mode }) {
   ctx.clearRect(0, 0, w, h);
   const wash = ctx.createLinearGradient(0, 0, 0, h); wash.addColorStop(0, '#092c3e70'); wash.addColorStop(.55, '#092c3e08'); wash.addColorStop(1, '#092c3eaa');
   ctx.fillStyle = wash; ctx.fillRect(0, 0, w, h);
-  if (pose && mode === 'camera' && time - pose.tMs < 250) {
-    const scale = Math.min(w / pose.image.width, h / pose.image.height);
-    const ox = (w - pose.image.width * scale)/2, oy = (h-pose.image.height*scale)/2;
-    const point = p => [ox + (1-p.x)*pose.image.width*scale, oy+p.y*pose.image.height*scale];
+  if (pose && mode === 'camera' && time - pose.tMs < FRAME_FRESH_MS) {
+    const scale = Math.max(w / pose.image.width, h / pose.image.height);
+    const point = p => { const projected=projectHead({...p,image:pose.image},w,h);return [projected.x*w,projected.y*h]; };
     ctx.strokeStyle = '#bdf4cbbb'; ctx.fillStyle = '#e8ffed'; ctx.lineWidth = 3;
     for (const side of ['left','right']) for (const [a,b] of links) {
       const p=pose.joints[side+a],q=pose.joints[side+b];
@@ -18,7 +19,8 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
     if (pose.head) { const [x,y]=point(pose.head);ctx.strokeStyle='#fff3ac';ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(x,y,pose.head.sizePx*scale/2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]); }
   }
   for (const o of state.obstacles) {
-    const x=o.x*w, gapTop=(o.gap-.25)*h, gapBottom=(o.gap+.25)*h;
+    const gap=gateOpening(o,state.difficulty);
+    const x=o.x*w, gapTop=gap.top*h, gapBottom=gap.bottom*h;
     ctx.fillStyle='#d8f4da40';ctx.strokeStyle='#d7ffe3';ctx.lineWidth=2;
     for (const [y,height] of [[0,gapTop],[gapBottom,h-gapBottom]]) {
       ctx.fillRect(x-17,y,34,height);ctx.strokeRect(x-17,y,34,height);

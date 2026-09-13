@@ -4,18 +4,27 @@ import { HeadFlightController } from './recognizer.js';
 import { createFlight, consumeAction, stepFlight, crash } from './engine.js';
 import { render } from './render.js';
 import { setupFullscreen } from './fullscreen.js';
+import { TrackingGate, FRAME_FRESH_MS } from './tracking-gate.js';
+import { DEFAULT_DIFFICULTY, setDifficulty, flightSpeed } from './difficulty.js';
+import { projectHead, validHeadControl } from './projection.js';
 
 document.querySelector('#app').innerHTML = `
 <main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas>
-<div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">Push-up play · head tracking</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates</div></div>
+<div class="hud"><div><h1 class="brand">Push-up Flight <small>You are the pilot.</small></h1><span class="badge" id="mode">HEAD & SHOULDERS</span><p class="mode-note" id="demo-note">Push-up play · head tracking</p></div><div class="stats"><strong id="seconds">0.0 s</strong>flight time · <span id="gates">0</span> gates<div class="current-speed">Speed <span id="current-speed">1.0×</span></div></div></div>
 <div class="panel" id="panel"><h2 id="title">Your head is the helicopter.</h2><p id="message">Get into your push-up position with your head and either shoulder visible. The helicopter follows your head down and up, right on the video.</p><p class="instructions">Keep your head and either shoulder in view for a moment to take off automatically. Move at your own pace and fly through the gates.</p><button class="primary" id="start">Enable camera</button><button id="demo">Try a demo</button></div>
 <div class="cue"><span id="cue" role="status">Head and one shoulder are enough. Lower down, then push up.</span><progress id="calibration" max="1" value="0" hidden aria-label="Automatic takeoff"></progress></div>
-<div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
+<div class="difficulty" role="group" aria-label="Difficulty">
+<label for="opening"><span>Gate opening <output id="opening-value">50%</output></span><input id="opening" type="range" min="30" max="70" step="1" value="50"></label>
+<label for="speed"><span>Speed <output id="speed-value">1.0×</output></span><input id="speed" type="range" min="0.4" max="1.8" step="0.1" value="1"></label>
+<label for="acceleration"><span>Acceleration <output id="acceleration-value">+0.4×/min</output></span><input id="acceleration" type="range" min="0" max="1.5" step="0.1" value="0.4"></label>
+</div><div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
 <span class="privacy">Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
 
 const $ = id => document.getElementById(id);
 const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d'),stage=document.querySelector('.stage');
 const controller=new HeadFlightController();
+const tracking=new TrackingGate();tracking.reset(performance.now());
+let difficulty={...DEFAULT_DIFFICULTY};
 let mode='camera',pose=null,pilot=null,state=createFlight({sessionId:'idle',source:{kind:'synthetic',id:'idle'}});
 let lastAction=null,lastFrame=performance.now(),demoSeq=0,starting=false,halted=false;
 let demoHead={x:.65,y:.52,image:{width:1280,height:720}};
@@ -36,27 +45,36 @@ function interrupt(message) {
 const camera=new PoseCamera({video,
   onStatus(status){
     if(status.state==='requesting') {
-      $('cue').textContent='Waiting for camera permission…';controller.reset(status);state=createFlight(status);
+      $('cue').textContent='Waiting for camera permission…';controller.reset(status);state=createFlight(status,difficulty);tracking.reset(performance.now());
     }
     if(status.state==='loading') $('cue').textContent='Preparing the local pose model…';
     if(status.state==='ready') {
-      $('cue').textContent='Show your head and either shoulder. Takeoff is automatic.';starting=false;
+      $('cue').textContent='Show your head and either shoulder. Takeoff is automatic.';starting=false;tracking.reset(performance.now());
     }
   },
   onPose(frame){
     if(halted || state.status==='crashing' || state.finished)return;
-    if(performance.now()-frame.tMs>250) {
-      interrupt('Tracking arrived too slowly. Check your camera and lighting, then try again.');return;
+    const now=performance.now();
+    if(now-frame.tMs>FRAME_FRESH_MS) {
+      if(state.status==='flying'){tracking.observe(false,now);state.trackingHeld=true;}
+      else $('cue').textContent='Camera is catching up. Keep your head in view.';
+      return;
     }
-    pose=frame;
-    const action=controller.update(frame);if(!action)return;
+    let input=frame;
+    const headControl={...frame.head,image:frame.image};
+    if(validHeadControl(headControl)) {
+      const rect=stage.getBoundingClientRect(),point=projectHead(headControl,rect.width,rect.height);
+      if(point.x<0||point.x>1||point.y<0||point.y>1)input={...frame,head:undefined};
+    }
+    const action=controller.update(input);if(!action)return;
     lastAction=action;
-    if(action.phase==='missing'&&state.status==='flying'){
-      interrupt('Your head or shoulder moved out of view. Reframe the camera and start again.');return;
-    }
-    consumeAction(state,action);
+    if(state.status==='flying') {
+      state.trackingHeld=tracking.observe(action.phase!=='missing',now).held;
+      if(state.trackingHeld)return;
+    } else {tracking.reset(now);state.trackingHeld=false;}
+    consumeAction(state,action);pose=input;
     $('calibration').hidden=action.phase!=='calibrating';$('calibration').value=action.calibrationProgress??0;
-    if(frame.head&&video.readyState>=2){
+    if(input.head&&video.readyState>=2){
       const {x,y,sizePx}=frame.head,s=Math.min(sizePx,video.videoWidth,video.videoHeight);
       const sx=Math.max(0,Math.min(video.videoWidth-s,x*video.videoWidth-s/2));
       const sy=Math.max(0,Math.min(video.videoHeight-s,y*video.videoHeight-s/2));
@@ -65,6 +83,8 @@ const camera=new PoseCamera({video,
     } else pilot=null;
   },
   onError(error){
+    if(state.status==='crashing'||state.finished)return;
+    if(state.status==='flying'&&!halted){tracking.observe(false,performance.now());state.trackingHeld=true;return;}
     const message=error.name==='NotAllowedError'?'Camera permission was denied. Allow camera access and try again, or explore the demo.':error.message;
     if(halted)panel('Let’s try that again.',message,'Start a fresh flight');else interrupt(message);
   },
@@ -81,7 +101,7 @@ async function startCamera(){
 }
 function startDemo(){
   halted=true;camera.stop('restart');clearHead();mode='synthetic';halted=false;starting=false;lastAction=null;demoSeq=0;
-  state=createFlight({sessionId:crypto.randomUUID(),source:{kind:'synthetic',id:'pointer-demo'}});
+  state=createFlight({sessionId:crypto.randomUUID(),source:{kind:'synthetic',id:'pointer-demo'}},difficulty);
   const rect=stage.getBoundingClientRect();demoHead={x:.65,y:.52,image:{width:Math.round(rect.width),height:Math.round(rect.height)}};
   $('mode').textContent='SYNTHETIC DEMO';$('demo-note').textContent='Pointer / touch / arrows · no camera';
   $('panel').hidden=true;$('stop').hidden=false;$('stop').textContent='Finish & rest';$('calibration').hidden=true;
@@ -91,10 +111,18 @@ function finishOrStop(){
     crash(state,'rest');camera.stop('finished');clearHead();$('stop').hidden=true;
   } else interrupt('Camera and model stopped. Take your time.');
 }
+function updateDifficulty(){
+  difficulty={opening:Number($('opening').value)/100,speed:Number($('speed').value),acceleration:Number($('acceleration').value)};
+  setDifficulty(state,difficulty);
+  $('opening-value').textContent=`${Math.round(difficulty.opening*100)}%`;
+  $('speed-value').textContent=`${difficulty.speed.toFixed(1)}×`;
+  $('acceleration-value').textContent=`+${difficulty.acceleration.toFixed(1)}×/min`;
+}
+for(const id of ['opening','speed','acceleration'])$(id).addEventListener('input',updateDifficulty);
 setupFullscreen(stage,$('fullscreen'),message=>{$('view-status').textContent=message;});
 $('start').onclick=startCamera;$('demo').onclick=startDemo;$('stop').onclick=finishOrStop;
 function pointerControl(event){
-  if(mode!=='synthetic'||halted||event.target.closest('button'))return;
+  if(mode!=='synthetic'||halted||event.target.closest('button, .difficulty'))return;
   const rect=stage.getBoundingClientRect();
   demoHead={x:1-Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),
     y:Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height)),
@@ -102,7 +130,7 @@ function pointerControl(event){
 }
 stage.addEventListener('pointerdown',pointerControl);stage.addEventListener('pointermove',pointerControl);
 window.addEventListener('keydown',event=>{
-  if(mode==='synthetic'&&!halted&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){
+  if(mode==='synthetic'&&!halted&&!event.target.closest('.difficulty')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){
     event.preventDefault();
     if(event.code==='ArrowUp')demoHead.y=Math.max(.05,demoHead.y-.04);
     if(event.code==='ArrowDown')demoHead.y=Math.min(.95,demoHead.y+.04);
@@ -125,12 +153,11 @@ function tick(now){
       recognizerId:'synthetic-pointer',action:'head-flight',phase:'active',progress:1,
       calibrationProgress:null,cue:'Synthetic head position',completion:null,headControl:demoHead});
   }
-  if(!halted&&mode==='camera'&&state.status==='flying'&&now-state.lastTMs>250)
-    interrupt('Tracking was interrupted. Show your head and shoulder, then start again.');
+  if(!halted&&mode==='camera'&&state.status==='flying')state.trackingHeld=tracking.status(now).held;
   if(!halted)stepFlight(state,dt,now,rect);
   if(!halted&&state.status==='flying'){
     $('stop').textContent='Finish & rest';
-    $('cue').textContent=mode==='camera'?'Your helicopter follows your head. Down, then up — at your own pace.':'Move your pointer, drag on the video, or use the arrow keys.';
+    $('cue').textContent=state.trackingHeld?'Tracking lost — holding your position. Obstacles keep moving.':mode==='camera'?'Your helicopter follows your head. Down, then up — at your own pace.':'Move your pointer, drag on the video, or use the arrow keys.';
   } else if(!halted&&state.status==='waiting'&&lastAction)$('cue').textContent=lastAction.cue;
   else if(!halted&&state.status==='crashing'){$('cue').textContent='It’s okay. We’ve got you.';$('calibration').hidden=true;}
   if(state.finished&&!halted){
@@ -138,7 +165,7 @@ function tick(now){
     panel('You did so well.',mode==='synthetic'?'Demo complete. In camera play, this is where your effort is celebrated: “You’re amazing. You did a wonderful job. Rest for a moment — the sky can wait.”':'You showed up, and that matters. You’re amazing. You did a wonderful job. Rest for a moment — the sky can wait.','Fly again with camera');
     $('cue').textContent=state.reason==='obstacle'?'A little bump in the sky. Your effort still counts.':'A soft ending. Rest for as long as you need.';
   }
-  $('seconds').textContent=`${state.flightSeconds.toFixed(1)} s`;$('gates').textContent=state.passed;
+  $('seconds').textContent=`${state.flightSeconds.toFixed(1)} s`;$('gates').textContent=state.passed;$('current-speed').textContent=`${flightSpeed(state).toFixed(1)}×`;
   if(canvas.width!==Math.round(rect.width*dpr)||canvas.height!==Math.round(rect.height*dpr)){
     canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
   }

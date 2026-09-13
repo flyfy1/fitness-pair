@@ -1,6 +1,6 @@
-/** Match the mirrored, object-fit: contain camera preview, including letterboxing. */
+/** Match the mirrored, object-fit: cover camera preview, including the centered crop. */
 export function projectHead(head, width, height) {
-  const scale = Math.min(width/head.image.width, height/head.image.height);
+  const scale = Math.max(width/head.image.width, height/head.image.height);
   return { x: ((width-head.image.width*scale)/2+(1-head.x)*head.image.width*scale)/width,
     y: ((height-head.image.height*scale)/2+head.y*head.image.height*scale)/height };
 }
