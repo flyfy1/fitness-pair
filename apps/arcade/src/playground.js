@@ -16,6 +16,28 @@ export function drawPreview(canvas,id){
   c.save();c.translate(270,244);c.scale(10,10);c.fillStyle='#2347ee';c.beginPath();const pts=[[0,0],[4,0],[4,-6],[12,-6],[12,0],[7,0],[7,2],[11,2],[11,4],[5,4],[5,9],[2,9],[2,12],[0,12],[0,8],[-3,8],[-3,11],[-5,11],[-5,6],[-8,3],[-8,-1],[-6,2],[-2,2]];pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();c.fillStyle='white';c.fillRect(8,-5,1.5,1.5);c.restore();
   round(551,280,25,90,9,'#366c48');round(527,302,24,17,6,'#366c48');round(520,277,16,42,6,'#366c48');round(575,324,27,16,6,'#366c48');round(591,296,15,45,6,'#366c48');
   for(let i=0;i<17;i++){c.fillStyle='#d0a975';c.fillRect((i*149)%720,390+(i%4)*20,15,3);}
+ }else if(id==='plank-flight'){
+  c.fillStyle='#dedaff';c.fillRect(0,0,w,h);circle(425,110,68,'#fff1be');
+  // Flat scenery and a cobalt character match the neighboring game cards.
+  round(54,119,136,28,14,'#f4f0ff');circle(105,116,28,'#f4f0ff');circle(140,111,35,'#f4f0ff');
+  round(340,189,115,23,12,'#f4f0ff');circle(380,184,24,'#f4f0ff');circle(409,180,29,'#f4f0ff');
+  c.fillStyle='#b9b1e6';c.beginPath();c.moveTo(0,367);c.quadraticCurveTo(140,230,310,365);c.quadraticCurveTo(500,260,720,350);c.lineTo(720,480);c.lineTo(0,480);c.fill();
+  c.fillStyle='#9186c8';c.beginPath();c.moveTo(0,422);c.quadraticCurveTo(210,337,385,422);c.quadraticCurveTo(570,350,720,408);c.lineTo(720,480);c.lineTo(0,480);c.fill();
+  round(548,-20,60,190,14,'#398b69');round(536,145,84,27,9,'#56a276');
+  round(548,336,60,164,14,'#398b69');round(536,323,84,28,9,'#56a276');
+  round(559,-10,12,145,6,'#77b68d');round(559,363,12,122,6,'#77b68d');
+  // A dotted rising path points through the open gate.
+  for(let i=0;i<6;i++)circle(373+i*30,280-Math.sin(i/5*Math.PI/2)*40,5,'#fff1be');
+  c.save();c.translate(267,256);c.rotate(-.1);
+  round(-134,-8,80,19,9,'#2347ee');round(-144,-39,18,64,7,'#152c99');
+  circle(-135,-6,11,'#ff795e');
+  round(-14,-74,13,36,6,'#182346');round(-103,-79,194,10,5,'#182346');
+  round(-75,-39,159,91,39,'#2347ee');
+  round(7,-27,65,52,23,'#fff1be');round(15,-20,16,32,8,'#fff9e4');
+  round(-53,42,10,28,5,'#152c99');round(44,42,10,28,5,'#152c99');
+  round(-76,65,153,10,5,'#182346');round(-62,-14,31,9,4,'#7e98ff');
+  c.restore();
+  round(89,253,43,6,3,'#a69fea');round(112,274,30,6,3,'#a69fea');
  }else{
   c.fillStyle='#dedaff';c.fillRect(0,0,w,h);c.strokeStyle='#a69fea';c.lineWidth=2;for(let i=0;i<3;i++){c.beginPath();c.ellipse(350,240,180+i*55,85+i*38,-.4,0,7);c.stroke();}circle(350,240,84,'#2347ee');circle(307,212,14,'white');circle(369,212,14,'white');c.strokeStyle='#eeff41';c.lineWidth=9;c.beginPath();c.arc(339,238,32,.2,2.8);c.stroke();circle(536,125,43,'#ff795e');circle(137,310,32,'#eeff41');circle(540,349,19,'#2347ee');
  }
