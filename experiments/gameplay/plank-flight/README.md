@@ -59,3 +59,56 @@ The pose model's nose and ear indices follow the
 [official MediaPipe landmark definitions](https://ai.google.dev/edge/api/mediapipe/python/mp/tasks/vision/PoseLandmark).
 Runtime files and model weights are generated locally and ignored. Camera pixels
 and head crops stay in memory and are never saved or uploaded.
+
+## Recognition and flight details
+
+One fully visible side is enough; each required joint needs visibility ≥ 0.6. Pixel
+aspect ratio is corrected before checking body angles. Shoulder-to-ankle span must
+be at least 22% of image width, near-horizontal, with hip/knee angles ≥ 150°/145°,
+and visible wrist/elbow support below the torso. These heuristic thresholds are
+experimental, not personalized calibration or exercise-technique standards.
+Continuous supported frames for 1.2 seconds unlock the round. A gap over 250 ms
+resets this entry timer. The recognizer accepts high/forearm support and the lowered
+push-up shape, without distinguishing them as separate exercises.
+
+Support lifts, visible non-support descends, and 3 seconds of uninterrupted
+non-support triggers a 1.6-second tumbling animation. A gate collision also triggers
+the animation. Holding time and gates are separate counters; no rep events are
+created. Head visibility is optional: its absence uses a generic pilot and does
+not change recognition. Preview and head crop are mirrored only in the renderer.
+
+Missing body geometry during flight, an inference result older than 250 ms, window
+blur, hidden tab, or a camera failure stops the attempt and releases owned resources.
+The camera helper bounds initialization at 30 seconds and stalled inference at
+1 second. Cancellation also stops a late-arriving permission stream. Completion
+releases tracks, worker, and the in-memory head crop. Stopped attempts require a
+new start and fresh 1.2-second support calibration; keyboard never controls camera
+sessions. The separate demo is explicitly synthetic.
+
+## Verification
+
+```sh
+npm test
+npm run build
+npm run test:browser
+```
+
+Run these three commands from this experiment folder. Browser tests use a production
+preview on isolated port 5185 and installed Chrome. Runtime preparation checks the
+same SHA-256-pinned Lite model as the baseline app. The initial model download timed
+out on this machine; verification reused the existing local model and checked its
+checksum. No model bytes are committed.
+
+2026-09-13 evidence: six synthetic unit checks cover support shapes, calibration,
+provenance, stale frames, coast/recovery, collisions and optional head hints. Browser
+checks cover the synthetic camera AR loop through retry, video/overlay alignment,
+local head crop, tracking interruption, permission denial, late cancellation, mobile
+pointer controls and layout. A separate public standing-image inference checks the
+real local model and head output, with no external runtime requests. This standing
+image is **not** evidence of real plank or push-up recognition. The root baseline's
+38 tests also pass.
+
+Decision: keep as an isolated playable POC for a live, non-recorded side-view trial.
+The remaining question is whether actual near-floor tracking is stable and whether
+the hold/rest flight cadence and encouragement feel good. No human accuracy or
+emotional-impact claim has been established; stop implementation at this boundary.
