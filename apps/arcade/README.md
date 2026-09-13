@@ -18,6 +18,8 @@ Cloud sharing on `fitness.integ.life` uses Integ.Life login and the VM storage i
 
 ## Add a game
 
+The homepage lists only Motion Quest, Push-up Flight and Ready to Move. Keep additional demos registered with `listed: false` until they are ready to appear in the arcade. This hides their homepage cards and links while preserving direct `/play/:id` access, mounted builds, recording and sharing.
+
 Add one entry in `game-catalog.js` for the UI, build and publication allowlist, and select a presentation adapter. Prefer the native API described in [the shared gameplay host](src/gameplay/README.md); the recorder never needs a game-specific change. No generic event bus or new recognition semantics are introduced.
 
 ## Evidence

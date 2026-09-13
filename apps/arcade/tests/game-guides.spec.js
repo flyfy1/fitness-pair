@@ -26,7 +26,7 @@ for(const game of listed)test(`${game.id}: illustrated instructions before enter
  expect(errors).toEqual([]);
 });
 test('title links open matching instructions and close restores page scrolling',async({page})=>{
- await page.goto('/#arcade');await page.getByRole('heading',{name:'Bubble Pop AR',exact:true}).getByRole('link').click();
- const dialog=page.getByRole('dialog');await expect(dialog).toContainText('below shoulder height');await expect(dialog).toContainText('Raise your left wrist');
+ await page.goto('/#arcade');await page.getByRole('heading',{name:'Motion Quest',exact:true}).getByRole('link').click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toContainText('Charge your spell');await expect(dialog).toContainText('Repeat five times');
  await dialog.getByRole('button',{name:'Close instructions'}).click();await expect(dialog).not.toBeVisible();expect(await page.evaluate(()=>document.body.style.overflow)).toBe('');
 });
