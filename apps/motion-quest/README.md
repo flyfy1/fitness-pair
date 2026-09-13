@@ -19,10 +19,11 @@ Both real and preview paths use the same game rules.
 
 ## Local data and lifecycle
 
-Only video permission is requested. No audio capture, recording, persisted camera
-data, or upload is implemented. Model, WASM, and code load from this site. Inference
+Only video permission is requested. The standalone game does not record or upload
+camera data. Hopmodo’s arcade host creates local replays as described below. Model, WASM, and code load from this site. Inference
 runs with CPU/WASM (XNNPACK) in a classic Worker compatible with the unmodified
-MediaPipe loader. Initialization is bounded to 30 seconds; stalled inference stops
+MediaPipe loader. Initialization is bounded to 120 seconds to allow the first model download; a
+loading reminder appears after 20 seconds and cancellation remains available; stalled inference stops
 after 8 seconds. One frame at a time is processed, scheduled at most about 16 times
 per second; actual performance depends on the device.
 

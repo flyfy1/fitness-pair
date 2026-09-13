@@ -42,7 +42,7 @@ camera / recorded input
   identifier, never a hardware serial number. All downstream frames preserve it.
 - A real recording played back is still `replay`, never a current camera workout.
 - Missing detections still produce a frame. No input at all requires a host watchdog.
-  Current host: 30s model initialization timeout, 8s stalled-inference timeout.
+  Motion Quest host: 120s model initialization timeout, 8s stalled-inference timeout.
 
 ## Action semantics
 

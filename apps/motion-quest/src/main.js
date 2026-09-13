@@ -15,7 +15,7 @@ let mode = 'idle', stream = null, worker = null, generation = 0, inFlight = fals
 let frameSentAt = 0, lastVideoTime = -1, lastResultAt = 0, lastRenderAt = 0, raf = 0;
 let reps = 0, elapsedMs = 0, runningAt = null, demoHeldAt = null, demoCharge = 0;
 let statusUntil = 0, currentProgress = 0, sound = null;
-let initTimer = null, gameState = null, inputSeq = 0;
+let initTimer = null, loadingHintTimer = null, gameState = null, inputSeq = 0;
 
 function status(title, detail, error = false, headline = title) {
   setText('status-title', title); setText('status-detail', detail);
@@ -85,6 +85,7 @@ function attack(actionFrame) {
 function releaseCamera() {
   generation++;
   clearTimeout(initTimer); initTimer = null;
+  clearTimeout(loadingHintTimer); loadingHintTimer = null;
   worker?.terminate(); worker = null; inFlight = false;
   stream?.getTracks().forEach(track => track.stop()); stream = null;
   video.srcObject = null; game.body = null; ctx.clearRect(0, 0, overlay.width, overlay.height);
@@ -105,7 +106,7 @@ function failCamera(error) {
     NotAllowedError: ['Camera permission denied', 'Allow camera access in your browser and retry, or try the preview.', 'Camera blocked'],
     NotFoundError: ['No camera found', 'Connect a camera and retry, or try the preview.'],
     NotReadableError: ['Camera is unavailable', 'Another app may be using it. Close that app and retry.'],
-    TimeoutError: ['Model loading timed out', 'Retry after the local model files have been prepared.'],
+    TimeoutError: ['Tracking took too long to load', 'Check your connection and retry, or try the gameplay preview.'],
   };
   const [title, detail, headline = 'Retry camera'] = messages[error.name] ?? ['Could not start recognition', 'Try a recent Chrome or Edge browser, or use the gameplay preview.'];
   stopCamera(title, detail, headline); status(title, detail, true, headline);
@@ -129,16 +130,20 @@ async function startCamera() {
     video.srcObject = stream; await video.play();
     if (session !== generation) return;
     $('camera-placeholder').hidden = true; $('start').textContent = 'Loading local model…';
-    $('camera-tag').textContent = 'CAM 01 · LOCAL'; status('Warming up movement tracking', 'The model runs on this device. Stand tall for about 2 seconds when ready.', false, 'Getting ready');
+    $('camera-tag').textContent = 'CAM 01 · LOCAL'; status('Loading movement tracking', 'The first load can take up to two minutes. You can cancel at any time.', false, 'Getting ready');
     const workerURL = new URL(`${import.meta.env.BASE_URL}runtime/pose-worker.js`, location.href);
     worker = new Worker(workerURL);
+    loadingHintTimer = setTimeout(() => {
+      if (session === generation && mode === 'loading') status('Still loading movement tracking',
+        'Keep this page open while the tracking files load. You can cancel and try the preview.', false, 'Still getting ready');
+    }, 20_000);
     initTimer = setTimeout(() => {
       if (session === generation) failCamera(Object.assign(new Error('Model timed out'), { name: 'TimeoutError' }));
-    }, 30_000);
+    }, 120_000);
     worker.onmessage = ({ data }) => {
       if (session !== generation) return;
       if (data.type === 'ready') {
-        clearTimeout(initTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
+        clearTimeout(initTimer); clearTimeout(loadingHintTimer); mode = 'camera'; lastVideoTime = -1; lastResultAt = performance.now();
         $('start').hidden = true; $('start').disabled = false; $('calibrate').hidden = false;
         $('tracking-badge').textContent = 'Local model ready'; $('mode-label').textContent = 'Camera AR · squat controls';
         status('Stand tall to calibrate', 'Keep shoulders to ankles visible for about 2 seconds. Turn slightly sideways.', false, 'Stand tall');
