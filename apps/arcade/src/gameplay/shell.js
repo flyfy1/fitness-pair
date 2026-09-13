@@ -10,14 +10,14 @@ export function mountGame(container,game){
  const frame=container.querySelector('#game-frame');
  let recorder=null;const reload=()=>recorder?.onGameReload();frame.addEventListener('load',reload);
  const runtime=game.createAdapter(frame);
- runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Conversation recording is optional. Nothing is uploaded unless you choose to share.'});
+ runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; videos over 30 seconds are saved at 2× speed. Conversation recording is optional. Nothing is uploaded unless you choose to share.'});
  recorder=mountRecording(game,runtime,{panel:container.querySelector('#record-panel'),result:container.querySelector('#local-result')});
  function controls(){
   const doc=frame.contentDocument;if(!doc?.body)return;
   const element=doc.createElement('div');element.className='hopmodo-conversation';
-  element.innerHTML='<button type="button" aria-pressed="false">Record conversation</button><span role="status" hidden>Microphone off</span>';
+  element.innerHTML='<button type="button" aria-pressed="false">Record conversation</button><button type="button" data-replay-share hidden>Share</button><span role="status" hidden>Microphone off</span>';
   const style=doc.createElement('style');
-  style.textContent='.hopmodo-conversation{position:fixed;right:12px;bottom:12px;z-index:100;max-width:min(280px,calc(100vw - 24px));padding:0;border:0;border-radius:22px;color:#182346;font:12px Arial,sans-serif}.hopmodo-conversation button{display:block;min-height:44px;box-shadow:0 2px 12px #0003;border:0;border-radius:20px;background:#2347ee;color:#fff;padding:6px 12px;font:600 12px Arial,sans-serif}.hopmodo-conversation button[aria-pressed=true]{background:#a92020}.hopmodo-conversation span{position:absolute;right:0;bottom:calc(100% + 6px);width:max-content;max-width:240px;padding:8px;border:1px solid #18234655;border-radius:8px;background:#fff;line-height:1.4}.hopmodo-conversation span[hidden]{display:none}.hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}';
+  style.textContent='.hopmodo-conversation{position:fixed;right:12px;bottom:12px;z-index:100;max-width:min(280px,calc(100vw - 24px));padding:0;border:0;border-radius:22px;color:#182346;font:12px Arial,sans-serif}.hopmodo-conversation button{display:block;min-height:44px;box-shadow:0 2px 12px #0003;border:0;border-radius:20px;background:#2347ee;color:#fff;padding:6px 12px;font:600 12px Arial,sans-serif}.hopmodo-conversation button[aria-pressed=true]{background:#a92020}.hopmodo-conversation [data-replay-share]{margin-top:8px;background:#fff;color:#2347ee;border:2px solid #2347ee;font-size:16px}.hopmodo-conversation [hidden]{display:none}.hopmodo-conversation span{position:absolute;right:0;bottom:calc(100% + 6px);width:max-content;max-width:240px;padding:8px;border:1px solid #18234655;border-radius:8px;background:#fff;line-height:1.4}.hopmodo-conversation span[hidden]{display:none}.hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}';
   Object.assign(element.style,game.recordingControlPosition||{});doc.head.append(style);doc.body.append(element);recorder.connectControls(element);
  }
  frame.addEventListener('load',controls);if(frame.contentDocument?.readyState==='complete')controls();

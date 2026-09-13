@@ -10,7 +10,7 @@ async function sample(page,label){
  },label);
 }
 
-test('calibrated synthetic camera round retains charge, final projectile, impact, victory and game audio before ending',async({page},info)=>{
+test('calibrated synthetic camera round retains charge, final projectile, impact, victory and game audio without a promotional ending',async({page},info)=>{
  test.setTimeout(90000);
  await movingCamera(page,{controlled:true});
  await page.addInitScript(()=>{
@@ -64,7 +64,7 @@ test('calibrated synthetic camera round retains charge, final projectile, impact
   if(video.readyState<2)await new Promise(r=>video.addEventListener('loadeddata',r,{once:true}));
   video.pause();const c=document.createElement('canvas');c.width=1280;c.height=800;const ctx=c.getContext('2d');
   const frames=[];
-  for(const sample of [...samples,{label:'ending',time:video.duration-.3}]){
+  for(const sample of samples){
    const time=Math.max(.06,Math.min(video.duration-.1,sample.time));
    await new Promise(r=>{video.addEventListener('seeked',r,{once:true});video.currentTime=time;});ctx.drawImage(video,0,0);
    const data=ctx.getImageData(0,0,1280,800).data;
@@ -87,7 +87,6 @@ test('calibrated synthetic camera round retains charge, final projectile, impact
  expect(decoded.frames[3].hit).toBeGreaterThan(1000);
  expect(decoded.frames[4].victory).toBeGreaterThan(1000);
  for(const f of decoded.frames.slice(0,5))expect(f.cyan).toBeGreaterThan(100000);
- expect(decoded.frames[5].cyan).toBeLessThan(1000);
  for(const label of ['charge','projectile','impact','victory'])expect(decoded.levels.find(s=>s.label===label).rms).toBeGreaterThan(.0001);
  const pending=page.waitForEvent('download');await page.locator('#local-result a[download]').click();await(await pending).saveAs(info.outputPath('synthetic-full.mp4'));
  // The short local copy must retain the synthesized audio too.

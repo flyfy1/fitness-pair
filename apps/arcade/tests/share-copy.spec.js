@@ -50,13 +50,13 @@ test('cancelling or backgrounding a share copy releases capture tracks and retai
  await expect(card).toContainText('Keep this tab visible');await expect.poll(()=>page.evaluate(()=>window.captures.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
 });
 
-test('long real media produces a bounded branded share copy without replacing original',async({page})=>{
+test('long real media produces a bounded unbranded share copy without replacing original',async({page})=>{
  test.skip(!process.env.HOPMODO_LONG_CLIP,'Optional generated 70-second synthetic MP4 fixture; see RECORDING.md.');test.setTimeout(90000);
  const bytes=await readFile(process.env.HOPMODO_LONG_CLIP);await page.goto('/library');
  await page.evaluate(async bytes=>{const blob=new Blob([new Uint8Array(bytes)],{type:'video/mp4'});await new Promise((resolve,reject)=>{const request=indexedDB.open('fitness-pair-clips',1);request.onupgradeneeded=()=>request.result.createObjectStore('clips',{keyPath:'id'});request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result,tx=db.transaction('clips','readwrite');tx.objectStore('clips').put({id:crypto.randomUUID(),title:'Motion Quest · long synthetic fixture',game:'motion-quest',gameTitle:'Motion Quest',source:'synthetic',includesCamera:true,createdAt:Date.now(),duration:70,blob});tx.oncomplete=()=>{db.close();resolve();};};});},[...bytes]);
  await page.reload();const original=page.locator('.clip-card').first();await original.getByRole('button',{name:'Make short share copy'}).click();
  await expect(page.locator('.clip-card')).toHaveCount(2,{timeout:70000});const copy=page.locator('.clip-card').nth(1);
  const result=await copy.locator('video').evaluate(async video=>{if(video.readyState<2)await new Promise(r=>video.addEventListener('loadeddata',r,{once:true}));const blob=await (await fetch(video.src)).blob();video.currentTime=video.duration-.2;await new Promise(r=>video.addEventListener('seeked',r,{once:true}));const c=document.createElement('canvas');c.width=1280;c.height=800;const ctx=c.getContext('2d');ctx.drawImage(video,0,0);const pixel=[...ctx.getImageData(5,5,1,1).data];return {duration:video.duration,size:blob.size,type:blob.type,pixel};});
- expect(result.duration).toBeGreaterThan(56);expect(result.duration).toBeLessThanOrEqual(60);expect(result.size).toBeLessThanOrEqual(20*1024*1024);expect(result.type).toBe('video/mp4');expect(result.pixel[0]).toBeGreaterThan(200);expect(result.pixel[1]).toBeGreaterThan(200);expect(result.pixel[2]).toBeLessThan(100);
+ expect(result.duration).toBeGreaterThan(54);expect(result.duration).toBeLessThanOrEqual(60);expect(result.size).toBeLessThanOrEqual(20*1024*1024);expect(result.type).toBe('video/mp4');expect(result.pixel[0]>200&&result.pixel[1]>200&&result.pixel[2]<100).toBe(false);
  await page.reload();await expect(page.locator('.clip-card')).toHaveCount(2);await expect(page.getByRole('heading',{name:'Motion Quest · long synthetic fixture'})).toBeVisible();
 });

@@ -118,7 +118,7 @@ test('synthetic camera fixture is mirrored behind AR layers and recorder release
  const sample=await page.locator('#local-result video').evaluate(async v=>{
   await v.play();v.pause();v.currentTime=.5;await new Promise(resolve=>v.addEventListener('seeked',resolve,{once:true}));
   const canvas=document.createElement('canvas');canvas.width=v.videoWidth;canvas.height=v.videoHeight;const ctx=canvas.getContext('2d');ctx.drawImage(v,0,0);
-  const source=document.querySelector('#game-frame').contentDocument.querySelector('#game');const scale=Math.min(1280/source.width,720/source.height),w=source.width*scale,h=source.height*scale,x=(1280-w)/2,y=(720-h)/2;
+  const source=document.querySelector('#game-frame').contentDocument.querySelector('#game');const scale=Math.min(1280/source.width,800/source.height),w=source.width*scale,h=source.height*scale,x=(1280-w)/2,y=(800-h)/2;
   return {left:[...ctx.getImageData(Math.round(x+w*.25),Math.round(y+h*.2),1,1).data],right:[...ctx.getImageData(Math.round(x+w*.75),Math.round(y+h*.2),1,1).data]};
  });
  expect(sample.left[1]).toBeGreaterThan(200);expect(sample.left[0]).toBeLessThan(40);expect(sample.right[0]).toBeGreaterThan(200);expect(sample.right[1]).toBeLessThan(40);
@@ -146,10 +146,10 @@ test('replays do not stop at the former 60-second cutoff',async({page})=>{
  await expect(page.locator('#local-result')).toBeHidden();
 });
 
-test('an immediate restart records while the previous ending card finishes',async({page})=>{
+test('an immediate restart records without focusing the previous replay',async({page})=>{
  await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
  await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
- await expect(page.locator('#record-panel')).toHaveAttribute('data-state','finishing',{timeout:15000});
+ await expect(game.locator('[data-replay-share]')).toBeVisible({timeout:15000});
  await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:1200});
  await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:4500});
  await expect(page.getByRole('heading',{name:'Your replay is ready.'})).not.toBeFocused();
@@ -187,7 +187,7 @@ test('only the original three games are listed and all tracking assets remain av
   const wasm=await request.get(`/games/${game}/runtime/wasm/vision_wasm_internal.wasm`);expect(wasm.status()).toBe(200);expect(wasm.headers()['content-type']).toBe('application/wasm');
  }
 });
-test('Dino AR keyboard rounds produce branded local replays',async({page})=>{
+test('Dino AR keyboard rounds produce local replays',async({page})=>{
  await page.goto('/play/dino-ar');const game=page.frameLocator('#game-frame');
  await expect(game.locator('.privacy')).toContainText('record automatically');
  await game.locator('#primary').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
@@ -226,7 +226,7 @@ test('a WebM-only encoder saves genuine WebM with an explicit fallback notice',a
  });
  await page.goto('/play/motion-quest');
  await page.frameLocator('#game-frame').locator('#demo').click();
- await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(700);
  await page.evaluate(()=>{const doc=document.querySelector('#game-frame').contentDocument;document.querySelector('#game-frame').contentWindow.motionQuest.getReplayState=()=>({roundId:doc.documentElement.dataset.roundId,phase:'complete'});});
  await expect(page.locator('#local-result video')).toBeVisible({timeout:12000});
  await expect(page.getByText(/This browser saved WebM/)).toBeVisible();

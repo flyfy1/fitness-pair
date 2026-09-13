@@ -1,5 +1,22 @@
 # Recording and export evidence
 
+## Current replay policy
+
+- Target player: someone finishing a round who wants to replay or share it.
+- Job: keep the game in view until Share is selected; retain only the two latest videos.
+- Risk: asynchronous encoding must not steal focus from a new round, resurrect an
+  evicted clip, change the gallery source, or lose synchronized game audio.
+- Loop: play → native Replay or Share → unbranded preview/upload; Download alone
+  makes a temporary branded copy with a footer and three-second invitation.
+- Rounds over 30 seconds are saved at 2× speed once. A 90-second round becomes
+  about 45 seconds, not a 30-second crop. If conversion fails or is interrupted,
+  retain the original-speed video and report the limitation.
+- Proof: `tests/replay-policy.spec.js` uses actual browser recordings, decoded
+  pixels/audio/duration, repeated rounds, reloads and concurrent IndexedDB saves.
+- Boundary: no camera/recognition changes, no remote conversion, and no automatic
+  upload. Historical checks below describe earlier releases; their branding and
+  unlimited-retention expectations are superseded by this policy.
+
 ## Format policy
 
 Automatic capture tries H.264 MP4 (explicit profile, compatibility alias, then
