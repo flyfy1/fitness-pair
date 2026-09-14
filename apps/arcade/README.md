@@ -2,6 +2,11 @@
 
 Owns the landing page, game selection, local clip library, gallery UI and optional GCP gateway. Existing games and recognizers retain their ownership.
 
+The production origin sends standard Google Analytics 4 page views to the
+dedicated Hopmodo property. Analytics is disabled on localhost and other hosts.
+Query strings are omitted, and individual `/clips/:id` URLs are grouped under one
+report path. Camera frames, recordings and local clip data are never included.
+
 Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Dino Run, Dino AR, Push-up Flight and Jump Game (guided camera Dino) under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
 
 Recording starts automatically when a game is running. Motion Quest starts after standing calibration reaches gameplay readiness, or immediately on entering its synthetic preview. Permission, model loading and initial calibration are excluded. A visible notice explains that the game, enabled camera and available game sound are recorded on this device; microphone audio is requested only after the player clicks Record conversation and is stored as a separate local track. Each finished round produces a replay without another recording choice. Explicit round identifiers distinguish immediate restarts; a previous replay can finish processing while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest retains the full charge, projectile, impact and victory animation before saving. Its camera stops at the final repetition; the recorder freezes the last camera frame while the game effects finish. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Dino uses a camera inset. Saved previews and gallery uploads contain the original game view without a promotional footer or invitation.

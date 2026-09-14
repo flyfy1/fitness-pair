@@ -10,6 +10,8 @@ import {installGameGuides} from './game-guide-dialog.js';
 import {mountGame} from './gameplay/shell.js';
 import {drawPreview, setupPlayground, startConcept} from './playground.js';
 import {renderLibrary, renderGallery, renderClip} from './clips.js';
+import {installGoogleAnalytics} from './analytics.js';
+installGoogleAnalytics();
 const app=document.querySelector('#app');
 const arrow='<span aria-hidden="true">↗</span>';
 const nav=()=>`<a class="skip" href="#main">Skip to content</a><header class="nav"><a class="brand" href="/" aria-label="Hopmodo home">${brandLink()}</a><nav aria-label="Main navigation"><a href="/gallery" data-i18n="landing.gallery">The gallery</a></nav><span data-account-nav></span><a class="nav-play" href="/#arcade">Let’s play ${arrow}</a></header>`;
