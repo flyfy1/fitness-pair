@@ -8,6 +8,8 @@ import worker from '../../server/worker.js';
 import {createMetadataTokenProvider} from './identity.mjs';
 import {createAccountStore} from './account-store.mjs';
 import {createAuth} from './auth.mjs';
+import {createFeedbackCollector} from './feedback.mjs';
+import {playableGames} from '../../game-catalog.js';
 
 globalThis.crypto ??= webcrypto;
 
@@ -22,6 +24,7 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
     runtimeEnv.ACCOUNTS=auth;
     cleanup=setInterval(()=>store.pruneSessions().catch(()=>{}),3600000);cleanup.unref();
   }
+  const feedback=env.FITNESS_STATE_DIR?createFeedbackCollector({directory:env.FITNESS_STATE_DIR,origin,games:playableGames,getUser:request=>auth?.user(request)}):null;
   if(env.GCP_IMPERSONATE_SERVICE_ACCOUNT)runtimeEnv.GCP_ACCESS_TOKEN_PROVIDER=createMetadataTokenProvider({serviceAccount:env.GCP_IMPERSONATE_SERVICE_ACCOUNT});
   const server=http.createServer(async(req,res)=>{
     try {
@@ -32,7 +35,8 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
       }
       const request=new Request(new URL(req.url,origin),{method:req.method,headers:req.headers,
         ...(!['GET','HEAD'].includes(req.method)?{body:req,duplex:'half'}:{})});
-      const response=await auth?.handle(request)||await galleryWorker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
+      const feedbackResponse=await feedback?.handle(request);
+      const response=feedbackResponse||(new URL(request.url).pathname==='/api/feedback'?Response.json({error:'Feedback storage is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}}):null)||await auth?.handle(request)||await galleryWorker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
       const responseHeaders=Object.fromEntries(response.headers);
       // Node 18 Headers folds Set-Cookie. OAuth needs both transaction cleanup and session issuance.
       const setCookie=response.headers.get('set-cookie');

@@ -27,3 +27,49 @@
 .game-play .local-result > .clip-grid { max-width: 1000px; }
 
 .game-play .replay-return { margin-bottom: 12px; min-height: 44px; }
+
+.game-feedback {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 21, 17, .78);
+  backdrop-filter: blur(8px);
+}
+.game-feedback-card {
+  width: min(520px, 100%);
+  padding: clamp(28px, 6vw, 48px);
+  border-radius: 28px;
+  background: #f3f4ed;
+  color: #182346;
+  box-shadow: 0 24px 80px #0007;
+  text-align: center;
+}
+.game-feedback-card h1 { margin: 6px 0 12px; font-size: clamp(32px, 7vw, 54px); line-height: 1; }
+.game-feedback-card > p { line-height: 1.5; }
+.game-feedback-rating { display: flex; justify-content: center; gap: 14px; margin: 28px 0 18px; }
+.game-feedback-rating button {
+  display: grid;
+  gap: 6px;
+  min-width: 128px;
+  min-height: 112px;
+  padding: 16px;
+  border: 2px solid #182346;
+  border-radius: 20px;
+  background: white;
+  color: #182346;
+}
+.game-feedback-rating button span { font-size: 38px; }
+.game-feedback-rating button[data-selected=true] { border-color: #2347ee; background: #e8ecff; }
+.game-feedback-rating button:focus-visible, .game-feedback-actions :focus-visible { outline: 4px solid #ff795e; outline-offset: 3px; }
+.game-feedback-status { min-height: 24px; font-weight: 700; }
+.game-feedback-actions { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 20px; }
+.game-feedback-actions button, .game-feedback-actions a { min-height: 44px; padding: 12px 18px; border-radius: 22px; }
+.game-feedback-actions button { border: 0; background: #2347ee; color: white; font-weight: 700; }
+.game-feedback-actions a { color: #182346; }
+@media (max-width: 420px) {
+  .game-feedback-rating button { min-width: 0; flex: 1; }
+  .game-feedback-actions { flex-direction: column; gap: 8px; }
+}

@@ -12,7 +12,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  let conversationControls=null;
  const conversation=createConversationCapture({onChange:state=>{
   if(!conversationControls)return;
-  const button=conversationControls.querySelector('button');
+  const button=conversationControls.querySelector('[data-conversation]');
   const label=state.pending?'Cancel microphone request':state.enabled?'Stop conversation recording':'Record conversation';
   button.setAttribute('aria-label',label);button.title=label;
   conversationControls.dataset.state=state.pending?'pending':state.recording?'recording':state.enabled?'ready':'off';
@@ -175,7 +175,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
   connectControls(element){
    conversationControls=element;shareButton=element.querySelector('[data-replay-share]');
    shareButton.onclick=()=>{const snapshot=readGame();if(snapshot?.phase!=='complete'||!readyRounds.has(snapshot.round))return;shareRound=snapshot.round;revealResult();};
-   element.querySelector('button').disabled=!supported||panel.dataset.state==='unavailable';element.querySelector('button').onclick=()=>conversation.toggle();watchForStart();
+   element.querySelector('[data-conversation]').disabled=!supported||panel.dataset.state==='unavailable';element.querySelector('[data-conversation]').onclick=()=>conversation.toggle();watchForStart();
   },
   onGameReload(){if(active)active.finish('Game reloaded');conversation.disable();handledRound=null;completedRound=null;shareRound=null;},
   dispose(){if(unloading)return;unloading=true;document.removeEventListener('visibilitychange',visibility);conversation.disable();clearInterval(watcher);unsubscribe();for(const session of sessions)session.saveNow();},
