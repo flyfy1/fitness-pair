@@ -4,24 +4,29 @@ const activePhase = phase => ['playing','paused','ending'].includes(phase);
 
 export function mountGameFeedback(game, runtime, {container, stopGame}) {
  let startedAt=null, round=null, controls=null, stopped=false, disposed=false;
+ const promptedRounds=new Set();
  const sourcePage=`/play/${game.id}`;
  function observe(){
   if(disposed||stopped)return;
   const snapshot=runtime.readFrame();
   if(snapshot?.phase==='playing'&&(round!==snapshot.round||startedAt===null)){round=snapshot.round;startedAt=Date.now();}
   if(controls){const button=controls.querySelector('[data-stop-game]');button.hidden=startedAt===null||!activePhase(snapshot?.phase);}
+  if(snapshot?.phase==='complete'&&startedAt!==null&&snapshot.round===round&&!promptedRounds.has(round)){
+   promptedRounds.add(round);void finish(snapshot,Date.now(),true);
+  }
  }
  const interval=setInterval(observe,100),unsubscribe=runtime.subscribe(observe);observe();
- function showPrompt(snapshot,stoppedAt){
+ function showPrompt(snapshot,stoppedAt,naturalCompletion){
   const feedbackId=crypto.randomUUID();
   const overlay=document.createElement('section');overlay.className='game-feedback';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','game-feedback-title');
-  overlay.innerHTML=`<div class="game-feedback-card"><p class="kicker">${message('gameFeedback.kicker')}</p><h1 id="game-feedback-title"></h1><p>${message('gameFeedback.detail')}</p><div class="game-feedback-rating" role="group"></div><p class="game-feedback-status" role="status"></p><div class="game-feedback-actions"><button type="button" data-play-again>${message('common.playAgain')}</button><a href="/#arcade">${message('gameFeedback.back')}</a></div></div>`;
+  overlay.innerHTML=`<div class="game-feedback-card"><p class="kicker">${message('gameFeedback.kicker')}</p><h1 id="game-feedback-title"></h1><p>${message('gameFeedback.detail')}</p><div class="game-feedback-rating" role="group"></div><p class="game-feedback-status" role="status"></p><div class="game-feedback-actions">${naturalCompletion?`<button type="button" data-view-replay>${message('record.viewReplay')}</button>`:''}<button type="button" data-play-again>${message('common.playAgain')}</button><a href="/#arcade">${message('gameFeedback.back')}</a></div></div>`;
   overlay.querySelector('h1').textContent=message('gameFeedback.title',[game.title]);
   const group=overlay.querySelector('.game-feedback-rating');
   for(const [rating,label,icon] of [['up',message('gameFeedback.like'),'👍'],['down',message('gameFeedback.dislike'),'👎']]){
    const button=document.createElement('button');button.type='button';button.dataset.rating=rating;button.setAttribute('aria-label',label);button.innerHTML=`<span aria-hidden="true">${icon}</span><b>${label}</b>`;group.append(button);
   }
   const status=overlay.querySelector('[role=status]');
+  if(naturalCompletion)overlay.querySelector('[data-view-replay]').onclick=()=>{overlay.remove();document.querySelector('#local-result h2')?.focus();};
   overlay.querySelector('[data-play-again]').onclick=()=>location.reload();
   for(const button of group.querySelectorAll('button'))button.onclick=async()=>{
    for(const choice of group.querySelectorAll('button'))choice.disabled=true;
@@ -29,7 +34,7 @@ export function mountGameFeedback(game, runtime, {container, stopGame}) {
    try{
     const response=await fetch('/api/feedback',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({
      version:1,id:feedbackId,rating:button.dataset.rating,gameId:game.id,sourcePage,
-     durationMs:Math.max(0,stoppedAt-startedAt),stoppedAt,inputSource:snapshot?.source?.kind||null,score:snapshot?.score||null,
+     durationMs:Math.max(0,stoppedAt-startedAt),stoppedAt,endReason:naturalCompletion?'completed':'stopped',inputSource:snapshot?.source?.kind||null,score:snapshot?.score||null,
     })});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||message('gameFeedback.failed'));
     button.dataset.selected='true';status.textContent=message('gameFeedback.saved');overlay.querySelector('[data-play-again]').focus();
@@ -37,12 +42,16 @@ export function mountGameFeedback(game, runtime, {container, stopGame}) {
   };
   container.append(overlay);group.querySelector('button').focus();
  }
+ async function finish(snapshot,stoppedAt,naturalCompletion){
+  await document.exitFullscreen?.().catch(()=>{});
+  if(!naturalCompletion)stopGame();
+  showPrompt(snapshot,stoppedAt,naturalCompletion);
+ }
  async function stop(){
   if(stopped||startedAt===null)return;
   const snapshot=runtime.readFrame(),stoppedAt=Date.now();stopped=true;
   clearInterval(interval);unsubscribe();
-  await document.exitFullscreen?.().catch(()=>{});
-  stopGame();showPrompt(snapshot,stoppedAt);
+  await finish(snapshot,stoppedAt,false);
  }
  return {
   connectControls(element){controls=element;controls.querySelector('[data-stop-game]').onclick=stop;observe();},

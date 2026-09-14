@@ -26,7 +26,7 @@ test('GCP gateway routes same-origin feedback to durable state',async t=>{
   const server=createGateway({origin:'http://127.0.0.1',env:{FITNESS_STATE_DIR:directory}});
   server.listen(0,'127.0.0.1');await once(server,'listening');const base=`http://127.0.0.1:${server.address().port}`;
   try{
-    const response=await fetch(base+'/api/feedback',{method:'POST',headers:{Origin:'http://127.0.0.1','Content-Type':'application/json'},body:JSON.stringify({version:1,id:'550e8400-e29b-41d4-a716-446655440000',rating:'up',gameId:'motion-quest',sourcePage:'/play/motion-quest',durationMs:5000,stoppedAt:Date.now(),inputSource:'synthetic',score:'1 / 5 squats'})});
+    const response=await fetch(base+'/api/feedback',{method:'POST',headers:{Origin:'http://127.0.0.1','Content-Type':'application/json'},body:JSON.stringify({version:1,id:'550e8400-e29b-41d4-a716-446655440000',rating:'up',gameId:'motion-quest',sourcePage:'/play/motion-quest',durationMs:5000,stoppedAt:Date.now(),endReason:'completed',inputSource:'synthetic',score:'1 / 5 squats'})});
     assert.equal(response.status,201);assert.deepEqual(await readdir(directory+'/feedback/events'),['550e8400-e29b-41d4-a716-446655440000.json']);
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });

@@ -42,5 +42,7 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
   await game.locator('#start').click();await startWithHands(game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
   await page.waitForTimeout(400);await game.locator('#finish').click();await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:12000});
  }
- await game.locator('#home').click();await expect(page).toHaveURL('/#arcade');
+ const feedbackBack=page.getByRole('dialog').getByRole('link',{name:'Back to the arcade'});
+ if(await feedbackBack.isVisible().catch(()=>false))await feedbackBack.click();else await game.locator('#home').click();
+ await expect(page).toHaveURL('/#arcade');
 });

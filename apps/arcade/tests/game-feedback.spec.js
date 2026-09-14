@@ -15,9 +15,24 @@ test('stopping an active game shows one-tap feedback and sends the game session 
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();await expect(page.getByRole('heading',{name:'How was Dino Run?'})).toBeVisible();
  await page.getByRole('button',{name:'Like',exact:true}).click();
  await expect(dialog.getByRole('status')).toHaveText('Thanks — feedback saved.');
- expect(submitted).toMatchObject({version:1,rating:'up',gameId:'dino-run',sourcePage:'/play/dino-run'});
+ expect(submitted).toMatchObject({version:1,rating:'up',gameId:'dino-run',sourcePage:'/play/dino-run',endReason:'stopped'});
  expect(submitted.id).toMatch(/^[0-9a-f-]{36}$/);expect(submitted.durationMs).toBeGreaterThanOrEqual(100);expect(submitted.stoppedAt).toBeGreaterThan(0);
  await expect(page.locator('#game-frame')).toHaveAttribute('src','about:blank');
+});
+
+test('a naturally completed Plank Flight asks for feedback and keeps its local replay available',async({page})=>{
+ let submitted;
+ await page.route('**/api/feedback',async route=>{submitted=route.request().postDataJSON();await route.fulfill({status:201,json:{ok:true,id:submitted.id,receivedAt:Date.now()}});});
+ await page.goto('/play/plank-flight');const game=page.frameLocator('#game-frame');
+ await game.getByRole('button',{name:'Try a demo',exact:true}).click();
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.waitForTimeout(500);await game.getByRole('button',{name:'Finish & rest',exact:true}).click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible({timeout:15000});await expect(dialog.getByRole('heading',{name:'How was Push-up Flight?'})).toBeVisible();
+ await dialog.getByRole('button',{name:'Dislike',exact:true}).click();
+ await expect(dialog.getByRole('status')).toHaveText('Thanks — feedback saved.');expect(submitted.endReason).toBe('completed');
+ await expect.poll(()=>page.locator('#record-panel').getAttribute('data-state'),{timeout:10000}).toBe('idle');
+ await dialog.getByRole('button',{name:'View replay',exact:true}).click();await expect(dialog).toBeHidden();await expect(page.locator('#local-result')).toBeVisible();
+ await expect(page.locator('#game-frame')).not.toHaveAttribute('src','about:blank');
 });
 
 test('failed feedback can be retried without changing the event id and the prompt fits a phone',async({page})=>{
