@@ -223,8 +223,9 @@ gateway behavior.
    mask, preview, upload, public playback and private sidecar retrieval; inspect
    the complete video, including tracking gaps and final frames.
 
-Stop after Motion Quest proves the loop. Port the optional tracking subscription
-to other games only after the first physical-camera result.
+All registered camera games now share the tracking subscription contract. Use
+Motion Quest as the first physical-camera avatar/redaction proof before expanding
+the masking workflow across game-specific layouts.
 
 ## Verification gate
 
