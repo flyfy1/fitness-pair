@@ -8,6 +8,7 @@ import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { PoseCamera } from './camera.js';
 import { BodyGestures } from './gestures.js';
 import { setupFullscreen } from './fullscreen.js';
+import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
 const runner = new Runner();
@@ -21,6 +22,8 @@ setupFullscreen($('play-area'), $('fullscreen'), message => { $('announcement').
 let mode = 'motion', cameraState = 'off', latestAction = null, lastPoseAt = 0;
 let awaitingStart = false, countdownAt = null, cameraError = '', pauseReason = '';
 let previousStatus = '', lastFrame = 0, lastPaint = 0;
+const trackingPublisher = createTrackingPublisher();
+let presentationSession = {sessionId: crypto.randomUUID(), source: {kind: 'camera', id: 'pending'}};
 const storageKey = () => `motion-arcade:dino-run:best:${mode === 'motion' ? 'motion-v1' : 'v1'}`;
 function loadBest() {
   try { const n = Number(localStorage.getItem(storageKey())); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; } catch { return 0; }
@@ -35,12 +38,14 @@ const camera = new PoseCamera({
     cameraState = status.state;
     if (status.state === 'requesting') {
       const session = { sessionId: status.sessionId, source: status.source };
+      presentationSession = session;
       startGate.reset(session); recognizer.reset(session); gestures.reset(session); gestureState = null; gestureMessage = ''; gestureStartRequested = false; motionInput.reset(session); latestAction = null;
       lastPoseAt = 0; countdownAt = null; cameraError = '';
     }
     paint();
   },
   onPose(frame) {
+    trackingPublisher.emit(frame);
     // Freshness is measured from capture, not from when inference finishes.
     lastPoseAt = frame.tMs;
     if (performance.now() - frame.tMs >= 250) {
@@ -215,7 +220,11 @@ function command(action) {
     if (['start', 'resume', 'restart'].includes(action)) return primaryAction();
     return false; // A keyboard or external jump cannot override camera height.
   }
+  const priorStatus = runner.status;
   const accepted = runner.command(action);
+  if (accepted && mode === 'keyboard' && ((priorStatus === 'ready' && action === 'start') || (priorStatus === 'over' && action === 'restart'))) {
+    const sessionId = crypto.randomUUID(); presentationSession = {sessionId, source: {kind: 'synthetic', id: sessionId}};
+  }
   if (accepted) { paint(); renderer.draw(); }
   return accepted;
 }
@@ -292,8 +301,9 @@ paint(); requestAnimationFrame(frame);
 
 // Presentation is independent from game physics and the selected input source.
 window.gameplay = Object.freeze({
-  getFrame: () => ({round:runner.roundId, phase:runner.status==='running'?'playing':runner.status==='over'?'complete':runner.status==='paused'?'paused':'setup',
+  getFrame: () => ({round:presentationSession.sessionId, sessionId:presentationSession.sessionId, source:presentationSession.source, phase:runner.status==='running'?'playing':runner.status==='over'?'complete':runner.status==='paused'?'paused':'setup',
     canvas:$('game'), video:$('camera'), isAR:false, score:`${runner.score} points`}),
+  subscribeTracking: trackingPublisher.subscribe,
   configureHost({homeURL,recordingNote}) {
     const home=document.querySelector('.brand');home.href=homeURL;home.target='_top';home.setAttribute('aria-label','Back to the Hopmodo arcade');
     document.querySelector('.camera-note').textContent=recordingNote;

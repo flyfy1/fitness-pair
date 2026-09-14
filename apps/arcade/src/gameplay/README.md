@@ -8,7 +8,7 @@
 - Main risk: a generic lifecycle could lose first/final frames or own another
   module's camera/audio tracks.
 - Loop: game + optional action controller → presentation adapter → shared shell
-  and recorder → local replay + optional conversation → selected export.
+  and recorder → local replay + aligned named-joint tracking + optional conversation → selected export.
 - Proof: all five existing game mounts and input paths, synthetic recording/audio
   regression, a game with no recognizer driving the same host, and source-swapping
   controller tests. No private participant recordings.
@@ -26,6 +26,13 @@ viewport. Opening a replay never publishes or automatically plays its video.
 `rolling-media.js` bounds native video and optional conversation capture to the
 latest 90 seconds, then remuxes the retained packets at normal speed. It rotates
 independently decodable segments and preserves a shared video/audio timeline.
+Camera presentations may implement `subscribeTracking(callback)`. While a video
+recording is active, the recorder stores matching validated `PoseFrame` samples
+with millisecond offsets into that video. The clip UUID and camera-session UUID
+remain separate. Rolling-video trimming filters and rebases the tracking window;
+derived share copies slice and re-time the same sidecar without changing its
+session identity. The sidecar is saved and evicted atomically with the IndexedDB
+clip. Synthetic sessions still receive UUIDs but never create camera tracking.
 The clip library and account sharing live outside this directory. Game rules,
 rendering, model loading and calibration remain independently owned.
 
@@ -52,10 +59,13 @@ reference implementation; its engine can run entirely without pose contracts.
 
 1. Keep your rules and renderer in the game app. Export `window.gameplay` with
    `getFrame()` returning the types in `index.d.ts`; it may return null during setup.
-   Provide a new round ID per restart, explicit phases and references to rendered
+   Provide a UUID v4 `sessionId` per restart, use it as the presentation round ID,
+   and return matching source provenance, explicit phases and references to rendered
    canvas/video/audio. `playing` begins only after permission/calibration. Keep
    `ending` until the game's final effects finish, then emit `complete`.
-2. Optionally implement `subscribe(changed)` for immediate transitions. Polling is
+2. Optionally implement `subscribe(changed)` for immediate transitions. Camera
+   games also implement `subscribeTracking(callback)` and publish validated,
+   unmirrored named-joint PoseFrames from that same session. Polling is
    retained for older games. `configureHost({homeURL,recordingNote})` wires the
    game's home control and privacy note. Stop only your owned camera/model on
    exit. The recorder owns clones of game sound, never the game's audio source.
@@ -89,6 +99,7 @@ with a listening toggle; including it in downloaded/shared video remains explici
 ```mermaid
 flowchart LR
   Camera[Optional pose source] --> Recognizer
+  Camera --> Tracking[Validated PoseFrame tracking]
   Recognizer --> Action[Action controller]
   Action --> Controls[Game semantic controls]
   Buttons[Keyboard / buttons] --> Controls
@@ -96,6 +107,7 @@ flowchart LR
   Game --> API[Presentation API or legacy adapter]
   API --> Shell[Shared gameplay shell]
   API --> Recorder[Shared recorder]
+  Tracking --> Recorder
   Mic[Optional microphone] --> Track[Separate local conversation track]
   Recorder --> Library[Local clip library]
   Track --> Library

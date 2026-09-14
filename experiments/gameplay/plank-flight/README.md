@@ -155,8 +155,10 @@ local model → PoseFrame + optional head → ActionFrame + headControl → Game
 The initial model download uses the baseline's pinned SHA-256. Model/runtime files
 are ignored and processed locally. The optional head crop stays in memory and is
 cleared on manual stop, restart or round completion. During tracking loss it stays
-with the helicopter until the round ends. No camera pixels or participant recordings
-are saved, uploaded, or committed.
+with the helicopter until the round ends. The standalone experiment saves no
+camera pixels, landmarks or participant recordings. When embedded in Hopmodo,
+the disclosed Arcade recorder stores the local replay and aligned named-joint
+tracking sidecar; neither is uploaded automatically or committed.
 
 Model initialization is bounded at 330 seconds, stalled inference at 3 seconds.
 Camera frames older than 400 ms cannot start/control a round. During a flight,

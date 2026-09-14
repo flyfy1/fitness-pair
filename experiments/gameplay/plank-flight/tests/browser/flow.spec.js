@@ -66,6 +66,15 @@ test('close-up camera automatically starts; helicopter follows head down/up and 
   await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
   await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();
 });
+test('camera presentation publishes validated PoseFrames under its UUID session',async({page})=>{
+  await syntheticCamera(page);await page.goto('/');
+  await page.evaluate(()=>{window.trackedPoseFrames=[];window.stopTracking=window.plankFlight.subscribeTracking(frame=>window.trackedPoseFrames.push(frame));});
+  await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>window.trackedPoseFrames.length)).toBeGreaterThan(0);
+  const tracking=await page.evaluate(()=>({sessionId:window.plankFlight.getState().sessionId,poseSessionIds:[...new Set(window.trackedPoseFrames.map(frame=>frame.sessionId))]}));
+  expect(tracking.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(tracking.poseSessionIds).toEqual([tracking.sessionId]);
+  await page.getByRole('button',{name:'Stop camera'}).click();
+});
 test('brief loss and delayed frames hold position and automatically recover in the same round',async({page})=>{
   await syntheticCamera(page);await page.goto('/');await page.evaluate(()=>{window.testHeadMissing=true;});
   await page.getByRole('button',{name:'Enable camera'}).click();await expect(page.locator('#cue')).toContainText('Bring your head');

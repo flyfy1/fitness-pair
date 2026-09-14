@@ -35,12 +35,12 @@ test('input mappings preserve frame identity, reject foreign/stale sources and d
 
 test('native presentation adapters reconnect and dispose without game-specific knowledge',()=>{
  const frame=new EventTarget();frame.contentDocument={readyState:'complete'};
- let state={round:1,phase:'setup',canvas:{width:1280,height:800},score:'0'},notify,cleanups=0,host;
- frame.contentWindow={gameplay:{getFrame:()=>state,subscribe:callback=>{notify=callback;return()=>cleanups++;},configureHost:options=>{host=options;}}};
- const runtime=createNativeAdapter(frame);let changes=0;runtime.subscribe(()=>changes++);
+ let state={round:1,phase:'setup',canvas:{width:1280,height:800},score:'0'},notify,notifyTracking,cleanups=0,trackingCleanups=0,host;
+ frame.contentWindow={gameplay:{getFrame:()=>state,subscribe:callback=>{notify=callback;return()=>cleanups++;},subscribeTracking:callback=>{notifyTracking=callback;return()=>trackingCleanups++;},configureHost:options=>{host=options;}}};
+ const runtime=createNativeAdapter(frame);let changes=0;const tracked=[];runtime.subscribe(()=>changes++);runtime.subscribeTracking(value=>tracked.push(value));
  runtime.configureHost({homeURL:'/',recordingNote:'Local replay'});assert.equal(host.homeURL,'/');
- state={...state,phase:'playing'};notify();assert.equal(changes,1);assert.equal(runtime.readFrame(),state);
- frame.dispatchEvent(new Event('load'));assert.equal(cleanups,1);assert.equal(changes,2);
- runtime.dispose();assert.equal(cleanups,2);assert.equal(runtime.readFrame(),null);
+ state={...state,phase:'playing'};notify();notifyTracking({seq:1});assert.equal(changes,1);assert.deepEqual(tracked,[{seq:1}]);assert.equal(runtime.readFrame(),state);
+ frame.dispatchEvent(new Event('load'));assert.equal(cleanups,1);assert.equal(trackingCleanups,1);assert.equal(changes,2);
+ runtime.dispose();assert.equal(cleanups,2);assert.equal(trackingCleanups,2);assert.equal(runtime.readFrame(),null);
  frame.dispatchEvent(new Event('load'));assert.equal(cleanups,2);
 });

@@ -9,6 +9,7 @@ import { BodyGestures } from '../../dino-run/src/gestures.js';
 import { setupFullscreen } from '../../dino-run/src/fullscreen.js';
 import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { createDiagnostics } from './diagnostics.js';
+import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
 const gameMode = new URLSearchParams(location.search).get('mode') !== 'detect';
@@ -39,6 +40,8 @@ let trackingHoldAt = null, signalState = null, candidateKey = '', candidateSince
 let testing = false, jumpCount = 0, jumpPeak = 0, returning = false, detectedAt = null, lastJumpPeak = 0;
 const countedJumps = new Set();
 let complete = false, error = '', view = {}, lastViewKey = '', previousStage = null;
+const trackingPublisher = createTrackingPublisher();
+let presentationSession = {sessionId: crypto.randomUUID(), source: {kind: 'camera', id: 'pending'}};
 const log = (event, detail = {}) => { diagnostics.append(event, detail); paintLog(); };
 log('app-opened');
 setupFullscreen($('setup'), $('fullscreen'), message => { $('announcement').textContent = message; log('fullscreen-message', { message }); });
@@ -58,6 +61,7 @@ const camera = new PoseCamera({
   onStatus(status) {
     cameraState = status.state; log('camera-state', { state: cameraState });
     if (cameraState === 'requesting') {
+      presentationSession = {sessionId: status.sessionId, source: status.source};
       if (gameMode) runner.bindMotionSession(status);
       recognizer.reset(status); recognizer.setJumpRange(MOVEMENT_SCALE); gestures.reset(status); action = null; hands = null;
       lastPoseAt = 0; countdownAt = null; previousStage = null; trackingHoldAt = null; signalState = null;
@@ -65,6 +69,7 @@ const camera = new PoseCamera({
     paint();
   },
   onPose(input) {
+    trackingPublisher.emit(input);
     lastPoseAt = input.tMs;
     const stale = performance.now() - input.tMs >= 250;
     const frame = stale ? { ...input, joints: {} } : visibleFrame(input);
@@ -387,7 +392,7 @@ $('export-log').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([diagnostics.export()], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = 'camera-start-log.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-window.cameraSetup = Object.freeze({ getAudioStream:()=>sound.getAudioStream(), getState: () => ({ stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false, testing, jumpCount, audio: sound.snapshot(), mode: gameMode ? 'game' : 'detect',
+window.cameraSetup = Object.freeze({ getAudioStream:()=>sound.getAudioStream(), subscribeTracking:trackingPublisher.subscribe, getState: () => ({ sessionId:presentationSession.sessionId, source:presentationSession.source, stage: view.stage, reason: view.reason ?? null, camera: cameraState, calibration: action?.stage ?? null, heightConfirmed: action?.calibrated ?? complete, canConfirm: action?.canConfirmMaximum ?? false, testing, jumpCount, audio: sound.snapshot(), mode: gameMode ? 'game' : 'detect',
   gesture: hands ? { kind: hands.kind, latched: hands.latched, progress: hands.progress, tracked: hands.tracked } : null,
   game: gameMode ? { ...runner.snapshot(), pauseReason, nextObstacleDistance: runner.obstacles[0] ? runner.obstacles[0].x - 116 : null,
     playfield: (() => { const {width,height} = $('game-world').getBoundingClientRect(); const g = sceneGeometry(width,height); return { width, height, groundY: g.origin.y, player: g.player(runner.y) }; })() } : null }), getLog: () => diagnostics.entries() });

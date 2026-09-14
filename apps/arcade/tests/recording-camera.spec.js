@@ -3,6 +3,7 @@ import {test,expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
 
 import {movingCamera} from './moving-camera.js';
+import {readStoredClip} from './read-stored-clip.js';
 
 test('actual Motion Quest camera path exports moving person, game, HUD without promotional branding in genuine MP4',async({page},info)=>{
  await movingCamera(page);const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
@@ -12,6 +13,10 @@ test('actual Motion Quest camera path exports moving person, game, HUD without p
  await expect(game.locator('#rep-count')).toHaveText('5',{timeout:25000});
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
  await expect(page.locator('#local-result')).toContainText('Player recording');
+ const stored=await readStoredClip(page,'motion-quest');
+ expect(stored.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+ expect(stored.tracking).toMatchObject({format:'fitness-pair/tracking-session/1',sessionId:stored.sessionId,source:stored.inputSource});
+ expect(stored.tracking.sampleCount).toBeGreaterThan(0);expect(stored.tracking.sampleSessionIds).toEqual([stored.sessionId]);
  const camera=await page.evaluate(()=>{const w=document.querySelector('#game-frame').contentWindow;return {requests:w.cameraRequests,stopped:w.testStream.getTracks().every(t=>t.readyState==='ended'),terminated:w.testWorker.terminated};});
  expect(camera).toEqual({requests:1,stopped:true,terminated:true});expect(uploads).toEqual([]);
  await openReplay(page.locator('#local-result video'));

@@ -102,7 +102,7 @@ type HeadAnchor = {
 
 type TrackingSample = {
   pose: PoseFrame;
-  headInClip: HeadAnchor | null;
+  headInClip?: HeadAnchor | null; // added by the avatar-redaction slice
   videoMs: number;
 };
 
@@ -111,7 +111,7 @@ type TrackingEnvelope = {
   sessionId: string;
   createdAt: string;
   game: string;
-  source: 'camera';
+  source: Source;
   samples: TrackingSample[];
 };
 ```
@@ -211,8 +211,10 @@ gateway behavior.
 
 ## P1 implementation slices
 
-1. **Tracking contract and capture:** add `HeadAnchor`, tracking subscription,
-   aligned local envelope, validation and IndexedDB outbox for Motion Quest only.
+1. **Tracking contract and capture:** add the tracking subscription to every
+   camera game, persist aligned named-joint envelopes atomically with local clips,
+   and prove session/clip association across reload. Add `HeadAnchor` and the
+   upload outbox in the next server/avatar slice.
 2. **Privacy copy:** add the avatar picker and local face-covered transcode; keep
    the original; cover gaps safely; add deterministic transform tests.
 3. **Private ingest:** add the idempotent tracking endpoint, upload capability,

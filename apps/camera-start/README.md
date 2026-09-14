@@ -68,6 +68,12 @@ hidden tabs, collision and **Finish run** / **Finish test**. Finishing setup kee
 the camera active. Play again starts a fresh camera session and resets the round.
 Manual pause keeps tracking active so the player can resume with a gesture.
 
+Each camera start creates a UUID v4 shared by its PoseFrames and Arcade
+presentation. When embedded in Hopmodo, the game publishes validated named-joint
+frames while the shared recorder is active; the local replay and aligned tracking
+sidecar are saved together. Standalone play does not persist tracking, and the
+Arcade does not upload it automatically.
+
 ## Local runtime log
 
 Choose **Log** to inspect recent events or **Download log** to export JSON.

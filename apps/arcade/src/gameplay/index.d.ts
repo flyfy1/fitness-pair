@@ -1,8 +1,9 @@
-import type {Source} from '../../../../contracts/index.js';
+import type {PoseFrame,Source} from '../../../../contracts/index.js';
 
 export type GameplayPhase='setup'|'playing'|'paused'|'ending'|'complete'|'idle';
 export interface GameplayFrame {
  round: string|number;
+ sessionId?: string;
  phase: GameplayPhase;
  canvas: HTMLCanvasElement;
  video?: HTMLVideoElement|null;
@@ -18,6 +19,7 @@ export interface GameplayFrame {
 export interface GamePresentation {
  getFrame(): GameplayFrame|null;
  subscribe?(changed:()=>void): ()=>void;
+ subscribeTracking?(tracked:(frame:PoseFrame)=>void): ()=>void;
  configureHost?(options:{homeURL:string;recordingNote:string}):void;
  dispose?():void;
 }
@@ -25,6 +27,7 @@ export interface GameplayRuntime {
  getViewport?():{width:number;height:number};
  readFrame():GameplayFrame|null;
  subscribe(changed:()=>void):()=>void;
+ subscribeTracking(tracked:(frame:PoseFrame)=>void):()=>void;
  configureHost(options:{homeURL:string;recordingNote:string}):void;
  dispose():void;
 }

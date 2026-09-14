@@ -3,6 +3,7 @@ import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import {syntheticCamera,confirmWithHand} from '../../camera-start/tests/browser/synthetic-camera.js';
+import {readStoredClip} from './read-stored-clip.js';
 test('landing has a direct arcade path and a factual build story',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  await expect(page).toHaveTitle('Hopmodo — Games that get you moving');
@@ -90,6 +91,7 @@ test('Dino recording starts with gameplay and saves automatically at game over',
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.getByRole('heading',{name:'Your replay is ready.'})).toBeVisible({timeout:20000});
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle');await expect(page.getByRole('button',{name:'Share with a friend'})).toBeVisible();
+ const stored=await readStoredClip(page,'dino-run');expect(stored.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(stored.tracking).toBeNull();
 });
 
 test('synthetic camera fixture is mirrored behind AR layers and recorder releases only its capture track',async({page})=>{
@@ -195,6 +197,7 @@ test('Dino AR keyboard rounds produce local replays',async({page})=>{
  await game.locator('#primary').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#local-result video')).toBeVisible({timeout:20000});
  await expect(page.getByRole('heading',{name:'Dino AR · my replay'})).toBeVisible();
+ const stored=await readStoredClip(page,'dino-ar');expect(stored.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(stored.tracking).toBeNull();
  await game.locator('#primary').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
 });
 test('Push-up Flight demo records the crash sequence and saves automatically',async({page})=>{
@@ -206,6 +209,7 @@ test('Push-up Flight demo records the crash sequence and saves automatically',as
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});expect(uploads).toEqual([]);
  await expect(page.getByRole('heading',{name:'Push-up Flight · my replay'})).toBeVisible();
+ const stored=await readStoredClip(page,'plank-flight');expect(stored.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(stored.tracking).toBeNull();
 });
 
 test('guided camera Dino calibrates and saves a replay on manual finish with synthetic camera input',async({page})=>{
@@ -217,6 +221,7 @@ test('guided camera Dino calibrates and saves a replay on manual finish with syn
  await page.waitForTimeout(900);await game.locator('#show-settings').click();await game.locator('#end-run').click();
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
  await expect(page.getByRole('heading',{name:'Jump Game · my replay'})).toBeVisible();
+ const stored=await readStoredClip(page,'jump-game');expect(stored.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(stored.tracking?.sampleCount).toBeGreaterThan(0);expect(stored.tracking?.sessionId).toBe(stored.sessionId);expect(stored.tracking?.sampleSessionIds).toEqual([stored.sessionId]);
  expect(await page.evaluate(()=>document.querySelector('#game-frame').contentWindow.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
 });
 
