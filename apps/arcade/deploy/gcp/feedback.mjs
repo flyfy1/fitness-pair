@@ -77,6 +77,7 @@ export function createFeedbackCollector({directory, origin, games, getUser = asy
       if (!['up','down'].includes(body.rating)) throw fail(400, 'Choose thumbs up or thumbs down.');
       if (!Number.isSafeInteger(body.durationMs) || body.durationMs < 0 || body.durationMs > 86400000) throw fail(400, 'Invalid game duration.');
       if (!Number.isSafeInteger(body.stoppedAt) || Math.abs(body.stoppedAt - now()) > 7 * 86400000) throw fail(400, 'Invalid stop time.');
+      if (!['stopped','completed'].includes(body.endReason)) throw fail(400, 'Invalid game end reason.');
       const page = text(body.sourcePage, 256), score = body.score == null ? null : text(body.score, 160);
       if (page !== `/play/${game.id}` || (body.score != null && score === null)) throw fail(400, 'Invalid game details.');
       const inputSource = body.inputSource == null ? null : text(body.inputSource, 32);
@@ -89,6 +90,7 @@ export function createFeedbackCollector({directory, origin, games, getUser = asy
         game:{id:game.id,title:game.title,inputSource,score},
         sourcePage:page,
         durationMs:body.durationMs,
+        endReason:body.endReason,
         stoppedAt:body.stoppedAt,
         receivedAt:now(),
         request:{

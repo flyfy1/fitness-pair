@@ -7,7 +7,7 @@ import {createFeedbackCollector} from './feedback.mjs';
 const origin='https://fitness.example.test';
 const game={id:'motion-quest',title:'Motion Quest'};
 const id='550e8400-e29b-41d4-a716-446655440000';
-const body=(overrides={})=>({version:1,id,rating:'up',gameId:game.id,sourcePage:'/play/motion-quest',durationMs:3210,stoppedAt:1700000000000,inputSource:'synthetic',score:'2 / 5 squats',...overrides});
+const body=(overrides={})=>({version:1,id,rating:'up',gameId:game.id,sourcePage:'/play/motion-quest',durationMs:3210,stoppedAt:1700000000000,endReason:'stopped',inputSource:'synthetic',score:'2 / 5 squats',...overrides});
 const request=(value=body(),headers={})=>new Request(origin+'/api/feedback',{method:'POST',headers:{Origin:origin,Referer:origin+'/play/motion-quest?private=query','Content-Type':'application/json','User-Agent':'Synthetic Browser 1','Sec-Fetch-Site':'same-origin',Cookie:'private-session',Authorization:'Bearer private-token',...headers},body:JSON.stringify(value)});
 
 test('feedback stores bounded game and request facts with an authenticated account but no credentials',async t=>{
@@ -19,7 +19,7 @@ test('feedback stores bounded game and request facts with an authenticated accou
  assert.equal((await stat(directory+'/feedback/events/'+files[0])).mode&0o777,0o600);
  const saved=JSON.parse(await readFile(directory+'/feedback/events/'+files[0],'utf8'));
  assert.deepEqual(saved.game,{id:'motion-quest',title:'Motion Quest',inputSource:'synthetic',score:'2 / 5 squats'});
- assert.equal(saved.durationMs,3210);assert.equal(saved.sourcePage,'/play/motion-quest');
+ assert.equal(saved.durationMs,3210);assert.equal(saved.endReason,'stopped');assert.equal(saved.sourcePage,'/play/motion-quest');
  assert.deepEqual(saved.request,{origin,referer:'/play/motion-quest',userAgent:'Synthetic Browser 1',secFetchSite:'same-origin'});
  assert.deepEqual(saved.user,{id:'a'.repeat(64),email:'player@example.test'});
  for(const secret of ['private-session','private-token','private-csrf','?private=query'])assert.equal(JSON.stringify(saved).includes(secret),false);
@@ -37,6 +37,7 @@ test('anonymous feedback is accepted while invalid origins, games, ratings, dura
   [request(body({gameId:'unknown'})),400],
   [request(body({rating:'maybe'})),400],
   [request(body({durationMs:-1})),400],
+  [request(body({endReason:'closed'})),400],
   [request(body({sourcePage:'/private'})),400],
   [request(body({inputSource:'hardware-serial'})),400],
   [request(body(),{Origin:'https://attacker.test'}),403],

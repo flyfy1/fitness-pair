@@ -35,7 +35,8 @@ Every hosted playable game receives one shared **Stop game** control. After an
 active round is stopped, the player can send a thumbs-up or thumbs-down rating.
 `POST /api/feedback` stores one private JSON record per event under
 `/var/lib/fitness-arcade/feedback/events/`. The browser supplies the game ID,
-play-page path, elapsed session time, stop time, input provenance and final score.
+play-page path, elapsed session time, stop time, stopped/completed reason, input
+provenance and final score.
 The gateway adds its receipt time plus bounded User-Agent, Origin, Referer path
 and `Sec-Fetch-Site` headers. For a valid Integ.Life product session it also adds
 the hashed account ID and display email.
