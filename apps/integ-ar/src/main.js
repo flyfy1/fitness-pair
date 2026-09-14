@@ -11,6 +11,7 @@ import {drawBody} from '../../camera-start/src/body-overlay.js';
 import {setupFullscreen} from '../../dino-run/src/fullscreen.js';
 import {BodyArcadeRecognizer} from '../../../experiments/action-recognition/body-arcade/index.js';
 import {createBodyInput} from './input.js';
+import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
@@ -29,6 +30,7 @@ let hosted = false;
 let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
 const listeners = new Set(), changed = () => listeners.forEach(callback => callback());
+const trackingPublisher = createTrackingPublisher();
 const storage = {
   get(key, fallback) { try { return JSON.parse(localStorage.getItem('integ-ar:' + key)) ?? fallback; } catch { return fallback; } },
   set(key, value) { try { localStorage.setItem('integ-ar:' + key, JSON.stringify(value)); } catch {} },
@@ -57,7 +59,9 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     $('tracking').textContent = status.state === 'ready' ? 'Finding your torso' : status.state === 'loading' ? 'Preparing tracking' : 'Waiting for camera';
   },
   onPose(frame) {
-    if (disposed || performance.now() - frame.tMs > 250) return;
+    if (disposed) return;
+    trackingPublisher.emit(frame);
+    if (performance.now() - frame.tMs > 250) return;
     pose = frame; action = recognizer.update(frame); const hands = gestures.update(frame);
     if (!action) return;
     const valid = ['active', 'ready', 'completed'].includes(action.phase);
@@ -188,13 +192,14 @@ function render(now) {
 }
 function dispose() {
   if (disposed) return;
-  disposed = true; camera.stop('dispose'); game.destroy(); tutorialView?.dispose(); cancelAnimationFrame(raf); listeners.clear();
+  disposed = true; camera.stop('dispose'); game.destroy(); tutorialView?.dispose(); cancelAnimationFrame(raf); listeners.clear(); trackingPublisher.clear();
 }
 window.addEventListener('pagehide', dispose, {once: true});
 window.gameplay = {
-  getFrame: () => ({round, phase: phase === 'tutorial' ? 'setup' : phase, canvas: $('world'), video: $('camera'), skeleton: $('skeleton'),
+  getFrame: () => ({round, sessionId: session?.sessionId, phase: phase === 'tutorial' ? 'setup' : phase, canvas: $('world'), video: $('camera'), skeleton: $('skeleton'),
     isAR: true, score: `${game.getState().score} points`, source: session?.source}),
   subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
+  subscribeTracking: trackingPublisher.subscribe,
   configureHost({homeURL, recordingNote}) { hosted = true; $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
   dispose,
 };

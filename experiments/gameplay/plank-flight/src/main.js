@@ -13,6 +13,7 @@ import { setupFullscreen } from './fullscreen.js';
 import { TrackingGate, FRAME_FRESH_MS } from './tracking-gate.js';
 import { DEFAULT_DIFFICULTY, setDifficulty, flightSpeed } from './difficulty.js';
 import { projectHead, validHeadControl } from './projection.js';
+import {createTrackingPublisher} from '../../../../packages/gameplay/tracking.js';
 
 document.querySelector('#app').innerHTML = `
 <main class="shell"><section class="stage" aria-label="Live video AR flight"><video id="video" muted playsinline aria-label="Your mirrored local camera"></video><canvas id="scene" aria-label="Helicopter follows your head over the camera"></canvas><canvas id="body-overlay" aria-label="Recognized body joints"></canvas>
@@ -42,6 +43,7 @@ let difficulty={...DEFAULT_DIFFICULTY};
 let mode='camera',pose=null,pilot=null,state=createFlight({sessionId:'idle',source:{kind:'synthetic',id:'idle'}});
 let lastAction=null,lastFrame=performance.now(),demoSeq=0,starting=false,halted=false;
 let demoHead={x:.65,y:.52,image:{width:1280,height:720}};
+const trackingPublisher=createTrackingPublisher();
 const headCanvas=document.createElement('canvas');headCanvas.width=headCanvas.height=100;
 function panel(title,message,label=t('Try again')) {
   document.querySelector('.instructions').hidden=true;
@@ -68,6 +70,7 @@ const camera=new PoseCamera({video,
   },
   onPose(frame){
     if(halted || state.status==='crashing' || state.finished)return;
+    trackingPublisher.emit(frame);
     const now=performance.now();
     if(now-frame.tMs>FRAME_FRESH_MS) {
       if(['countdown','flying'].includes(state.status)){tracking.observe(false,now);state.trackingHeld=true;}
@@ -222,7 +225,7 @@ function tick(now){
 }
 requestAnimationFrame(tick);
 // Retain the existing read-only debug handle; never expose camera pixels or raw landmarks.
-window.plankFlight={localizeHost:()=>localizeDOM(),getAudioStream:()=>sound.getAudioStream(),getState:()=>{
+window.plankFlight={localizeHost:()=>localizeDOM(),getAudioStream:()=>sound.getAudioStream(),subscribeTracking:trackingPublisher.subscribe,getState:()=>{
   const {headControl,...snapshot}=structuredClone(state);
   return {...snapshot,mode,cameraActive:camera.active,starting,audio:sound.snapshot(),headVisible:!!pilot,phase:lastAction?.phase??null};
 }};

@@ -94,6 +94,16 @@ test('AR camera loop: large dinosaur, optional skeleton, proportional height, cl
   expect(errors).toEqual([]);
 });
 
+test('camera presentation publishes validated PoseFrames under its UUID session',async({page})=>{
+  await syntheticCamera(page);await page.goto('/');await page.getByLabel('Controls',{exact:true}).selectOption('camera');
+  await page.evaluate(()=>{window.trackedPoseFrames=[];window.stopTracking=window.dinoAR.subscribeTracking(frame=>window.trackedPoseFrames.push(frame));});
+  await page.getByRole('button',{name:'Enable camera',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>window.trackedPoseFrames.length)).toBeGreaterThan(0);
+  const tracking=await page.evaluate(()=>({sessionId:window.dinoAR.getState().sessionId,poseSessionIds:[...new Set(window.trackedPoseFrames.map(frame=>frame.sessionId))]}));
+  expect(tracking.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(tracking.poseSessionIds).toEqual([tracking.sessionId]);
+  await page.getByRole('button',{name:'Turn camera off'}).click();
+});
+
 test('mobile upper-body view, fullscreen, debug toggling and manual pause clean up',async({page})=>{
   await page.setViewportSize({width:390,height:844}); await syntheticCamera(page); await page.goto('/'); await page.getByLabel('Controls',{exact:true}).selectOption('camera');
   await page.evaluate(()=>{window.testUpper=true;}); await enterPlay(page);

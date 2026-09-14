@@ -5,6 +5,7 @@ import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';
 import { createGameState, consumeAction } from '@fitness-pair/game-forest';
 import { ARGame } from './ar-game.js';
 import { cameraPoint } from './camera-projection.js';
+import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
@@ -18,12 +19,14 @@ let reps = 0, elapsedMs = 0, runningAt = null, demoHeldAt = null, demoCharge = 0
 let statusUntil = 0, currentProgress = 0;
 let replayPhase = 'idle', actionPhase = 'missing';
 let initTimer = null, loadingHintTimer = null, gameState = null, inputSeq = 0;
+const trackingPublisher = createTrackingPublisher();
 
 // A read-only presentation lifecycle for the same-origin arcade recorder.
 // Recognition completion IDs and scoring continue through the shared contracts.
 window.motionQuest = {
-  getReplayState: () => ({ roundId: gameState?.sessionId, phase: replayPhase, actionPhase, charge: game.charge }),
+  getReplayState: () => ({ roundId: gameState?.sessionId, sessionId: gameState?.sessionId, source: gameState?.source, phase: replayPhase, actionPhase, charge: game.charge }),
   getAudioStream: () => game.getAudioStream(),
+  subscribeTracking: trackingPublisher.subscribe,
 };
 function setReplayPhase(phase) {
   if (phase === replayPhase) return;
@@ -176,6 +179,7 @@ async function startCamera() {
         try {
           const frame = fromMediaPipe({ landmarks: data.landmarks, sessionId: gameState.sessionId, seq: inputSeq++,
             tMs: data.time, source: gameState.source, width: video.videoWidth, height: video.videoHeight });
+          trackingPublisher.emit(frame);
           drawSkeleton(frame.joints);
           game.setPose(frame.joints, video.videoWidth, video.videoHeight);
           const action = detector.update(frame);

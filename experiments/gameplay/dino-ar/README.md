@@ -40,7 +40,10 @@ engine. The experiment owns a small shoulder-motion recognizer in
 `src/shoulder-motion.js` for cameras that do not show the waist. It is intentionally outside the workspace package list:
 no root package or lockfile change is needed. The first asset preparation downloads
 the existing checksum-verified Lite model into ignored `public/runtime/`.
-Runtime camera processing stays local; video and landmarks are not saved.
+Runtime camera processing stays local. The standalone experiment does not save
+video or landmarks. When embedded in Hopmodo, the disclosed Arcade recorder
+stores validated named-joint PoseFrames beside the local replay; it does not
+upload either artifact automatically.
 
 ### Keyboard preview (default)
 

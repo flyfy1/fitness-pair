@@ -3,6 +3,7 @@ import {startWithHands} from '../../integ-ar/tests/start-hands.js';
 import {test,expect} from '@playwright/test';
 import {syntheticCamera} from '../../integ-ar/tests/synthetic-camera.js';
 import {arGames} from '../../integ-ar/src/catalog.js';
+import {readStoredClip} from './read-stored-clip.js';
 for(const config of arGames)test(`${config.id}: guest plays AR and receives a local camera replay`,async({page},info)=>{
  await syntheticCamera(page);const errors=[],uploads=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(['PUT','POST'].includes(r.method()))uploads.push(r.url());});
@@ -20,6 +21,11 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
  const cue=await game.locator('#cue').boundingBox(),buttons=await game.locator('.controls').boundingBox();expect(cue.y+cue.height).toBeLessThanOrEqual(buttons.y);
  await page.screenshot({path:info.outputPath('host-mobile.png')});
  await game.locator('#finish').click();await expect(page.locator('#local-result video')).toBeVisible({timeout:12000});
+ const stored=await readStoredClip(page,config.id);
+ expect(stored.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+ expect(stored.tracking).toMatchObject({format:'fitness-pair/tracking-session/1',sessionId:stored.sessionId,source:stored.inputSource});
+ expect(stored.tracking.sampleCount).toBeGreaterThan(0);expect(stored.trackingBytes).toBeGreaterThan(0);
+ expect(stored.tracking.sampleSessionIds).toEqual([stored.sessionId]);expect(stored.tracking.firstVideoMs).toBeGreaterThanOrEqual(0);expect(stored.tracking.lastVideoMs).toBeLessThanOrEqual(stored.tracking.durationMs+50);
  await expect(page.locator('#local-result')).toContainText(config.title);
  await openReplay(page.locator('#local-result video'));
  const decoded=await page.locator('#local-result video').evaluate(async v=>{

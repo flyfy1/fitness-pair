@@ -16,6 +16,11 @@ The existing `PoseFrame → ActionFrame → GameSnapshot` contract is unchanged.
 Presentation and recording are independently hosted by
 `apps/arcade/src/gameplay`; see its README and typed presentation interface.
 
+`createTrackingPublisher()` is the optional event-driven bridge from a camera
+host to that presentation layer. It validates each named-joint `PoseFrame` before
+delivery and owns no camera, model, buffering, or persistence. Standalone games
+have no subscriber, so publishing a frame does not save it by itself.
+
 ## Camera start gesture
 
 `HandsStartGate` consumes named PoseFrames using the existing BodyGestures

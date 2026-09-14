@@ -6,8 +6,9 @@ import {BRAND_NAME,SITE_URL} from '../brand.js';
 import {recordingSize,drawClipFrame} from '../clip-compositor.js';
 import {saveClip,listClips} from '../local-clips.js';
 import {mountClipCard} from '../clips.js';
+import {createTrackingCapture,isSessionUUID,trackingBytes} from './tracking-recording.js';
 export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
- panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. Only your two latest videos stay on this device. Replays keep the latest 90 seconds at normal speed.</p><p class="record-note">Game + enabled camera · game sound when available · optional conversation track · nothing shared automatically</p></div><a href="/library">My clips →</a>';
+ panel.innerHTML='<div><strong>Play now. Replay after.</strong><p id="record-status" role="status">Your game records automatically when you start. Only your two latest videos stay on this device. Replays keep the latest 90 seconds at normal speed.</p><p class="record-note">Game + enabled camera · named body-joint coordinates for replay tools · game sound when available · optional conversation track · nothing shared automatically</p></div><a href="/library">My clips →</a>';
  const status=panel.querySelector('#record-status');
  let conversationControls=null;
  const conversation=createConversationCapture({onChange:state=>{
@@ -65,7 +66,11 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
   revealResult();
  }
  function start(snapshot){
-  const session={round:snapshot.round,createdAt:Date.now(),phase:'recording',hadCamera:cameraLive(snapshot.video),cameraTime:snapshot.video?.currentTime,lastCameraAt:performance.now(),startAt:performance.now(),raf:0,endTimer:0,capture:null,recorder:null,failed:false};
+  const startAt=performance.now(),hadCamera=cameraLive(snapshot.video);
+  const sessionId=isSessionUUID(snapshot.sessionId)?snapshot.sessionId:isSessionUUID(snapshot.round)?snapshot.round:crypto.randomUUID();
+  const source=snapshot.source||{kind:hadCamera?'camera':'synthetic',id:sessionId};
+  const session={round:snapshot.round,sessionId,source,createdAt:Date.now(),phase:'recording',hadCamera,cameraTime:snapshot.video?.currentTime,lastCameraAt:startAt,startAt,raf:0,endTimer:0,capture:null,recorder:null,failed:false};
+  session.tracking=createTrackingCapture({sessionId,source,game:game.id,startedAt:startAt,createdAt:session.createdAt});
   sessions.add(session);active=session;handledRound=snapshot.round;
   session.conversation=conversation.begin(session.startAt);
   function stopTracks(){session.conversationResult??=session.conversation.finish();cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
@@ -78,7 +83,8 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
    stopTracks();
   }
   async function saveRecording(recorded){
-   const clip={id:crypto.randomUUID(),title:`${game.title} · ${translateText('my replay')}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,blob:recorded.blob};
+   const tracking=session.tracking?.finish(recorded);
+   const clip={id:crypto.randomUUID(),sessionId:session.sessionId,title:`${game.title} · ${translateText('my replay')}`,game:game.id,gameTitle:game.title,createdAt:session.createdAt,width:session.context.canvas.width,height:session.context.canvas.height,duration:recorded.duration,playbackRate:1,source:session.hadCamera?'replay':'synthetic',inputSource:session.source,includesCamera:session.hadCamera,includesAudio:session.includesAudio,brand:BRAND_NAME,website:SITE_URL,branded:false,hasEnding:false,finalScore:session.finalScore,stopReason:session.stopReason,tracking,trackingBytes:trackingBytes(tracking),blob:recorded.blob};
    clip.conversation=await session.conversationResult;
    clip.thumbnail=recorded.trimmed?recorded.thumbnail:await session.thumbnail;
    if(clip.conversation)clip.conversation.offsetSeconds-=recorded.startSeconds;
@@ -171,6 +177,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  }
  document.addEventListener('visibilitychange',visibility);
  const unsubscribe=runtime.subscribe(watchForStart);
+ const unsubscribeTracking=runtime.subscribeTracking(frame=>active?.tracking?.add(frame));
  return {
   connectControls(element){
    conversationControls=element;shareButton=element.querySelector('[data-replay-share]');
@@ -178,6 +185,6 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
    element.querySelector('[data-conversation]').disabled=!supported||panel.dataset.state==='unavailable';element.querySelector('[data-conversation]').onclick=()=>conversation.toggle();watchForStart();
   },
   onGameReload(){if(active)active.finish('Game reloaded');conversation.disable();handledRound=null;completedRound=null;shareRound=null;},
-  dispose(){if(unloading)return;unloading=true;document.removeEventListener('visibilitychange',visibility);conversation.disable();clearInterval(watcher);unsubscribe();for(const session of sessions)session.saveNow();},
+  dispose(){if(unloading)return;unloading=true;document.removeEventListener('visibilitychange',visibility);conversation.disable();clearInterval(watcher);unsubscribe();unsubscribeTracking();for(const session of sessions)session.saveNow();},
  };
 }

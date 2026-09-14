@@ -11,6 +11,12 @@ or a keyboard-controlled preview. Games receive semantic controls after
 The existing pose camera, body-gesture pause command, model assets and recording
 host are reused. No new runtime dependency or model is required.
 
+Every camera start creates a UUID v4 shared by its PoseFrames and Arcade
+presentation. The six games publish validated named-joint frames through the
+same optional presentation boundary. Hopmodo records only the frames emitted
+during the local video window and persists both artifacts atomically; standalone
+play does not save tracking, and no upload happens automatically.
+
 Source code under `src/originals/` is adapted from the user's `flyfy1/integ-games`
 commit `c2a3374daec9ea15342baa32e001581ade40dec8`, paths `src/games/` and
 `src/core/game-types.ts`. It is user-authorized source reuse, not a claim of an

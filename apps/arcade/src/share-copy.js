@@ -3,6 +3,7 @@ import {captureClipThumbnail} from './clip-thumbnail.js';
 import {loadRecordingLogo,drawClipEnding} from './clip-compositor.js';
 import {startVideoRecorder,recordedBlob} from './video-format.js';
 import {MAX_BYTES} from './local-clips.js';
+import {sliceTracking,trackingBytes} from './gameplay/tracking-recording.js';
 
 export const SHARE_MAX_BYTES=200_000_000,SHARE_MAX_SECONDS=90;
 export const fitsWebsiteShare=clip=>clip.blob.size>0&&clip.blob.size<=SHARE_MAX_BYTES&&Number.isFinite(clip.duration)&&clip.duration>0&&clip.duration<=SHARE_MAX_SECONDS;
@@ -104,7 +105,8 @@ export async function createShareCopy(clip,{signal,onProgress=()=>{},includeConv
   });
   const encoded=await output;encoded.thumbnail=await thumbnail;localSignal.throwIfAborted();
   if(!fullLength&&!fitsWebsiteShare(encoded))throw new Error('The share copy exceeded the website limits. Your full replay is still saved.');
-  return {id:crypto.randomUUID(),parentId:clip.id,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · ${translateText(fullLength?'with conversation':'share copy')}`,game:clip.game,createdAt:Date.now(),width:canvas.width,height:canvas.height,source:clip.source,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio||!!voiceBuffer,conversationEmbedded:!!voiceBuffer||!!clip.conversationEmbedded,gameTitle:clip.gameTitle,brand:clip.brand,website:clip.website,shareCopy:!fullLength,branded:brandedDownload||clip.branded!==false,playbackRate:(clip.playbackRate||1)*playbackRate,endingSeconds:brandedDownload?3:fullLength?(clip.endingSeconds??3)/playbackRate:0,hasEnding:brandedDownload||(fullLength&&!!clip.hasEnding),finalScore:clip.finalScore,...encoded};
+  const derivedTracking=sliceTracking(clip.tracking,{startSeconds:range.start,endSeconds:range.end,playbackRate});
+  return {id:crypto.randomUUID(),parentId:clip.id,sessionId:clip.sessionId,title:`${clip.gameTitle||clip.title.split(' · ')[0]} · ${translateText(fullLength?'with conversation':'share copy')}`,game:clip.game,createdAt:Date.now(),width:canvas.width,height:canvas.height,source:clip.source,inputSource:clip.inputSource,includesCamera:clip.includesCamera,includesAudio:!!clip.includesAudio||!!voiceBuffer,conversationEmbedded:!!voiceBuffer||!!clip.conversationEmbedded,gameTitle:clip.gameTitle,brand:clip.brand,website:clip.website,shareCopy:!fullLength,branded:brandedDownload||clip.branded!==false,playbackRate:(clip.playbackRate||1)*playbackRate,endingSeconds:brandedDownload?3:fullLength?(clip.endingSeconds??3)/playbackRate:0,hasEnding:brandedDownload||(fullLength&&!!clip.hasEnding),finalScore:clip.finalScore,tracking:derivedTracking,trackingBytes:trackingBytes(derivedTracking),...encoded};
  }finally{
   clearTimeout(deadline);clearTimeout(endTimer);cancelAnimationFrame(raf);
   if(recorder){recorder.ondataavailable=recorder.onstop=recorder.onerror=null;if(recorder.state!=='inactive')recorder.stop();}

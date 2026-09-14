@@ -8,6 +8,7 @@ import { setupFullscreen } from '../../../../apps/dino-run/src/fullscreen.js';
 import { ShoulderMotionRecognizer } from './shoulder-motion.js';
 import { KeyboardInput } from './keyboard-input.js';
 import { sceneGeometry, drawSkeleton, drawWorld } from './scene.js';
+import {createTrackingPublisher} from '../../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
 const startGate = createHandsStart($('arena'));
@@ -18,6 +19,8 @@ let inputMode = 'keyboard', action = null, pose = null, cameraState = 'off';
 let awaiting = false, lastPoseAt = 0, lastFrame = 0, lastPaint = 0;
 let message = '', error = '', previousStatus = 'ready';
 let lastPassed = 0, clearedAt = -Infinity, bestLift = 0;
+const trackingPublisher = createTrackingPublisher();
+let presentationSession = {sessionId: crypto.randomUUID(), source: {kind: 'synthetic', id: 'keyboard-preview'}};
 setupFullscreen($('arena'), $('fullscreen'), text => { $('announcement').textContent = text; });
 
 function pause(reason, release = false) {
@@ -45,6 +48,7 @@ const camera = new PoseCamera({
     if (inputMode !== 'camera') return;
     cameraState = status.state;
     if (status.state === 'requesting') {
+      presentationSession = {sessionId: status.sessionId, source: status.source};
       startGate.reset(status); recognizer.reset(status); motionInput.reset(status);
       action = null; pose = null; lastPoseAt = 0; bestLift = 0;
     }
@@ -52,6 +56,7 @@ const camera = new PoseCamera({
   },
   onPose(frame) {
     if (inputMode !== 'camera') return;
+    trackingPublisher.emit(frame);
     lastPoseAt = frame.tMs;
     const fresh = performance.now() - frame.tMs < 250;
     pose = fresh ? frame : null;
@@ -88,7 +93,7 @@ function start() {
   error = ''; message = ''; awaiting = true;
   if (inputMode === 'keyboard') {
     if (runner.status === 'ready') {
-      keyboard.reset(`keyboard-${crypto.randomUUID()}`); motionInput.reset(keyboard.session);
+      keyboard.reset(crypto.randomUUID()); presentationSession = keyboard.session; motionInput.reset(keyboard.session);
       action = null; bestLift = 0;
       consumeAction(keyboard.update(performance.now()));
     } else { runner.command('resume'); awaiting = false; }
@@ -198,7 +203,8 @@ window.addEventListener('keydown', event => {
   }
 });
 // Compact observability: no raw camera frames or identifiable landmarks.
-window.dinoAR = Object.freeze({ getState: () => ({ ...runner.snapshot(), inputMode,
+window.dinoAR = Object.freeze({ subscribeTracking: trackingPublisher.subscribe, getState: () => ({ ...runner.snapshot(), inputMode,
+  sessionId: presentationSession.sessionId, source: presentationSession.source,
   input: { source: action?.source ?? null, phase: action?.phase ?? null,
     heightRatio: action?.heightRatio ?? 0, bestHeightRatio: bestLift },
   camera: { state: cameraState, stage: inputMode === 'camera' ? action?.stage ?? 'standing' : 'off',
