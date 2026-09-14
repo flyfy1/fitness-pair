@@ -29,6 +29,24 @@ The earlier access-code release was verified on GCP; account rollout evidence is
 
 The site hosts clip links but cannot prevent viewers from saving videos or recording their screen. An iframe does not provide copy protection. Sites access controls still determine who can open shared pages; a private deployment is not a public growth loop.
 
+## Game stop feedback
+
+Every hosted playable game receives one shared **Stop game** control. After an
+active round is stopped, the player can send a thumbs-up or thumbs-down rating.
+`POST /api/feedback` stores one private JSON record per event under
+`/var/lib/fitness-arcade/feedback/events/`. The browser supplies the game ID,
+play-page path, elapsed session time, stop time, input provenance and final score.
+The gateway adds its receipt time plus bounded User-Agent, Origin, Referer path
+and `Sec-Fetch-Site` headers. For a valid Integ.Life product session it also adds
+the hashed account ID and display email.
+
+The endpoint accepts only same-origin JSON for a registered playable game. It
+does not store Cookie, Authorization, CSRF tokens, IP addresses, camera frames,
+landmarks or recordings. Event files are mode `0600` inside the service's private
+state directory and survive release rollbacks. This first slice has no public or
+browser-readable reporting endpoint; operators can aggregate the private event
+files on the VM without exposing account and request metadata.
+
 ## Sources
 
 - [GCP object upload API](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert)
