@@ -48,6 +48,24 @@ state directory and survive release rollbacks. This first slice has no public or
 browser-readable reporting endpoint; operators can aggregate the private event
 files on the VM without exposing account and request metadata.
 
+## Private recognition debug reports
+
+During a game, the shared shell keeps the latest 90 seconds of UUID-linked named
+body-joint data on the device with the local replay. A player may open **Debug
+report**, or explicitly enable the browser speech service and say
+**“我要上传 debug”**, to review a private diagnostic upload. Nothing is uploaded
+until the player confirms. Gameplay video is a separate checkbox and defaults off.
+
+`POST /api/debug-reports` accepts at most 16 MiB of bounded JSON tracking and
+session context. `PUT /api/debug-reports/:id/video` requires the distinct
+`debug-video-v1` consent header and accepts MP4/WebM up to 105 MiB. The GCP gateway
+stores mode-`0600` records under `$FITNESS_STATE_DIR/debug-reports/events/` and
+optional video under `$FITNESS_STATE_DIR/debug-reports/videos/`; neither is a
+gallery publication. Both expire after 30 days; the gateway prunes them on startup,
+hourly and before accepting another report. Requests are same-origin, UUID-bound and idempotent. Browser
+speech recognition is opt-in because the browser's speech service may process
+command audio; Hopmodo does not store that command audio.
+
 ## Sources
 
 - [GCP object upload API](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert)
