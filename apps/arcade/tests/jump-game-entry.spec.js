@@ -19,7 +19,7 @@ test('previous Jump Game URLs and shared clips still open the renamed game',asyn
  await expect(page.locator('#game-frame')).toHaveAttribute('title','Jump Game game');
  await page.goto('/games/camera-start/');
  await expect(page).toHaveTitle('Jump Game');await expect(page.locator('#primary')).toHaveText('Enable camera');
- const clip={id:'ab125bc1-8659-4f6f-9889-b049e0247852',title:'Previous jump replay',game:'camera-start',source:'synthetic'};
+ const clip={id:'ab125bc1-8659-4f6f-9889-b049e0247852',title:'Previous jump replay',game:'camera-start',source:'synthetic',expiresAt:null,visibility:'public',duration:1};
  await page.route('**/api/clips/'+clip.id,route=>route.fulfill({json:clip}));
  await page.route('**/api/media/'+clip.id,route=>route.fulfill({status:404}));
  await page.goto('/clips/'+clip.id);
