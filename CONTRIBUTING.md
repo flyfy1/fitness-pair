@@ -4,7 +4,7 @@ Read [AGENTS.md](AGENTS.md), [README.md](README.md), and the [contracts](contrac
 
 ## Claim a bounded task
 
-Before parallel work, state the directory, intended result, and stop condition in the coordinating task. Work in `experiments/<track>/<experiment-slug>/` for exploration. Use a separate branch or worktree for multiple writers; explicitly disjoint file ownership is required in any shared checkout. Do not edit a claimed directory or shared interface concurrently. Do not assign contributors who have not agreed to participate.
+Use the primary checkout on `main` for development and deployment, with one local worktree by default. Do not create task branches or extra worktrees unless the user explicitly requests isolation. Serialize writers in the shared checkout. Before user-requested parallel work, state the directory, intended result, and stop condition in the coordinating task. Work in `experiments/<track>/<experiment-slug>/` for exploration. Do not edit a claimed directory or shared interface concurrently. Do not assign contributors who have not agreed to participate.
 
 | Boundary | Directory | Responsibility |
 | --- | --- | --- |
@@ -46,23 +46,24 @@ fix with a passing regression check, or a playable interaction with browser
 evidence. Keep each commit coherent; unfinished work stays outside that commit.
 
 1. Claim the directory, result, and stop condition in a shared issue, PR, or
-   coordinating conversation visible to the affected contributors. Use a task
-   branch (`codex/<short-task>` for agents) and separate worktrees for concurrent
-   local writers. Fetch the latest remote state before choosing the starting point.
+   coordinating conversation visible to the affected contributors. Work on `main`
+   in the primary checkout by default. Fetch the latest remote state and reconcile
+   it safely before starting; preserve unrelated uncommitted work.
 2. Complete one bounded part and run its relevant checks. Documentation-only
    changes need a content/link review and `git diff --check`; shared code and
    playable-path changes retain the checks specified above.
 3. Review the diff and stage explicit owned paths. Inspect the staged diff before
    committing so unrelated work, private data, and generated files stay out.
-4. Commit with an English message describing the change. Push the first checkpoint
-   with `git push -u origin <task-branch>` and subsequent checkpoints with
-   `git push`. Verify that the remote branch points to the delivered commit.
+4. Commit with an English message describing the change and push with
+   `git push origin main`. Verify that remote `main` contains the delivered commit.
+   For explicitly requested isolation, use `codex/<short-task>` unless another name
+   is specified, push that branch, and finish by integrating as described below.
 5. Share the branch, commit, changed behavior, checks, push result, and remaining
    work so teammates can fetch the checkpoint. Open or update a narrow PR when
    the checkpoint is ready for review; use a draft if integration is unfinished.
 
 These routine commits and pushes are authorized within the agreed task. Checkpoint
-pushes share progress; task completion also requires the integration below.
+pushes share progress; isolated work also requires the integration below.
 Breaking contracts still require agreement from affected owners. Do not merge
 another contributor's work without authorization.
 
@@ -71,9 +72,15 @@ verified. If a push fails, retain the local commit, report that it is unpushed,
 and resolve authentication or remote divergence without overwriting teammates'
 history. Do not force-push a shared branch or silently claim the team has the work.
 
-## Finish by integrating the worktree
+## Finish on main
 
-A completed task must not remain only on its worktree branch. Merge its verified,
+Normal work is committed and pushed directly on `main`; do not create an extra
+branch or worktree just to validate or deliver it. Deployment requires clean,
+committed `main` synchronized with remote `main`, plus authorization to publish.
+Branch cleanup alone is not deployment authorization.
+
+If the user explicitly requested isolation, a completed task must not remain
+only on its temporary branch. Merge its verified,
 task-owned commits into the agreed integration branch (default: `main`) and push
 that branch before reporting completion. The user authorizes this routine final
 integration; no additional reminder or approval is needed. Respect repository
@@ -83,7 +90,8 @@ those requirements block completion.
 1. Fetch the latest target branch and inspect the full difference from the task
    branch. Include only the agreed work; a branch that also contains unrelated
    contributions needs a clean integration branch containing the intended commits.
-2. Integrate in a clean worktree. Preserve other contributors' active worktrees,
+2. Integrate in the existing primary checkout on `main`, without creating another
+   worktree. Preserve other contributors' active worktrees,
    uncommitted changes, and local data. Resolve conflicts within the agreed scope;
    coordinate any conflict that requires changing another owner's contract.
 3. Review and validate the integrated result with the relevant checks above.
@@ -92,9 +100,10 @@ those requirements block completion.
 4. Verify that the remote integration branch contains the delivered commits.
    Report the target branch, integrated commit, checks, and push result. A pushed
    task branch or an open PR alone does not mean integration is complete.
-5. Remove task-owned temporary worktrees only after verifying integration and
+5. Remove explicitly requested, task-owned temporary worktrees after verifying integration and
    checking for uncommitted, untracked, or ignored local data that must be retained.
-   Never force-remove a worktree or clean up another contributor's active workspace.
+   Never discard local data or clean up another contributor's active workspace
+   without authorization. Finish with the primary checkout on `main`.
 
 If validation, conflicts, branch protection, or access prevent integration, keep
 the work available and report the exact blocker and remaining merge explicitly.

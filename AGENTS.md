@@ -40,8 +40,11 @@ Do not imply multiplayer exists because of the project name.
 - `experiments/pose-models/`, `action-recognition/`, `gameplay/`, `evaluation/`:
   independent explorations. Work under `<track>/<experiment-slug>/`.
 
-Claim a concrete directory and task before parallel work. Use separate branches
-or worktrees for multiple writers; never have two agents edit the same files.
+Default to the primary checkout on `main` for development and deployment. Keep
+one local worktree; do not create task branches or additional worktrees unless
+the user explicitly requests an isolated workflow. Serialize writers in the
+shared checkout and never have two agents edit the same files.
+Claim a concrete directory and task before user-requested parallel work.
 Use read-only scouts/reviewers when useful, one integration owner, and one bounded
 review pass. Do not invent team members or assign people without their agreement.
 
@@ -96,18 +99,17 @@ for the shared recorder. Do not create another default soundtrack per game.
   for these routine commits and pushes within the agreed task.
 - Report each checkpoint's branch, commit, checks, push result, and remaining
   work. If validation or push fails, report the blocker and do not claim delivery.
-- Use `codex/<short-task>` for agent branches unless the user specifies otherwise.
-- Push checkpoints to the task branch. When the agreed task is complete, merge
-  its verified commits into the agreed integration branch (default: `main`) and
-  push that branch. This routine integration of task-owned work is authorized;
-  do not stop at a pushed worktree branch or request another reminder.
-- Before integration, fetch the latest target, review the complete merge diff,
-  and run relevant checks on the integrated result in a clean worktree. Preserve
-  concurrent work and never overwrite teammates' history to resolve a rejected push.
-- Verify the remote integration branch contains the completed commits and report
-  the result. Remove only task-owned temporary worktrees after confirming they
-  contain no uncommitted work or local data to preserve. If integration is blocked,
-  report the blocker and outstanding merge instead of claiming the task complete.
+- Commit and push checkpoints directly to `main` by default. Fetch and reconcile
+  remote changes before starting; preserve unrelated local work and never force-push.
+- Only when the user explicitly requests isolation, use `codex/<short-task>`
+  unless another name is specified. Merge verified task-owned commits into `main`,
+  validate the integrated result in the existing checkout, and push `main` before
+  reporting completion. Do not create another worktree solely for integration.
+- Verify remote `main` contains the delivered commits. For an explicitly requested
+  temporary worktree, preserve uncommitted and ignored local data before removing
+  it after integration; finish with the primary checkout on `main`.
+- Deploy only from clean, committed `main` synchronized with remote `main`.
+  A cleanup or branch change does not authorize publishing a public service.
 - Keep PRs narrow: problem, changed behavior, evidence, remaining limitations.
 - Do not merge another contributor's work or publish a public service unless
   authorized. Ordinary local development and validation should proceed directly.
