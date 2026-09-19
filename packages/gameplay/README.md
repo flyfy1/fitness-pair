@@ -23,20 +23,28 @@ have no subscriber, so publishing a frame does not save it by itself.
 
 ## Camera start gesture
 
-`HandsStartGate` consumes named PoseFrames using the existing BodyGestures
-recognizer. Participating hosts choose a setup boundary for this gate. Both wrists
-must be visible above the shoulders for one second, followed by 400 ms with both
-hands down. A missing/stale frame or loss of readiness resets the attempt. Reset
-the gate for every camera session; hide its view on teardown. It emits permission
-to begin, never a scoring ActionFrame. Camera permission still requires a button.
+`BodyGestures` is the shared named-joint gesture recognizer. Each camera host
+creates one instance and calls `update` once per PoseFrame. Its result feeds both
+start confirmation and existing pause/resume commands. `HandsStartGate` owns no
+recognizer, camera or Worker: it validates readiness, frame/session identity,
+freshness, left-hand hold and release from that same result.
 
-Jump Game does not use this gate; after standing calibration, a one-second
-left-hand raise or the Confirm & continue button leads directly to the countdown.
+Standing games require a left-hand hold above the shoulder for one second with
+the right hand down, followed by 400 ms with both hands lowered. A gesture begun
+before readiness cannot authorize play. Confirmation never scores. Hosts retain
+their existing game-specific calibration and countdown; Motion Quest and Dino AR
+use the gate's optional three-second countdown. There is exactly one countdown.
+New camera sessions reset confirmation; ordinary in-round tracking recovery does
+not add another setup gesture. Push-up Flight reuses its existing head/shoulder
+controller and countdown, with no hand gesture or extra detector.
 
-`createHandsStart` provides the large instruction overlay for participating
-camera routes, with transparent text and no panel or progress bar. Pointer and keyboard previews keep their existing controls.
-Motion Quest and Push-up Flight do not use this gate: standing calibration and
-the head/one-shoulder countdown respectively begin immediately after camera setup.
+`createHandsStart` provides the common confirmation prompt. `mountGameEntry`
+provides the shared introduction, steps and controls on all 11 playable routes,
+including standalone pages. Hosts pass their native buttons/options; the view
+moves them temporarily and restores them before their existing handlers run.
+It never requests a camera or starts inference. Keyboard/pointer alternatives
+retain their original controls. The arcade shell still owns recording, optional
+microphone/debug controls, feedback and statistics.
 
 ## Language preference
 

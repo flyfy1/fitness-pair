@@ -1,7 +1,8 @@
 export async function camera(page){await page.addInitScript(()=>{
+ window.cameraRequests=0;window.workerCreations=0;
  window.startPose={hands:'down',rise:0,missing:false};
- navigator.mediaDevices.getUserMedia=async()=>{const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d');x.fillStyle='#567468';x.fillRect(0,0,640,480);window.startStream=c.captureStream(30);const timer=setInterval(()=>{if(window.startStream.getTracks().every(t=>t.readyState==='ended'))clearInterval(timer);else{x.fillStyle='#567468';x.fillRect(0,0,640,480);}},30);return window.startStream;};
- window.Worker=class{constructor(){window.startWorker=this;}postMessage(m){if(m.type==='init'){setTimeout(()=>this.onmessage?.({data:{type:'ready'}}),0);return;}m.bitmap.close();const a=window.startPose,p=Array.from({length:33},()=>({x:.5,y:.2-a.rise,visibility:1}));
+ navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d');x.fillStyle='#567468';x.fillRect(0,0,640,480);window.startStream=c.captureStream(30);const timer=setInterval(()=>{if(window.startStream.getTracks().every(t=>t.readyState==='ended'))clearInterval(timer);else{x.fillStyle='#567468';x.fillRect(0,0,640,480);}},30);return window.startStream;};
+ window.Worker=class{constructor(){window.workerCreations++;window.startWorker=this;}postMessage(m){if(m.type==='init'){setTimeout(()=>this.onmessage?.({data:{type:'ready'}}),0);return;}m.bitmap.close();const a=window.startPose,p=Array.from({length:33},()=>({x:.5,y:.2-a.rise,visibility:1}));
  for(const [side,ids] of [[-1,[11,13,15,23,25,27]],[1,[12,14,16,24,26,28]]]){
   const x=.5+side*.065;for(const [i,y] of [[0,.28],[1,.42],[2,.64],[3,.52],[4,.72],[5,.91]])p[ids[i]]={x:x+(i===1||i===2?side*.055:0),y:y-a.rise,visibility:1};
   if(a.squat){p[ids[0]].y=.38;p[ids[3]].y=.64;p[ids[4]].x=x+.14;}

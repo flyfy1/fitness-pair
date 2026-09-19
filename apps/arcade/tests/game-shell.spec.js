@@ -1,3 +1,4 @@
+import {camera} from './start-camera-fixture.js';
 import {test, expect} from '@playwright/test';
 
 const games = [
@@ -11,26 +12,28 @@ const games = [
 
 for (const game of games) {
   test(`${game.id} fills the window and keeps game entry, exit and replay tools reachable`, async ({page}, info) => {
+    await camera(page);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    for (const size of [{width: 1440, height: 1000}, {width: 390, height: 844}, {width: 320, height: 740}]) {
+    for (const size of [{width: 1440, height: 1000}, {width: 390, height: 844}, {width: 320, height: 740}, {width:844,height:390}]) {
       await page.setViewportSize(size);
       await page.goto(`/play/${game.id}`);
       const frame = page.frameLocator('#game-frame');
       await expect(frame.locator(game.start)).toBeInViewport();
+      if(game.id==='plank-flight'){await frame.locator('.game-entry-settings summary').click();for(const slider of await frame.locator('.game-entry input[type=range]').all()){const b=await slider.boundingBox();expect(b.x).toBeGreaterThanOrEqual(0);expect(b.x+b.width).toBeLessThanOrEqual(size.width);}await frame.locator('.game-entry-settings summary').click();}
       const box = await page.locator('#game-frame').boundingBox();
       expect(box).toMatchObject({x: 0, y: 0, width: size.width, height: size.height});
       const stage = await frame.locator(game.stage).boundingBox();
       expect(stage).toMatchObject({x: 0, y: 0, width: size.width, height: size.height});
       await expect(page.locator('.nav, .play-heading, .footer')).toHaveCount(0);
-      await expect(frame.locator(game.note)).toContainText(/records? automatically|records on this device/);
+      await expect(frame.locator('.game-entry')).toBeVisible();expect(await frame.locator('body').evaluate(()=>({cameras:window.cameraRequests,workers:window.workerCreations}))).toEqual({cameras:0,workers:0});await expect(frame.locator('.game-entry-note')).toContainText('Camera processing stays on this device');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(await frame.locator('html').evaluate(el => el.scrollWidth <= innerWidth)).toBe(true);
       const tools = await page.locator('.game-replay-tools').boundingBox();
       expect(tools.y).toBe(size.height);
       await page.screenshot({path: info.outputPath(`${game.id}-${size.width}.png`)});
 
-      const home = frame.getByRole('link', {name: 'Back to the Hopmodo arcade'});
+      const home = frame.getByRole('link', {name: 'All games',exact:false});
       await expect(home).toBeInViewport();
       await expect(home).toHaveAttribute('target', '_top');
       if (size.width === 1440) await home.click();

@@ -1,3 +1,4 @@
+import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import './style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
@@ -6,7 +7,7 @@ import {createRunnerMotionInput} from './motion-input.js';
 import { Renderer } from './render.js';
 import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { PoseCamera } from './camera.js';
-import { BodyGestures } from './gestures.js';
+import { BodyGestures } from '../../../packages/gameplay/body-gestures.js';
 import { setupFullscreen } from './fullscreen.js';
 import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
@@ -16,7 +17,7 @@ const motionInput = createRunnerMotionInput(runner);
 runner.setControlMode('motion');
 const renderer = new Renderer($('game'), runner);
 const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true });
-const gestures = new BodyGestures();
+const gestures = new BodyGestures({oneHandSide:'left'});
 let gestureState = null, gestureMessage = '', gestureStartRequested = false;
 setupFullscreen($('play-area'), $('fullscreen'), message => { $('announcement').textContent = message; });
 let mode = 'motion', cameraState = 'off', latestAction = null, lastPoseAt = 0;
@@ -60,7 +61,7 @@ const camera = new PoseCamera({
     latestAction = action;
     gestureState = gestures.update(frame);
     if (gestureState?.neutral && !gestureState.latched) gestureMessage = '';
-    if (startGate.update(frame, action.calibrated || action.canConfirmMaximum)) {
+    if (startGate.update(frame, action.calibrated || action.canConfirmMaximum, gestureState)) {
       if (!action.calibrated) recognizer.confirmMaximum();
       else handleGesture(gestureState?.event);
     }
@@ -127,7 +128,7 @@ function paint() {
   } else if (!running) {
     if (cameraError) overlay('CAMERA NEEDS ATTENTION', 'Let’s get you connected.', cameraError, 'Retry camera', 'Keyboard mode is also available.');
     else if (cameraState === 'off') overlay('MOVE TO PLAY', paused ? 'Ready to move again?' : 'First, set your jump range.', pauseReason || 'Stand still, then make one maximum comfortable jump.', 'Enable camera', 'Keep the camera fixed, with your shoulders and hips visible.');
-    else if (!latestAction?.calibrated) overlay('CALIBRATION', latestAction?.canConfirmMaximum ? 'Height captured. Ready?' : latestAction?.stage === 'maximum' ? 'Set your maximum jump.' : 'Stand tall and still.', cameraState === 'requesting' ? 'Allow camera access in your browser.' : cameraState === 'loading' ? 'Loading the local pose model…' : calibrationCopy().detail, latestAction?.canConfirmMaximum ? 'Use measured height' : 'Calibrating…', 'Raise one hand above your shoulder for 1 second to confirm.', !latestAction?.canConfirmMaximum);
+    else if (!latestAction?.calibrated) overlay('CALIBRATION', latestAction?.canConfirmMaximum ? 'Height captured. Ready?' : latestAction?.stage === 'maximum' ? 'Set your maximum jump.' : 'Stand tall and still.', cameraState === 'requesting' ? 'Allow camera access in your browser.' : cameraState === 'loading' ? 'Loading the local pose model…' : calibrationCopy().detail, latestAction?.canConfirmMaximum ? 'Use measured height' : 'Calibrating…', 'Raise your left hand above your shoulder for 1 second to confirm.', !latestAction?.canConfirmMaximum);
     else if (!awaitingStart) overlay('TAKE A BREATHER', 'Ready when you are.', pauseReason || 'Stand in your calibrated position before continuing.', 'Resume run', 'Raise both hands for 1 second to resume. Then lower your hands.');
     else overlay('CALIBRATION COMPLETE', countdownAt === null ? 'Lower your hands and stand steady.' : `Starting in ${Math.max(1, Math.ceil((3000 - (performance.now() - countdownAt)) / 1000))}`, 'Your maximum jump is now 100%. Small hops make smaller jumps.', 'Get ready…', 'Stay in place. Jump when the run begins.', true);
   }
@@ -143,7 +144,7 @@ function calibrationCopy() {
   if (latestAction?.quality === 'position-changed') return { title: 'Return to your starting position', detail: 'Your body position or size changed. Keep the camera fixed, face it and stand at the same distance.' };
   if (latestAction?.phase === 'missing') return { title: 'Keep shoulders and hips in view', detail: 'Face the camera with both shoulders and hips visible. Legs can stay outside the frame.' };
   if (latestAction?.cue === 'prepare-jump') return { title: 'Ready when you are', detail: 'A small crouch before jumping is OK. Your standing baseline is saved.' };
-  if (latestAction?.canConfirmMaximum) return { title: 'Height captured — confirm it', detail: 'Raise one hand above your shoulder for 1 second, or choose Use measured height. You can jump again to record a higher maximum.' };
+  if (latestAction?.canConfirmMaximum) return { title: 'Height captured — confirm it', detail: 'Raise your left hand above your shoulder for 1 second, or choose Use measured height. You can jump again to record a higher maximum.' };
   if (latestAction?.cue === 'jump-higher-and-retry') return { title: 'Let’s measure that again', detail: 'That jump was too small to calibrate. Stand steady, then try one clear jump.' };
   if (latestAction?.stage === 'maximum' && latestAction.measuredRise > 0) return { title: 'Movement captured', detail: 'Return to your starting height and hold steady. Keep both shoulders and hips visible; your feet do not need to be in view.' };
   if (latestAction?.stage === 'maximum') return { title: 'Jump once to set your maximum', detail: latestAction.cue === 'land-and-hold' ? 'Land and stand steady to finish the measurement.' : 'Make your highest comfortable jump, then land in the same spot.' };
@@ -163,7 +164,7 @@ function paintCalibration() {
   const fraction = calibrated ? latestAction.heightRatio : latestAction?.calibrationProgress ?? 0;
   $('height-value').textContent = cameraState === 'off' ? '—' : `${Math.round(fraction * 100)}%`;
   $('height-bar').style.width = `${fraction * 100}%`;
-  $('height-detail').textContent = calibrated ? 'Your maximum = 100%' : latestAction?.stage === 'maximum' ? latestAction?.canConfirmMaximum ? 'Height captured · raise one hand to confirm' : 'Jump, return, then raise one hand to confirm' : 'Hold a steady standing pose';
+  $('height-detail').textContent = calibrated ? 'Your maximum = 100%' : latestAction?.stage === 'maximum' ? latestAction?.canConfirmMaximum ? 'Height captured · raise your left hand to confirm' : 'Jump, return, then raise your left hand to confirm' : 'Hold a steady standing pose';
   $('stop-camera').hidden = !camera.active; $('recalibrate').hidden = !camera.running;
   const stage = latestAction?.stage || 'standing';
   for (const step of ['standing', 'maximum', 'ready']) $( `step-${step}` ).classList.toggle('current', camera.active && stage === step);
@@ -178,7 +179,7 @@ function handleGesture(event) {
       gestureMessage = 'Paused · lower hands before another gesture';
     } else if (latestAction?.calibrated) {
       primaryAction(); gestureStartRequested = true; gestureMessage = 'Resume requested · lower your hands for the countdown';
-    } else gestureMessage = 'Finish height calibration first. Raise one hand to confirm a captured height.';
+    } else gestureMessage = 'Finish height calibration first. Raise your left hand to confirm a captured height.';
   } else if (runner.status !== 'running') {
     if (latestAction?.stage === 'standing') gestureMessage = 'Stand still until your baseline is captured, then make one clear jump.';
     else if (!latestAction?.calibrated) {
@@ -193,9 +194,9 @@ function paintGestures() {
   $('gesture-progress').style.width = `${(gestureState?.progress ?? 0) * 100}%`;
   $('gesture-status').textContent = cameraState === 'off' ? 'Enable camera once to use body controls.'
     : !gestureState?.tracked ? 'Keep both wrists and shoulders visible for gestures.'
-    : gestureState.progress > 0 && !gestureState.event ? `Hold ${gestureState.kind === 'both-hands' ? 'both hands' : 'one hand'}… ${Math.round(gestureState.progress * 100)}%`
+    : gestureState.progress > 0 && !gestureState.event ? `Hold ${gestureState.kind === 'both-hands' ? 'both hands' : 'your left hand'}… ${Math.round(gestureState.progress * 100)}%`
     : gestureState.latched ? gestureMessage || 'Lower both hands before another gesture.'
-    : gestureMessage || 'One hand: next · Both hands: pause / resume';
+    : gestureMessage || 'Left hand: next · Both hands: pause / resume';
 }
 
 function pauseRun(reason = '', stopCamera = false) {
@@ -310,3 +311,5 @@ window.gameplay = Object.freeze({
   },
 });
 window.addEventListener('pagehide',()=>motionInput.dispose());
+
+mountGameEntry({root:$('play-area'),title:'Dino Run',description:'Calibrate your standing pose and jump range, then help Dino clear the cacti.',buttons:[$('start')],options:[$('motion-mode'),$('keyboard-mode')]});

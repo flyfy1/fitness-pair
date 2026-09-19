@@ -1,11 +1,13 @@
+import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import './style.css';
+import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { DinoAudio } from './audio.js';
 import { AnimatedRunner } from './animated-runner.js';
 import { drawWorld, sceneGeometry } from '../../../experiments/gameplay/dino-ar/src/scene.js';
 import { drawBody } from './body-overlay.js';
 import { PoseCamera } from '../../dino-run/src/camera.js';
-import { BodyGestures } from '../../dino-run/src/gestures.js';
+import { BodyGestures } from '../../../packages/gameplay/body-gestures.js';
 import { setupFullscreen } from '../../dino-run/src/fullscreen.js';
 import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { createDiagnostics } from './diagnostics.js';
@@ -33,6 +35,7 @@ recognizer.setJumpRange(MOVEMENT_SCALE);
 let bodyFrame = null, gameTrackingSince = null;
 const GAME_TRACKING_GRACE_MS = 450;
 const gestures = new BodyGestures({ oneHandSide: 'left' });
+const startGate=createHandsStart($('setup'));
 const diagnostics = createDiagnostics();
 let countdownSerial = 0;
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
@@ -63,7 +66,7 @@ const camera = new PoseCamera({
     if (cameraState === 'requesting') {
       presentationSession = {sessionId: status.sessionId, source: status.source};
       if (gameMode) runner.bindMotionSession(status);
-      recognizer.reset(status); recognizer.setJumpRange(MOVEMENT_SCALE); gestures.reset(status); action = null; hands = null;
+      recognizer.reset(status); recognizer.setJumpRange(MOVEMENT_SCALE); gestures.reset(status); startGate.reset(status); action = null; hands = null;
       lastPoseAt = 0; countdownAt = null; previousStage = null; trackingHoldAt = null; signalState = null;
     }
     paint();
@@ -104,14 +107,15 @@ const camera = new PoseCamera({
       log('calibration-stage', { from: previousStage, to: action.stage, quality: action.quality });
       previousStage = action.stage;
     }
+    if (!testing && startGate.update(frame, action.calibrated || action.canConfirmMaximum, hands) && !action.calibrated) confirm('gesture');
     if (hands?.event) {
       log('gesture', { kind: hands.event.kind, inputSeq: input.seq });
       if (gameMode && testing && pauseReason !== 'tracking' && hands.event.kind === 'both-hands') toggleGame('gesture');
-      if (!testing && !action.calibrated && hands.event.kind === 'one-hand') confirm('gesture');
     }
     paint();
   },
   onStop({ reason }) {
+    startGate.hide();
     bodyFrame = null; drawBody($('body-overlay'), null);
     if (gameMode) pauseGame('camera-stopped');
     testing = false;
@@ -426,3 +430,5 @@ function tick() {
   requestAnimationFrame(tick);
 }
 paint(); requestAnimationFrame(tick);
+
+if(gameMode) mountGameEntry({root:$('setup'),title:'Jump Game',description:'Stand, confirm, then jump over cacti. No calibration jump is needed.',buttons:[$('primary')]});

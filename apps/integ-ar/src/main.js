@@ -1,3 +1,4 @@
+import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import './style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
@@ -6,7 +7,7 @@ import {mountTutorial} from './tutorial-view.js';
 import {arGames} from './catalog.js';
 import {modules} from './modules.ts';
 import {PoseCamera} from '../../dino-run/src/camera.js';
-import {BodyGestures} from '../../dino-run/src/gestures.js';
+import {BodyGestures} from '../../../packages/gameplay/body-gestures.js';
 import {drawBody} from '../../camera-start/src/body-overlay.js';
 import {setupFullscreen} from '../../dino-run/src/fullscreen.js';
 import {BodyArcadeRecognizer} from '../../../experiments/action-recognition/body-arcade/index.js';
@@ -17,7 +18,7 @@ const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
 const config = arGames.find(game => selected ? game.slug === selected : location.pathname.split('/').includes(game.id)) || arGames[0];
 const startGate = createHandsStart($('arena'));
-const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures();
+const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures({oneHandSide:'left'});
 document.title = `${config.title} · Hopmodo`;
 $('game-title').textContent = config.title;
 $('category').textContent = config.category.toUpperCase() + ' · CAMERA AR';
@@ -69,7 +70,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     $('movement').textContent = valid ? `Body ${Math.abs(action.controls.horizontal) < .1 ? 'center' : action.controls.horizontal < 0 ? 'left' : 'right'} · ${Math.round(Math.abs(action.controls.horizontal) * 100)}%` : action.cue;
     $('hand').textContent = action.controls.leftRaised ? 'Left hand raised · lower to rearm' : 'Left hand lowered';
     if (valid) lastValidAt = performance.now();
-    const started = startGate.update(frame, valid && ((!tutorialWanted && phase === 'setup') || (phase === 'tutorial' && tutorial.completed)));
+    const started = startGate.update(frame, valid && ((!tutorialWanted && phase === 'setup') || (phase === 'tutorial' && tutorial.completed)), hands);
     if (phase === 'tutorial' && tutorial.completed && started) leaveTutorial();
     if (phase === 'setup') {
       if (tutorialWanted) {
@@ -131,7 +132,7 @@ function setPhase(next) {
 }
 function friendlyCue(cue) { return cue.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase(); }
 function updatePracticeView(feedback = '') {
-  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'Raise BOTH hands to start.' : ''), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
+  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'Raise your LEFT hand.' : ''), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
 }
 function leaveTutorial() {
   tutorialWanted = false; recognizer.release(); readySince = null;
@@ -207,3 +208,5 @@ window.integAR = {getState: () => ({phase, round, pauseReason, game: game.getSta
 raf = requestAnimationFrame(render);
 
 if (tutorialWanted) { tutorialView.show(true); tutorialView.update('intro'); }
+
+mountGameEntry({root:$('arena'),title:config.title,description:config.action,buttons:tutorialWanted?[$('tutorial-start'),$('tutorial-skip')]:[$('start')]});

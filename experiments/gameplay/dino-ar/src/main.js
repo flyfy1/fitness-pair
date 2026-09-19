@@ -1,6 +1,8 @@
+import {mountGameEntry} from '../../../../packages/gameplay/entry-view.js';
 import '../../../../packages/gameplay/page-language.js';
 import {createRunnerMotionInput} from '../../../../apps/dino-run/src/motion-input.js';
 import './style.css';
+import {BodyGestures} from '../../../../packages/gameplay/body-gestures.js';
 import {createHandsStart} from '../../../../packages/gameplay/hands-start-view.js';
 import { Runner } from '../../../../apps/dino-run/src/engine.js';
 import { PoseCamera } from '../../../../apps/dino-run/src/camera.js';
@@ -11,7 +13,8 @@ import { sceneGeometry, drawSkeleton, drawWorld } from './scene.js';
 import {createTrackingPublisher} from '../../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
-const startGate = createHandsStart($('arena'));
+const startGate = createHandsStart($('arena'),{countdownMs:3000});
+const gestures=new BodyGestures({oneHandSide:'left'});
 const runner = new Runner(); runner.setControlMode('motion');
 const motionInput=createRunnerMotionInput(runner);
 const recognizer = new ShoulderMotionRecognizer(), keyboard = new KeyboardInput();
@@ -49,7 +52,7 @@ const camera = new PoseCamera({
     cameraState = status.state;
     if (status.state === 'requesting') {
       presentationSession = {sessionId: status.sessionId, source: status.source};
-      startGate.reset(status); recognizer.reset(status); motionInput.reset(status);
+      startGate.reset(status); gestures.reset(status); recognizer.reset(status); motionInput.reset(status);
       action = null; pose = null; lastPoseAt = 0; bestLift = 0;
     }
     paint();
@@ -61,7 +64,7 @@ const camera = new PoseCamera({
     const fresh = performance.now() - frame.tMs < 250;
     pose = fresh ? frame : null;
     const next=recognizer.update(fresh ? frame : { ...frame, joints: {} });
-    startGate.update(frame, fresh && next?.calibrated);
+    startGate.update(frame, fresh && next?.calibrated, gestures.update(fresh?frame:{...frame,joints:{}}));
     consumeAction(next);
   },
   onStop() {
@@ -232,3 +235,5 @@ function frame(now) {
   lastFrame = now; requestAnimationFrame(frame);
 }
 paint(); requestAnimationFrame(frame);
+
+mountGameEntry({root:$('arena'),title:'Dino AR',description:'Lift your body to help Dino jump through your room.',buttons:[$('primary')],options:[$('control-mode')]});

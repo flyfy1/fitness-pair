@@ -143,3 +143,12 @@ playing. Recalibration preserves the round; retry starts a fresh calibration.
 Large guidance remains transparent over the live camera and body skeleton.
 Synthetic browser evidence covers starting without visible wrists, five attacks,
 recalibration, retry and camera cleanup. It does not establish human accuracy.
+
+## Shared entry and start
+
+The common entry screen reuses the existing camera and button-preview handlers.
+Camera rounds calibrate standing once, then require the shared left-hand hold,
+release and three-second countdown. The same PoseFrame feeds squat recognition
+and one BodyGestures instance; the start gate consumes its result without a new
+model. Setup actions cannot score. Recalibration during a round retains start
+confirmation; a fresh camera round requires confirmation again.

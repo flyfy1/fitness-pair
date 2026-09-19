@@ -72,7 +72,7 @@
   {"id":"guide.jump.resetCopy","en":"Return to your baseline before the next movement. Keep your shoulders and hips visible.","zh":"下一次动作前回到基准位置，并让肩膀和髋部保持可见。"},
   {"id":"guide.jump.standingLabel","en":"Set your standing pose","zh":"设置站立姿势"},
   {"id":"guide.dino.goal","en":"Help Dino jump over the cacti.","zh":"帮助 Dino 跳过仙人掌。"},
-  {"id":"guide.dino.setup","en":"Enable the camera, calibrate standing and a comfortable jump range, then raise one hand for one second to confirm. Lower both hands before the countdown.","zh":"开启摄像头，校准站立姿势和舒适的跳跃范围，然后举起一只手并保持一秒来确认。倒计时前放下双手。"},
+  {"id":"guide.dino.setup","en":"Enable the camera, calibrate standing and a comfortable jump range, then raise your LEFT hand for one second to confirm. Lower both hands before the countdown.","zh":"开启摄像头，校准站立姿势和舒适的跳跃范围，然后举起左手并保持一秒来确认。倒计时前放下双手。"},
   {"id":"guide.dino.calibrateTitle","en":"Calibrate first","zh":"先完成校准"},
   {"id":"guide.dino.calibrateCopy","en":"Keep your shoulders and hips visible and follow the standing and jump-range prompts.","zh":"让肩膀和髋部保持可见，并按照站立和跳跃范围提示操作。"},
   {"id":"guide.dino.liftTitle","en":"Lift Dino","zh":"让 Dino 升高"},
@@ -82,7 +82,7 @@
   {"id":"guide.dino.calibrateLabel","en":"Calibrate standing","zh":"校准站立姿势"},
   {"id":"guide.dino.raiseLabel","en":"Raise your torso","zh":"抬高躯干"},
   {"id":"guide.dinoAr.goal","en":"Jump Dino through the obstacles over your live camera view.","zh":"在实时摄像头画面中，让 Dino 跳过障碍。"},
-  {"id":"guide.dinoAr.setup","en":"Choose camera play, keep your shoulders and hips visible, and follow the standing calibration prompts. When ready, raise both hands above your shoulders for one second, then lower them to start.","zh":"选择摄像头模式，让肩膀和髋部保持可见，并按照站立校准提示操作。准备好后，将双手举过肩膀并保持一秒，再放下双手开始。"},
+  {"id":"guide.dinoAr.setup","en":"Choose camera play, keep your shoulders and hips visible, and follow the standing calibration prompts. When ready, raise your LEFT hand above your shoulder for one second with your right hand down, then lower both hands to start.","zh":"选择摄像头模式，让肩膀和髋部保持可见，并按照站立校准提示操作。准备好后，将左手举过肩膀并保持一秒，右手放下，再放下双手开始。"},
   {"id":"guide.dinoAr.standCopy","en":"Start from a steady standing pose so the game can measure relative body movement.","zh":"先保持稳定站立，让游戏测量身体的相对动作。"},
   {"id":"guide.dinoAr.raiseTitle","en":"Raise your body","zh":"抬高身体"},
   {"id":"guide.dinoAr.raiseCopy","en":"Lift your shoulders and torso as a cactus approaches. Watch Dino rise over the camera view.","zh":"仙人掌靠近时抬高肩膀和躯干，观察 Dino 在摄像头画面中升起。"},
@@ -99,5 +99,8 @@
   {"id":"guide.concept.reachTitle","en":"Reach ten hits","zh":"点中十次"},
   {"id":"guide.concept.reachCopy","en":"Continue until the counter reaches ten, then start again.","zh":"继续操作，直到计数达到十，然后重新开始。"},
   {"id":"guide.concept.pointerLabel","en":"Use touch or pointer","zh":"使用触控或指针"},
-  {"id":"guide.concept.tapLabel","en":"Tap the star","zh":"点击星星"}
+  {"id":"guide.concept.tapLabel","en":"Tap the star","zh":"点击星星"},
+  {"id":"guide.shared.leftSetup","en":"Place your camera so your shoulders, hips and hands stay in view. Enable the camera, stand still with both hands down, and complete calibration. Raise your LEFT hand above your shoulder for one second with your right hand down, then lower both hands to start.","zh":"调整摄像头，让肩膀、髋部和双手保持入镜。开启摄像头，放下双手并站稳，完成校准。将左手举过肩膀保持一秒，右手放下，再放下双手开始。"},
+  {"id":"guide.motion.leftSetup","en":"Enable the camera, keep shoulders through ankles visible, turn slightly sideways and stand upright for about two seconds to calibrate. Raise your LEFT hand for one second, then lower both hands for the countdown.","zh":"开启摄像头，让肩膀到脚踝保持入镜，略微侧身，站直约两秒完成校准。举起左手保持一秒，再放下双手进入倒计时。"},
+  {"id":"guide.jump.leftReleaseSetup","en":"Enable the camera and stand still to calibrate. Raise your LEFT hand above your shoulder for one second with your right hand down. Lower both hands, then follow the three-second countdown.","zh":"开启摄像头并站稳以完成校准。将左手举过肩膀保持一秒，右手放下。放下双手后跟随三秒倒计时开始。"}
 ]

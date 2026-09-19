@@ -187,7 +187,7 @@ test('jump noise stays smooth; sustained loss and delayed inference recover the 
 test('three-step setup requires a left-hand gesture again on replay',async({page})=>{
   await syntheticCamera(page);await page.goto('/');
   await expect(page.locator('.steps span')).toHaveText(['1 · Stand','2 · Confirm','3 · Jump']);
-  await expect(page.locator('.hands-start')).toHaveCount(0);
+  await expect(page.locator('.hands-start')).toBeHidden();
   await startGame(page);
   const firstRound=(await state(page)).game.roundId;
   expect((await state(page)).jumpCount).toBe(0);

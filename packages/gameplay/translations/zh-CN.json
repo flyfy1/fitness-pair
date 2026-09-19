@@ -882,5 +882,22 @@
   {"id":"landing.featureGames","en":"Feature games","zh":"精选游戏"},
   {"id":"landing.otherGames","en":"Other games","zh":"其他游戏"},
   {"id":"landing.otherDescription","en":"More experiments and small games to explore.","zh":"探索更多实验作品和小游戏。"},
-  {"id":"landing.playStatistics","en":"Anonymous play counts and active time are sent to this site. Camera images stay on your device.","zh":"匿名游玩次数和有效时长会发送到本站。摄像头画面保留在你的设备上。"}
+  {"id":"landing.playStatistics","en":"Anonymous play counts and active time are sent to this site. Camera images stay on your device.","zh":"匿名游玩次数和有效时长会发送到本站。摄像头画面保留在你的设备上。"},
+  {"id":"entry.shared.0","en":"READY TO PLAY","zh":"准备开始"},
+  {"id":"entry.shared.1","en":"1 · Camera","zh":"1 · 摄像头"},
+  {"id":"entry.shared.2","en":"2 · Set up","zh":"2 · 准备"},
+  {"id":"entry.shared.3","en":"3 · Start","zh":"3 · 开始"},
+  {"id":"entry.shared.4","en":"Enable your camera when you are ready.","zh":"准备好后开启摄像头。"},
+  {"id":"entry.shared.5","en":"Follow the game’s positioning guide once.","zh":"按游戏提示完成一次姿势准备。"},
+  {"id":"entry.shared.6","en":"Raise your LEFT hand for one second, then lower it for the countdown.","zh":"举起左手保持一秒，放下后进入倒计时。"},
+  {"id":"entry.shared.7","en":"Keep your head and one shoulder in view for the countdown.","zh":"保持头部和一侧肩膀入镜，进入倒计时。"},
+  {"id":"entry.shared.8","en":"Camera processing stays on this device. Anonymous play counts and active time are sent to this site.","zh":"摄像头画面在本机处理。匿名游玩次数和有效时长会发送到本站。"},
+  {"id":"entry.shared.9","en":"Above your shoulder. Keep your right hand down. Hold for one second.","zh":"举过肩膀，右手放下，保持一秒。"},
+  {"id":"entry.shared.10","en":"Stand steady. Get ready to play.","zh":"站稳，准备开始。"},
+  {"id":"entry.shared.11","en":"Calibrate your standing pose and jump range, then help Dino clear the cacti.","zh":"校准站立姿势和跳跃幅度，然后帮助小恐龙越过仙人掌。"},
+  {"id":"entry.shared.12","en":"Stand, confirm, then jump over cacti. No calibration jump is needed.","zh":"站稳、确认，然后跳过仙人掌。无需先跳跃校准。"},
+  {"id":"entry.shared.13","en":"Move your head to fly a tiny helicopter. Keep your head and either shoulder in view.","zh":"用头部动作驾驶小直升机。保持头部和任一侧肩膀入镜。"},
+  {"id":"dino.confirmGesture.left","en":"Raise your left hand above your shoulder for 1 second to confirm.","zh":"将左手举过肩膀并保持一秒以确认。"},
+  {"id":"dino.oneHand.left","en":"Left hand up: confirm / next","zh":"举起左手：确认／下一步"},
+  {"id":"entry.settings","en":"Game settings","zh":"游戏设置"}
 ]

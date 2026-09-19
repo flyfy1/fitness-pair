@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BodyGestures } from '../src/gestures.js';
+import { BodyGestures } from '../../../packages/gameplay/body-gestures.js';
 const session = { sessionId: 'synthetic-ui', source: { kind: 'synthetic', id: 'gesture-test' } };
 function fixture(options) {
   const g = new BodyGestures(options); g.reset(session); let seq = 0, tMs = 0;

@@ -44,7 +44,7 @@ frames are recorded or uploaded. Use localhost or HTTPS for camera access.
    The measured range is retained while you wait; it no longer expires after 15 seconds.
    A too-small movement still needs another attempt. The screen explains whether it
    needs visible joints, a stable starting position, more rise, or a return to baseline.
-4. At **Height captured — confirm it**, raise **one hand above the shoulder for one
+4. At **Height captured — confirm it**, raise **your left hand above the shoulder for one
    second**, keeping the other hand below its shoulder. Or click **Use measured height**.
    Hands alone cannot invent a jump range. Lower both hands for the three-second countdown.
 5. Jump at different heights. Half your calibrated torso displacement maps to half
@@ -107,7 +107,7 @@ measured end-to-end human motion latency.
   continuous height and deduplicatable landing events.
 - `src/camera.js`: permission, media, latest-frame transport and resource lifetime.
 - `src/main.js`: calibration UI, countdown, loss/pause behavior and control selection.
-- `src/gestures.js`: named-wrist/shoulder UI commands with hold and release gates; no scoring.
+- `../../packages/gameplay/body-gestures.js`: named-wrist/shoulder UI commands with hold and release gates; no scoring.
 - `src/engine.js`: game state, continuous height consumption, keyboard physics,
   collision, scoring and per-session input validation.
 - `src/render.js`: canvas rendering only.

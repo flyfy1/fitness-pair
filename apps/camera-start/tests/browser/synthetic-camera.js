@@ -48,6 +48,7 @@ export async function syntheticCamera(page) {
 export async function confirmWithHand(surface) {
   await expect(surface.locator('#primary')).toBeHidden();
   await surface.locator('body').evaluate(() => { window.poseTest.hand = 'up'; });
-  await expect.poll(() => surface.locator('body').evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(true);
+  await expect(surface.locator('.hands-start-title')).toContainText('lower both');
   await surface.locator('body').evaluate(() => { window.poseTest.hand = 'down'; });
+  await expect.poll(() => surface.locator('body').evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(true);
 }

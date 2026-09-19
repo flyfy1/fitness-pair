@@ -1,5 +1,8 @@
+import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import './style.css';
+import {BodyGestures} from '../../../packages/gameplay/body-gestures.js';
+import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { SquatRecognizer } from '@fitness-pair/action-squat';
 import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';
 import { createGameState, consumeAction } from '@fitness-pair/game-forest';
@@ -12,6 +15,7 @@ const setText = (id, text) => { if ($(id).textContent !== text) $(id).textConten
 const video = $('camera'), overlay = $('skeleton'), ctx = overlay.getContext('2d');
 const game = new ARGame($('game'));
 const detector = new SquatRecognizer();
+const gestures=new BodyGestures({oneHandSide:'left'}),startGate=createHandsStart($('app'),{countdownMs:3000});
 const links = [['leftShoulder','rightShoulder'],['leftShoulder','leftElbow'],['leftElbow','leftWrist'],['rightShoulder','rightElbow'],['rightElbow','rightWrist'],['leftShoulder','leftHip'],['rightShoulder','rightHip'],['leftHip','rightHip'],['leftHip','leftKnee'],['leftKnee','leftAnkle'],['rightHip','rightKnee'],['rightKnee','rightAnkle']];
 let mode = 'idle', stream = null, worker = null, generation = 0, inFlight = false;
 let frameSentAt = 0, lastVideoTime = -1, lastResultAt = 0, lastRenderAt = 0, raf = 0;
@@ -60,7 +64,7 @@ function resetRound() {
   const source = { kind: mode === 'demo' ? 'synthetic' : 'camera', id: sessionId };
   gameState = createGameState({ sessionId, source }); inputSeq = 0;
   actionPhase = 'calibrating'; setReplayPhase('setup');
-  statusUntil = 0; detector.reset({ sessionId, source }); game.reset(); progress(0);
+  statusUntil = 0; detector.reset({ sessionId, source }); gestures.reset({sessionId,source}); startGate.reset({sessionId,source}); game.reset(); progress(0);
   $('rep-count').textContent = '0'; $('damage-count').textContent = '0'; $('elapsed').textContent = '00:00';
   $('hp-label').textContent = '100 / 100'; $('hp-bar').style.width = '100%'; $('victory').hidden = true;
 }
@@ -91,6 +95,7 @@ function attack(actionFrame) {
   }
 }
 function releaseCamera() {
+  startGate.hide();
   generation++;
   clearTimeout(initTimer); initTimer = null;
   clearTimeout(loadingHintTimer); loadingHintTimer = null;
@@ -183,7 +188,7 @@ async function startCamera() {
           drawSkeleton(frame.joints);
           game.setPose(frame.joints, video.videoWidth, video.videoHeight);
           const action = detector.update(frame);
-          if (action) handlePose(action);
+          if (action) {const hands=gestures.update(frame);const canPlay=startGate.update(frame,action.phase==='ready',hands);handlePose(action,canPlay);}
         } catch (error) { failCamera(error); }
       } else if (data.type === 'error') failCamera(Object.assign(new Error(data.message), { name: data.name || 'Error' }));
     };
@@ -191,7 +196,7 @@ async function startCamera() {
     worker.postMessage({ type: 'init', base: new URL(import.meta.env.BASE_URL, location.href).href });
   } catch (error) { if (session === generation) failCamera(error); }
 }
-function handlePose(result) {
+function handlePose(result,canPlay=true) {
   if (mode !== 'camera' || reps >= 5) return;
   const copy = {
     missing: ['Your full movement is not visible', 'Keep shoulders to ankles in frame and stand steady before continuing.', false, 'Step into view'],
@@ -203,10 +208,11 @@ function handlePose(result) {
   };
   actionPhase = result.phase;
   const inactive = ['missing', 'calibrating'].includes(result.phase);
-  if (inactive) { pauseClock(); statusUntil = 0; }
+  if (inactive || !canPlay) { pauseClock(); statusUntil = 0; }
   else startClock();
   game.charge = inactive ? 0 : result.progress;
   progress(result.calibrationProgress ?? result.progress, result.phase === 'calibrating' ? 'Standing calibration' : 'Movement charge');
+  if (!canPlay) {game.charge=0;if(copy[result.cue])status(...copy[result.cue]);return;}
   if (result.completion) { attack(result); return; }
   gameState = consumeAction(gameState, result).state;
   if (performance.now() >= statusUntil && copy[result.cue]) status(...copy[result.cue]);
@@ -318,3 +324,5 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => { releaseCamera(); game.sound.close(); });
 raf = requestAnimationFrame(render);
+
+mountGameEntry({root:$('app'),title:'Motion Quest',description:'Squat to charge a spell. Stand to cast it.',buttons:[$('start'),$('demo')]});

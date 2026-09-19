@@ -20,7 +20,7 @@ test('tutorial stays out of local recording and completed practice enters the or
 });
 test('intro keeps practice, skip and exit accessible at narrow and landscape sizes',async({page},info)=>{
  for(const size of [{width:320,height:740},{width:844,height:390},{width:1440,height:1000}]){
-  await page.setViewportSize(size);await page.goto('/play/ar-invaders');const game=page.frameLocator('#game-frame');await expect(game.locator('#tutorial-start')).toBeInViewport();await expect(game.locator('#tutorial-skip')).toBeInViewport();await expect(game.locator('#home')).toBeInViewport();
+  await page.setViewportSize(size);await page.goto('/play/ar-invaders');const game=page.frameLocator('#game-frame');await expect(game.locator('#tutorial-start')).toBeInViewport();await expect(game.locator('#tutorial-skip')).toBeInViewport();await expect(game.locator('.game-entry-back')).toBeInViewport();
   expect(await game.locator('#arena').evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:info.outputPath(`tutorial-intro-${size.width}.png`)});
  }
 });

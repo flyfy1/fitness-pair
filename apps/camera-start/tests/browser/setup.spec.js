@@ -26,7 +26,7 @@ test('left-hand confirmation starts the game once; right, both and short raises 
   await page.evaluate(() => { window.poseTest.hand = 'down'; });
   await page.waitForTimeout(500);
   expect(await page.evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(false);
-  await page.evaluate(() => { window.poseTest.hand = 'up'; });
+  await confirmWithHand(page);
   await expect(page.locator('#status')).toHaveText('MOVEMENT CONFIRMED · GET READY');
   await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().game.status), {timeout:6000}).toBe('running');
   const events = await page.evaluate(() => window.cameraSetup.getLog());
@@ -93,7 +93,7 @@ test('countdown interruption exposes a readable reason and writes it to persiste
 
 test('mobile hand instructions are visible, missing torso blocks setup and stop cleans resources', async({page})=>{
   await page.setViewportSize({width:390,height:844});await syntheticCamera(page);await page.goto('/?mode=detect');await standingSetup(page);
-  await expect(page.locator('#instruction')).toBeInViewport();
+  await expect(page.locator('.hands-start-title')).toBeInViewport();
   await expect(page.locator('#primary')).toBeHidden();
   await page.screenshot({path:'test-results/mobile-confirm.png'});
   await page.evaluate(()=>{window.poseTest.missing=true;});await expect(page.locator('#instruction')).toHaveText('Step into view.');
@@ -287,7 +287,9 @@ for (const interruption of ['crouch', 'missing', 'noiseFrames']) {
     await expect(page.locator('#step-confirm')).toHaveAttribute('aria-current', 'step');
     await expect(page.locator('#primary')).toBeHidden();
     await page.evaluate(key => { window.poseTest[key] = key === 'noiseFrames' ? 0 : false; }, interruption);
-    // Keep the same hand raised: an invalid-pose gesture must not consume the latch.
+    // Keep holding through recovery, then explicitly release the ready gesture.
+    await expect(page.locator('.hands-start-title')).toContainText('lower both');
+    await page.evaluate(() => { window.poseTest.hand = 'down'; });
     await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(true);
     await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().game.status), {timeout:6000}).toBe('running');
     const events = await page.evaluate(() => window.cameraSetup.getLog());
@@ -318,9 +320,8 @@ test('step two keeps hand instructions and progress on screen at distant-player 
   await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
   for (const size of [{width:1440,height:960},{width:390,height:844},{width:844,height:390}]) {
     await page.setViewportSize(size);
-    await expect(page.locator('#instruction')).toBeInViewport({ratio:1});
-    await expect(page.locator('#detail')).toBeInViewport({ratio:1});
-    await expect(page.locator('#feedback')).toBeInViewport({ratio:1});
+    await expect(page.locator('.hands-start-title')).toBeInViewport({ratio:1});
+    await expect(page.locator('.hands-start-detail')).toBeInViewport({ratio:1});
     await expect(page.locator('#primary')).toBeHidden();
     await expect(page.locator('#step-confirm')).toHaveAttribute('aria-current', 'step');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -332,7 +333,8 @@ test('step two keeps hand instructions and progress on screen at distant-player 
 
 test('raising the left hand with a small shoulder lift confirms without returning to step one', async ({page}) => {
   await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
-  await page.evaluate(() => { window.poseTest.shoulderLift = .04; window.poseTest.hand = 'up'; });
+  await page.evaluate(() => { window.poseTest.shoulderLift = .04; });
+  await confirmWithHand(page);
   await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(true);
   await page.evaluate(() => { window.poseTest.shoulderLift = 0; window.poseTest.hand = 'down'; });
   await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().game.status), {timeout:6000}).toBe('running');

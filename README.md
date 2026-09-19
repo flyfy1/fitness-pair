@@ -15,13 +15,13 @@ npm run dev
 ```
 
 Open <http://127.0.0.1:5178>. Enable the camera. Keep shoulders through ankles visible, turn slightly sideways,
-and stand upright for about two seconds to calibrate.
+and stand upright for about two seconds to calibrate. Raise your left hand for one second, then lower both hands for the countdown.
 Squat to charge, then stand to attack. The button/Space preview is labeled synthetic.
 The arcade homepage preloads tracking files without camera access. Games reuse verified device-cached files when browser storage is available; first-time and uncached starts show download progress in Motion Quest.
 
 Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
 with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,
-stand still, then make one maximum comfortable jump and return. Raise one hand
+stand still, then make one maximum comfortable jump and return. Raise your left hand
 for one second to confirm the measured height, then lower both hands for a
 three-second countdown. Raise both hands for one second to pause or resume,
 lowering them between commands. Dino follows your relative torso rise and descent. Height is a percentage of
@@ -168,4 +168,4 @@ Dino Run demonstrates direct keyboard/height controls plus an optional motion
 adapter. Conversation recording is opt-in and stored as a separate local track;
 players can export the original video or a version including conversation.
 
-Camera games other than Motion Quest, Push-up Flight and Jump Game use a deliberate start: raise both hands above the shoulders for one second, then lower them. Pixel Defense practice uses large instructions at the top of the AR view. See [the tutorial prototype](docs/invaders-tutorial-prototype.md).
+Standing camera games use one shared deliberate start: raise the left hand above the shoulder for one second, then lower both hands for the countdown. Push-up Flight reuses its head-and-shoulder readiness without a hand gesture. Pixel Defense practice uses large instructions at the top of the AR view. See [the tutorial prototype](docs/invaders-tutorial-prototype.md).

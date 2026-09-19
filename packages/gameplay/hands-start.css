@@ -4,3 +4,6 @@
 /* A transparent start prompt must not expose a competing legacy instruction. */
 .awaiting-hands-start #instruction,.awaiting-hands-start .guidance>:not(button),.awaiting-hands-start .overlay-card>:not(button),.awaiting-hands-start .cue{visibility:hidden}
 .awaiting-hands-start .overlay{background:none}
+
+.awaiting-hands-start .arena-message{visibility:hidden}
+.awaiting-hands-start .steps,.awaiting-hands-start #movement-settings{visibility:hidden}

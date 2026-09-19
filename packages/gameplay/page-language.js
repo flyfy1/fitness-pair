@@ -4,8 +4,9 @@ import './language.css';
 // Each independently built game uses the same locale and presentation adapter.
 function install() {
   if (!document.querySelector('select#language')) {
-    const control = languageControl(); control.classList.add('standalone-language');
-    document.body.append(control);
+    const control = languageControl(), slot = document.querySelector('[data-game-language-slot]');
+    if (!slot) control.classList.add('standalone-language');
+    (slot || document.body).append(control);
   }
   localizeDocument();
 }

@@ -9,7 +9,7 @@ const copy={
  right:['TRY 2 OF 3 · STEERING','Now move right.','Move right. The ship follows you.','sway-right','Move your torso →'],
  fire:['TRY 3 OF 3 · FIRING','Raise your LEFT hand.','LEFT hand above your shoulder. Right hand down.','raise','LEFT hand fires'],
  lower:['TRY 3 OF 3 · RESET','Shot! Lower your LEFT hand.','Below your shoulder. Ready for another shot.','lower','Lower to fire again'],
- ready:['CONTROLS CONFIRMED','Raise BOTH hands to start.','Hold for one second. Then lower both hands.','stand','Ready to play'],
+ ready:['CONTROLS CONFIRMED','Raise your LEFT hand.','Hold for one second. Then lower both hands.','stand','Ready to play'],
 };
 export function mountTutorial(root,{onStart,onSkip,onCancel}){
  const section=document.createElement('section');section.id='tutorial';section.hidden=true;section.setAttribute('aria-labelledby','tutorial-title');

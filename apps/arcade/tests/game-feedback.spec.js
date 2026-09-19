@@ -48,6 +48,7 @@ test('failed feedback can be retried without changing the event id and the promp
 test('stopping a camera game releases its camera, worker and recorder before asking for feedback',async({page})=>{
  await page.addInitScript(()=>{if(window!==top)return;window.recordingStreams=[];const capture=HTMLCanvasElement.prototype.captureStream;HTMLCanvasElement.prototype.captureStream=function(...args){const stream=capture.apply(this,args);window.recordingStreams.push(stream);return stream;};});
  await camera(page);await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
+ await expect(game.locator('.hands-start')).toBeVisible();await game.locator('body').evaluate(()=>window.startPose.hands='left');await expect(game.locator('.hands-start-title')).toContainText('lower both');await game.locator('body').evaluate(()=>window.startPose.hands='down');
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await page.evaluate(()=>{const gameWindow=document.querySelector('#game-frame').contentWindow;window.stoppedGameStream=gameWindow.startStream;window.stoppedGameWorker=gameWindow.startWorker;});
  await game.getByRole('button',{name:'Stop game',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();

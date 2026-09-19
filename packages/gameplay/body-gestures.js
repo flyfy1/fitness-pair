@@ -1,4 +1,4 @@
-import { sameSource } from '@fitness-pair/contracts';
+import { sameSource } from '../../contracts/index.js';
 
 const HOLD_MS = 1000, RELEASE_MS = 400, GAP_MS = 250;
 const visible = p => p && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y > .015 && p.y < .985;
@@ -21,7 +21,7 @@ export class BodyGestures {
     const tracked = ['leftShoulder', 'rightShoulder', 'leftWrist', 'rightWrist'].every(n => visible(j[n]));
     if (!tracked) {
       this.kind = null; this.since = null; this.releaseSince = null;
-      return { kind: null, progress: 0, event: null, tracked: false, latched: this.latched };
+      return { inputSeq: frame.seq, side: null, kind: null, progress: 0, event: null, tracked: false, latched: this.latched };
     }
     const raised = side => j[`${side}Wrist`].y < j[`${side}Shoulder`].y - .10;
     const lowered = side => j[`${side}Wrist`].y > j[`${side}Shoulder`].y + .04;
@@ -43,6 +43,6 @@ export class BodyGestures {
         this.latched = true;
       }
     }
-    return { kind, progress, event, tracked: true, latched: this.latched, neutral: lowered('left') && lowered('right') };
+    return { inputSeq: frame.seq, side: left && right ? 'both' : left ? 'left' : right ? 'right' : null, kind, progress, event, tracked: true, latched: this.latched, neutral: lowered('left') && lowered('right') };
   }
 }

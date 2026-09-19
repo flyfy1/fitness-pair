@@ -184,3 +184,10 @@ The GCP deployment records anonymous/account-deduplicated play counts and active
 play duration independently of recording and ratings. See [private game
 statistics](deploy/gcp/README.md#private-game-statistics) for the protected admin
 page, identity and timing definitions, storage, and deployment configuration.
+
+## Unified entry
+
+All playable routes use the common entry screen and the same left-hand start
+confirmation for standing games. Push-up Flight keeps its head/shoulder start.
+See [the experience review](../../docs/game-entry-review.md) and the
+[shared startup boundary](../../packages/gameplay/README.md#camera-start-gesture).

@@ -1,3 +1,4 @@
+import {mountGameEntry} from '../../../../packages/gameplay/entry-view.js';
 import {subscribeLanguage} from '../../../../packages/gameplay/locale.js';
 import '../../../../packages/gameplay/page-language.js';
 import {t,getLanguage,setLanguage,localizeDOM} from './i18n.js';
@@ -229,3 +230,5 @@ window.plankFlight={localizeHost:()=>localizeDOM(),getAudioStream:()=>sound.getA
   const {headControl,...snapshot}=structuredClone(state);
   return {...snapshot,mode,cameraActive:camera.active,starting,audio:sound.snapshot(),headVisible:!!pilot,phase:lastAction?.phase??null};
 }};
+
+mountGameEntry({root:stage,title:'Push-up Flight',description:'Move your head to fly a tiny helicopter. Keep your head and either shoulder in view.',buttons:[$('start'),$('demo')],options:[document.querySelector('.difficulty')],automatic:true,collapsibleOptions:true});
