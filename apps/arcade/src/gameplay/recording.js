@@ -47,6 +47,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  }
  function recordingFailed(session,error){
   sessions.delete(session);
+  session.resolveFinished?.(null);
   failedRounds.set(session.round,error.message||'The browser could not finish this recording.');
   while(failedRounds.size>2)failedRounds.delete(failedRounds.keys().next().value);
   if(!active)setState('idle',failedRounds.get(session.round));
@@ -70,17 +71,19 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
   const sessionId=isSessionUUID(snapshot.sessionId)?snapshot.sessionId:isSessionUUID(snapshot.round)?snapshot.round:crypto.randomUUID();
   const source=snapshot.source||{kind:hadCamera?'camera':'synthetic',id:sessionId};
   const session={round:snapshot.round,sessionId,source,createdAt:Date.now(),phase:'recording',hadCamera,cameraTime:snapshot.video?.currentTime,lastCameraAt:startAt,startAt,raf:0,endTimer:0,capture:null,recorder:null,failed:false};
+  session.finished=new Promise(resolve=>{session.resolveFinished=resolve;});
   session.tracking=createTrackingCapture({sessionId,source,game:game.id,startedAt:startAt,createdAt:session.createdAt});
   sessions.add(session);active=session;handledRound=snapshot.round;
   session.conversation=conversation.begin(session.startAt);
   function stopTracks(){session.conversationResult??=session.conversation.finish();cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.capture?.getTracks().forEach(t=>t.stop());}
   function saveNow(){
-   if(session.phase==='saving')return;
+   if(session.phase==='saving')return session.finished;
    cancelAnimationFrame(session.raf);clearTimeout(session.endTimer);session.phase='saving';session.stoppedAt=performance.now();
    if(active===session)active=null;
    if(!active)setState('saving','Saving your clip on this device…');
    if(session.recorder?.state!=='inactive')session.recorder?.stop().then(saveRecording).catch(error=>recordingFailed(session,error));
    stopTracks();
+   return session.finished;
   }
   async function saveRecording(recorded){
    const tracking=session.tracking?.finish(recorded);
@@ -95,12 +98,14 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
    while(readyRounds.size>2)readyRounds.delete(readyRounds.keys().next().value);
    if(!active)setState(sessions.size?'finishing':'idle',message);
    if(clip.unsaved||(await listClips().catch(()=>[clip])).some(item=>item.id===clip.id))showResult(clip);
+   session.resolveFinished(clip);
+   return clip;
   }
   function finish(score,reason='Round complete'){
    if(session.phase!=='recording')return;
    session.conversationResult??=session.conversation.finish();
    session.stopReason=reason;session.hasEnding=false;session.finalScore=score;
-   saveNow();
+   return saveNow();
   }
   session.saveNow=saveNow;session.finish=finish;
   try{
@@ -179,6 +184,20 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  const unsubscribe=runtime.subscribe(watchForStart);
  const unsubscribeTracking=runtime.subscribeTracking(frame=>active?.tracking?.add(frame));
  return {
+  async captureDebug(){
+   const snapshot=readGame();
+   let session=active||[...sessions].find(item=>item.round===snapshot?.round);
+   if(session?.phase==='recording')session.finish(snapshot?.score||'Unknown score','Debug report');
+   let clip=session?await session.finished:null;
+   if(!clip){
+    const clips=await listClips();
+    const readyId=readyRounds.get(snapshot?.round);
+    clip=clips.find(item=>item.id===readyId||item.game===game.id&&item.sessionId&&(item.sessionId===snapshot?.sessionId||item.sessionId===snapshot?.round))||null;
+   }
+   if(snapshot?.phase==='playing'&&!unloading){handledRound=null;queueMicrotask(watchForStart);}
+   if(!clip)throw new Error('No playable diagnostic recording is ready yet. Start the game, then try again.');
+   return {clip,snapshot};
+  },
   connectControls(element){
    conversationControls=element;shareButton=element.querySelector('[data-replay-share]');
    shareButton.onclick=()=>{const snapshot=readGame();if(snapshot?.phase!=='complete'||!readyRounds.has(snapshot.round))return;shareRound=snapshot.round;revealResult();};

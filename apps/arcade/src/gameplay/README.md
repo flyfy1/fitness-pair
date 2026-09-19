@@ -102,6 +102,13 @@ Its accessible name and tooltip explain the action; only errors open a status
 bubble. Voice remains a separate local track. Replays play it in sync by default,
 with a listening toggle; including it in downloaded/shared video remains explicit.
 
+The host also owns one Debug report control. Recording keeps the latest 90 seconds
+of UUID-linked named-joint data locally. The player must explicitly confirm each
+private diagnostic upload; the video checkbox is off by default. The optional
+voice command is separately opt-in and opens the same confirmation dialog when
+the browser recognizes “我要上传 debug”. Browser speech processing is disclosed
+before it is enabled, and command audio is not added to the diagnostic report.
+
 ```mermaid
 flowchart LR
   Camera[Optional pose source] --> Recognizer

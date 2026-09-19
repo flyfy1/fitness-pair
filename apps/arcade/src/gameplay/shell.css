@@ -69,7 +69,38 @@
 .game-feedback-actions button, .game-feedback-actions a { min-height: 44px; padding: 12px 18px; border-radius: 22px; }
 .game-feedback-actions button { border: 0; background: #2347ee; color: white; font-weight: 700; }
 .game-feedback-actions a { color: #182346; }
+.debug-report {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 21, 17, .82);
+  backdrop-filter: blur(8px);
+}
+.debug-report-card {
+  width: min(600px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: clamp(24px, 5vw, 42px);
+  border-radius: 28px;
+  background: #f3f4ed;
+  color: #182346;
+  box-shadow: 0 24px 80px #0007;
+}
+.debug-report-card h1 { margin: 6px 0 12px; font-size: clamp(30px, 6vw, 48px); line-height: 1; }
+.debug-report-card p, .debug-report-card li { line-height: 1.5; }
+.debug-report-card label { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 2px solid #18234633; border-radius: 14px; background: white; }
+.debug-report-card input { width: 22px; height: 22px; flex: 0 0 auto; }
+.debug-report-voice { margin: 18px 0; padding: 14px; border-radius: 14px; background: #fff; }
+.debug-report-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.debug-report-actions button { min-height: 44px; padding: 10px 18px; border: 2px solid #2347ee; border-radius: 22px; background: #2347ee; color: white; font-weight: 700; }
+.debug-report-actions button[data-cancel] { background: transparent; color: #182346; border-color: #18234655; }
+.debug-report-actions button:focus-visible, .debug-report-card input:focus-visible { outline: 4px solid #ff795e; outline-offset: 3px; }
+.debug-report-status { min-height: 24px; font-weight: 700; }
 @media (max-width: 420px) {
   .game-feedback-rating button { min-width: 0; flex: 1; }
   .game-feedback-actions { flex-direction: column; gap: 8px; }
+  .debug-report-actions { flex-direction: column; }
 }

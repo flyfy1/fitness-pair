@@ -9,6 +9,7 @@ import {createMetadataTokenProvider} from './identity.mjs';
 import {createAccountStore} from './account-store.mjs';
 import {createAuth} from './auth.mjs';
 import {createFeedbackCollector} from './feedback.mjs';
+import {createDebugReportCollector} from './debug-reports.mjs';
 import {playableGames} from '../../game-catalog.js';
 
 globalThis.crypto ??= webcrypto;
@@ -16,15 +17,17 @@ globalThis.crypto ??= webcrypto;
 // Caddy owns static files/TLS. The existing Worker owns gallery API semantics.
 export function createGateway({origin='https://fitness.integ.life',release={},env={},authFetcher=fetch,galleryWorker=worker}={}) {
   const runtimeEnv={...env};
-  let auth=null,cleanup=null;
+  let auth=null;const cleanups=[];
   if(env.INTEG_AUTH_CLIENT_ID){
     if(!env.FITNESS_STATE_DIR)throw Error('A durable account state directory is required.');
     const store=createAccountStore(env.FITNESS_STATE_DIR);
     auth=createAuth({origin,issuer:env.INTEG_AUTH_ISSUER||'https://auth.integ.life',clientId:env.INTEG_AUTH_CLIENT_ID,clientSecret:env.INTEG_AUTH_CLIENT_SECRET,store,fetcher:authFetcher});
     runtimeEnv.ACCOUNTS=auth;
-    cleanup=setInterval(()=>store.pruneSessions().catch(()=>{}),3600000);cleanup.unref();
+    const cleanup=setInterval(()=>store.pruneSessions().catch(()=>{}),3600000);cleanup.unref();cleanups.push(cleanup);
   }
   const feedback=env.FITNESS_STATE_DIR?createFeedbackCollector({directory:env.FITNESS_STATE_DIR,origin,games:playableGames,getUser:request=>auth?.user(request)}):null;
+  const debugReports=env.FITNESS_STATE_DIR?createDebugReportCollector({directory:env.FITNESS_STATE_DIR,origin,games:playableGames,release,getUser:request=>auth?.user(request)}):null;
+  if(debugReports){debugReports.prune().catch(()=>{});const cleanup=setInterval(()=>debugReports.prune().catch(()=>{}),3600000);cleanup.unref();cleanups.push(cleanup);}
   if(env.GCP_IMPERSONATE_SERVICE_ACCOUNT)runtimeEnv.GCP_ACCESS_TOKEN_PROVIDER=createMetadataTokenProvider({serviceAccount:env.GCP_IMPERSONATE_SERVICE_ACCOUNT});
   const server=http.createServer(async(req,res)=>{
     try {
@@ -35,8 +38,11 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
       }
       const request=new Request(new URL(req.url,origin),{method:req.method,headers:req.headers,
         ...(!['GET','HEAD'].includes(req.method)?{body:req,duplex:'half'}:{})});
-      const feedbackResponse=await feedback?.handle(request);
-      const response=feedbackResponse||(new URL(request.url).pathname==='/api/feedback'?Response.json({error:'Feedback storage is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}}):null)||await auth?.handle(request)||await galleryWorker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
+      const pathname=new URL(request.url).pathname;
+      const debugResponse=await debugReports?.handle(request);
+      const feedbackResponse=debugResponse?null:await feedback?.handle(request);
+      const unavailable=!debugResponse&&pathname.startsWith('/api/debug-reports')?Response.json({error:'Diagnostic storage is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}}):!feedbackResponse&&pathname==='/api/feedback'?Response.json({error:'Feedback storage is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}}):null;
+      const response=debugResponse||feedbackResponse||unavailable||await auth?.handle(request)||await galleryWorker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
       const responseHeaders=Object.fromEntries(response.headers);
       // Node 18 Headers folds Set-Cookie. OAuth needs both transaction cleanup and session issuance.
       const setCookie=response.headers.get('set-cookie');
@@ -49,7 +55,7 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
       else {res.writeHead(error.status||503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:error.status?error.message:'Service unavailable.'}));}
     }
   });
-  server.on('close',()=>{if(cleanup)clearInterval(cleanup);});
+  server.on('close',()=>{for(const cleanup of cleanups)clearInterval(cleanup);});
   return server;
 }
 
