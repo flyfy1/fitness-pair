@@ -156,7 +156,7 @@
   {"id":"shell.back","en":"← Back to the arcade","zh":"← 返回游戏大厅"},
   {"id":"shell.backAccessible","en":"Back to the Hopmodo arcade","zh":"返回 Hopmodo 游戏大厅"},
   {"id":"shell.gameFrame","en":"{0} game","zh":"{0} 游戏"},
-  {"id":"shell.recordingPrivacy","en":"Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; replays keep the latest 90 seconds at normal speed. Conversation recording is optional. Nothing is uploaded unless you choose to share.","zh":"游戏过程中会自动录下游戏和摄像头画面，并包含可用的游戏声音。此设备只保留最新两个视频；回放以正常速度保留最近 90 秒。对话录音由你选择开启。只有主动分享才会上传。"},
+  {"id":"shell.recordingPrivacy","en":"Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; replays keep the latest 90 seconds at normal speed. Conversation recording is optional. Anonymous play counts and active time are sent to this site. Video is uploaded only when you choose to share.","zh":"游戏过程中会自动录下游戏和摄像头画面，并包含可用的游戏声音。此设备只保留最新两个视频；回放以正常速度保留最近 90 秒。对话录音由你选择开启。匿名游玩次数和有效时长会发送到本站。只有主动分享时才会上传视频。"},
   {"id":"record.headline","en":"Play now. Replay after.","zh":"现在玩，结束后看回放。"},
   {"id":"record.description","en":"Your game records automatically when you start. Only your two latest videos stay on this device. Replays keep the latest 90 seconds at normal speed.","zh":"游戏开始后会自动录制。此设备只保留最新两个视频。回放以正常速度保留最近 90 秒。"},
   {"id":"record.note","en":"Game + enabled camera · game sound when available · optional conversation track · nothing shared automatically","zh":"游戏 + 已开启的摄像头 · 可用时包含游戏声音 · 可选对话音轨 · 不会自动分享"},
@@ -878,5 +878,9 @@
   {"id":"state.jumpLiftDino","en":"Lift your dinosaur over the cactus.","zh":"让小恐龙跳过仙人掌。"},
   {"id":"clips.defaultReplay","en":"my replay","zh":"我的回放"},
   {"id":"clips.defaultConversation","en":"with conversation","zh":"含对话"},
-  {"id":"clips.defaultShareCopy","en":"share copy","zh":"分享副本"}
+  {"id":"clips.defaultShareCopy","en":"share copy","zh":"分享副本"},
+  {"id":"landing.featureGames","en":"Feature games","zh":"精选游戏"},
+  {"id":"landing.otherGames","en":"Other games","zh":"其他游戏"},
+  {"id":"landing.otherDescription","en":"More experiments and small games to explore.","zh":"探索更多实验作品和小游戏。"},
+  {"id":"landing.playStatistics","en":"Anonymous play counts and active time are sent to this site. Camera images stay on your device.","zh":"匿名游玩次数和有效时长会发送到本站。摄像头画面保留在你的设备上。"}
 ]

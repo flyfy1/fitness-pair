@@ -1,10 +1,10 @@
 import {test,expect} from '@playwright/test';
 import {gameCatalog} from '../game-catalog.js';
 import {gameGuides} from '../src/game-guides.js';
-const listed=gameCatalog.filter(g=>g.listed!==false);
+const listed=gameCatalog.filter(g=>g.kind==='playable');
 for(const game of listed)test(`${game.id}: illustrated instructions before entering the game`,async({page},info)=>{
  await page.addInitScript(()=>{window.cameraRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;throw new Error('No camera in instruction tests');};});
- const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/#arcade');
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/#arcade');if(game.section==='other')await page.locator('#other-games summary').click();
  const card=page.locator('.game-card').filter({has:page.getByRole('heading',{name:game.title,exact:true})});
  await expect(card.locator('canvas[role=img], .game-poster')).toHaveCount(1);
  await expect(card.locator('.movement-art')).toHaveCount(0);
@@ -25,7 +25,7 @@ for(const game of listed)test(`${game.id}: illustrated instructions before enter
  await page.screenshot({path:info.outputPath('guide-mobile.png')});
  await skip.click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('#game-frame')).toHaveAttribute('title',game.title+' game');
  expect(await page.evaluate(id=>localStorage.getItem(`hopmodo:game-guide-skipped:v1:${id}`),game.id)).toBe('1');
- await page.goto('/#arcade');await card.getByRole('link',{name:'Play '+game.title,exact:true}).click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('dialog[open]')).toHaveCount(0);
+ await page.goto('/#arcade');if(game.section==='other')await page.locator('#other-games summary').click();await card.getByRole('link',{name:'Play '+game.title,exact:true}).click();await expect(page).toHaveURL('/play/'+game.id);await expect(page.locator('dialog[open]')).toHaveCount(0);
  expect(errors).toEqual([]);
 });
 test('title links open matching instructions and close restores page scrolling',async({page})=>{

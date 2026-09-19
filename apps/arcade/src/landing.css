@@ -110,3 +110,5 @@
   .landing-page .spring-mark { font-size: 64px; }
   .landing-page .footer { gap: 24px; }
 }
+
+.other-games{margin-top:2.5rem;border-top:1px solid #18234633;padding-top:1rem}.other-games>summary{cursor:pointer;font-size:1rem;font-weight:600}.other-games[open]>.game-grid{margin-top:1.5rem}.stats-table{overflow-x:auto;margin:1.5rem 0}.stats-table table{width:100%;border-collapse:collapse;font-size:.875rem}.stats-table th,.stats-table td{text-align:left;padding:.65rem;border-bottom:1px solid #18234633;white-space:nowrap}#stats-filters{display:flex;gap:1rem;flex-wrap:wrap}#stats-filters label{display:grid;gap:.3rem}

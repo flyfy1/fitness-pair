@@ -31,6 +31,7 @@ with tarfile.open(archive, 'w:gz') as bundle:
     bundle.add(root/'dist/client', arcname='client')
     bundle.add(manifest, arcname='release.json')
     for name in ['apps/arcade/deploy/gcp/gateway.mjs', 'apps/arcade/deploy/gcp/backfill-thumbnails.mjs', 'apps/arcade/deploy/gcp/identity.mjs', 'apps/arcade/deploy/gcp/auth.mjs', 'apps/arcade/deploy/gcp/feedback.mjs',
+                 'apps/arcade/deploy/gcp/play-stats.mjs', 'apps/arcade/deploy/gcp/debug-reports.mjs', 'contracts/index.js',
                  'apps/arcade/deploy/gcp/account-store.mjs', 'apps/arcade/deploy/gcp/Caddyfile',
                  'apps/arcade/deploy/gcp/fitness-arcade.service', 'apps/arcade/server/worker.js', 'apps/arcade/game-catalog.js']:
         bundle.add(root/name, arcname=name)

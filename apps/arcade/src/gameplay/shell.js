@@ -3,6 +3,7 @@ import {mountRecording} from './recording.js';
 import {mountGameFeedback} from './feedback.js';
 import {mountDebugReport} from './debug-report.js';
 import './shell.css';
+import {mountPlayStats} from './play-stats.js';
 
 export function mountGame(container,game){
  document.body.classList.add('game-mode');
@@ -13,9 +14,10 @@ export function mountGame(container,game){
  const frame=container.querySelector('#game-frame');
  let recorder=null;const reload=()=>recorder?.onGameReload();frame.addEventListener('load',reload);
  const runtime=game.createAdapter(frame);
- runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; replays keep the latest 90 seconds at normal speed. Conversation recording is optional. Nothing is uploaded unless you choose to share.'});
+ const stats=mountPlayStats(game,runtime);
+ runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; replays keep the latest 90 seconds at normal speed. Conversation recording is optional. Anonymous play counts and active time are sent to this site. Video is uploaded only when you choose to share.'});
  recorder=mountRecording(game,runtime,{panel:container.querySelector('#record-panel'),result:container.querySelector('#local-result'),onReturnToGame:()=>{frame.focus({preventScroll:true});frame.scrollIntoView({behavior:'instant',block:'start'});}});
- const feedback=mountGameFeedback(game,runtime,{container:container.querySelector('#game-feedback-root'),stopGame:()=>{frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();recorder.dispose();runtime.dispose();frame.src='about:blank';}});
+ const feedback=mountGameFeedback(game,runtime,{container:container.querySelector('#game-feedback-root'),stopGame:()=>{stats.dispose('stopped');frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();recorder.dispose();runtime.dispose();frame.src='about:blank';}});
  const debug=mountDebugReport(game,runtime,recorder,{container:container.querySelector('#debug-report-root')});
  let disposeControls=()=>{};
  function controls(){
@@ -25,6 +27,6 @@ export function mountGame(container,game){
  }
  frame.addEventListener('load',controls);if(frame.contentDocument?.readyState==='complete')controls();
  let disposed=false;
- function dispose(){if(disposed)return;disposed=true;frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();debug.dispose();feedback.dispose();recorder.dispose();runtime.dispose();window.removeEventListener('pagehide',dispose);frame.src='about:blank';document.body.classList.remove('game-mode');}
+ function dispose(){if(disposed)return;disposed=true;stats.dispose();frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();debug.dispose();feedback.dispose();recorder.dispose();runtime.dispose();window.removeEventListener('pagehide',dispose);frame.src='about:blank';document.body.classList.remove('game-mode');}
  window.addEventListener('pagehide',dispose);return {runtime,dispose};
 }

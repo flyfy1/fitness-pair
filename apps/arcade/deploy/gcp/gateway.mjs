@@ -10,7 +10,8 @@ import {createAccountStore} from './account-store.mjs';
 import {createAuth} from './auth.mjs';
 import {createFeedbackCollector} from './feedback.mjs';
 import {createDebugReportCollector} from './debug-reports.mjs';
-import {playableGames} from '../../game-catalog.js';
+import {createPlayStats} from './play-stats.mjs';
+import {gameCatalog,playableGames} from '../../game-catalog.js';
 
 globalThis.crypto ??= webcrypto;
 
@@ -25,6 +26,7 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
     runtimeEnv.ACCOUNTS=auth;
     const cleanup=setInterval(()=>store.pruneSessions().catch(()=>{}),3600000);cleanup.unref();cleanups.push(cleanup);
   }
+  const stats=env.FITNESS_STATE_DIR?createPlayStats({directory:env.FITNESS_STATE_DIR,origin,games:gameCatalog,getUser:request=>auth?.user(request),adminEmails:env.FITNESS_STATS_ADMIN_EMAILS||''}):null;
   const feedback=env.FITNESS_STATE_DIR?createFeedbackCollector({directory:env.FITNESS_STATE_DIR,origin,games:playableGames,getUser:request=>auth?.user(request)}):null;
   const debugReports=env.FITNESS_STATE_DIR?createDebugReportCollector({directory:env.FITNESS_STATE_DIR,origin,games:playableGames,release,getUser:request=>auth?.user(request)}):null;
   if(debugReports){debugReports.prune().catch(()=>{});const cleanup=setInterval(()=>debugReports.prune().catch(()=>{}),3600000);cleanup.unref();cleanups.push(cleanup);}
@@ -39,10 +41,12 @@ export function createGateway({origin='https://fitness.integ.life',release={},en
       const request=new Request(new URL(req.url,origin),{method:req.method,headers:req.headers,
         ...(!['GET','HEAD'].includes(req.method)?{body:req,duplex:'half'}:{})});
       const pathname=new URL(request.url).pathname;
-      const debugResponse=await debugReports?.handle(request);
+      const statsResponse=await stats?.handle(request);
+      const debugResponse=statsResponse?null:await debugReports?.handle(request);
       const feedbackResponse=debugResponse?null:await feedback?.handle(request);
       const unavailable=!debugResponse&&pathname.startsWith('/api/debug-reports')?Response.json({error:'Diagnostic storage is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}}):!feedbackResponse&&pathname==='/api/feedback'?Response.json({error:'Feedback storage is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}}):null;
-      const response=debugResponse||feedbackResponse||unavailable||await auth?.handle(request)||await galleryWorker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
+      const statsUnavailable=!stats&&['/api/play-sessions','/api/admin/game-stats'].includes(pathname)?Response.json({error:'Game statistics are unavailable.'},{status:503}):null;
+      const response=statsResponse||statsUnavailable||debugResponse||feedbackResponse||unavailable||await auth?.handle(request)||await galleryWorker.fetch(request,{...runtimeEnv,ASSETS:{fetch:()=>new Response('Not found',{status:404})}});
       const responseHeaders=Object.fromEntries(response.headers);
       // Node 18 Headers folds Set-Cookie. OAuth needs both transaction cleanup and session issuance.
       const setCookie=response.headers.get('set-cookie');

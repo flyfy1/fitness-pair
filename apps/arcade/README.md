@@ -172,3 +172,15 @@ English and Simplified Chinese. First visits follow the browser language; an
 explicit selector choice takes precedence and persists on this origin. The game
 control panel shares the same choice without restarting a round.
 See [translation workflow and evidence](../../docs/multilingual.md).
+
+## Game sections and play statistics
+
+The homepage presents Motion Quest, Push-up Flight and Jump Game under **Feature
+games**. **Other games** is a smaller, initially collapsed section containing the
+remaining eight playable games and Orbit Pop's clearly labeled concept preview.
+All cards use their existing guides and playable routes.
+
+The GCP deployment records anonymous/account-deduplicated play counts and active
+play duration independently of recording and ratings. See [private game
+statistics](deploy/gcp/README.md#private-game-statistics) for the protected admin
+page, identity and timing definitions, storage, and deployment configuration.

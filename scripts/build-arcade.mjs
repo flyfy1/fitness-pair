@@ -1,3 +1,4 @@
+import {build} from 'vite';
 import {playableGames} from '../apps/arcade/game-catalog.js';
 import {execFileSync} from 'node:child_process';
 import {mkdir,cp,rm,writeFile,readFile} from 'node:fs/promises';
@@ -6,10 +7,13 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const run=(args)=>execFileSync(process.execPath,args,{cwd:root,stdio:'inherit'});
 await rm(new URL('../dist/',import.meta.url),{recursive:true,force:true});
 run(['node_modules/vite/bin/vite.js','build','apps/arcade','--outDir','../../dist/client','--emptyOutDir']);
+await build({configFile:false,build:{outDir:root+'dist/client',emptyOutDir:false,lib:{entry:root+'apps/arcade/src/standalone-stats.js',formats:['es'],fileName:()=> 'play-statistics.js'}}});
 const hosts=playableGames.map(game=>[game.id,game.directory]);
 for(const [name,directory] of hosts){
   execFileSync('npm',['run','build'],{cwd:new URL(`../${directory}/`,import.meta.url),stdio:'inherit'});
   run(['node_modules/vite/bin/vite.js','build',directory,'--base',`/games/${name}/`,'--outDir',`${root}dist/client/games/${name}`,'--emptyOutDir']);
+  const html=new URL(`../dist/client/games/${name}/index.html`,import.meta.url);
+  await writeFile(html,(await readFile(html,'utf8')).replace('</head>','<script type="module" src="/play-statistics.js"></script></head>'));
   // One shared copy keeps identical model/runtime bundles out of the deployment archive.
   if(name==='motion-quest')await cp(new URL(`../dist/client/games/${name}/runtime/`,import.meta.url),new URL('../dist/client/runtime/',import.meta.url),{recursive:true});
   await rm(new URL(`../dist/client/games/${name}/runtime/`,import.meta.url),{recursive:true,force:true});

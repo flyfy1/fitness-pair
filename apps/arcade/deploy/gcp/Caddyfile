@@ -46,7 +46,7 @@ fitness.integ.life {
     handle {
         @runtime path_regexp runtime ^/games/([^/]+)/runtime/(.+)$
         rewrite @runtime /runtime/{re.runtime.2}
-        @pages path_regexp pages ^/(play/[^/]+|gallery|library|shared|clips/[^/]+)/?$
+        @pages path_regexp pages ^/(admin/games|play/[^/]+|gallery|library|shared|clips/[^/]+)/?$
         rewrite @pages /index.html
         header Cache-Control "no-cache"
         file_server

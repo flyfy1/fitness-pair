@@ -21,7 +21,7 @@ export function createAuth({origin, issuer, clientId, clientSecret, store, fetch
   function returnPath(raw) {
     try {
       const url = new URL(raw || '/shared', origin);
-      if (url.origin !== origin || !/^\/(?:library|shared|gallery|clips\/[a-f0-9-]{36})?$/.test(url.pathname)) return '/shared';
+      if (url.origin !== origin || !/^\/(?:admin\/games|library|shared|gallery|clips\/[a-f0-9-]{36})?$/.test(url.pathname)) return '/shared';
       // Only the local clip selector survives login; arbitrary redirects and credentials do not.
       const clip = url.searchParams.get('publish');
       return url.pathname + (url.pathname === '/library' && /^[a-f0-9-]{36}$/.test(clip || '') ? '?publish=' + clip : '');

@@ -144,3 +144,35 @@ time, allows five minutes to receive it and two minutes for the cloud write. Its
 1 GiB service memory ceiling accommodates the bounded body and cloud-upload copy.
 Local clips allow 200 MB per file and a 400 MB aggregate library, still retaining
 at most the latest two clips. This does not increase either cloud quota.
+
+## Private game statistics
+
+Set `FITNESS_STATS_ADMIN_EMAILS=flyfy1@gmail.com` in `/etc/fitness-arcade.env`
+for the administrator requested by the site owner. Comma-separated addresses are
+matched only against the existing authenticated Integ.Life session. Missing
+configuration grants nobody access. Restart the gateway after changing this value.
+Open `/admin/games` and log in with an allowed account. The page supports a UTC
+start-date range of up to 31 days, game/input filters, per-game unique players,
+session counts, total active duration, and paginated session timestamps.
+
+`POST /api/play-sessions` records every started round independently of video or
+feedback, including direct `/games/` visits and the Orbit Pop concept. The shell
+and standalone collector are mutually exclusive. Setup is excluded; active time
+accrues only in the playing phase of a visible page. Snapshots are cumulative,
+ordered and idempotent; they are sent on start, every 15 seconds, visibility
+changes and completion/exit. A crashed/offline browser can lose its final
+heartbeat interval; abandoned sessions display `interrupted`, with an unknown
+end time, after 45 seconds. Client clocks and reported duration are untrusted
+usage estimates, not billing or anti-cheat evidence. Replay/synthetic inputs can
+be filtered separately from camera play.
+
+Players are deduplicated by a hash of the account identity at round start, or a
+hash of a random browser-local ID when anonymous. Clearing storage, multiple
+anonymous browsers, or playing before and after login may count extra players.
+No camera frames, landmarks, IP address, email, cookies or URLs are stored by
+this collector. Records persist as private, atomically replaced mode-0600 files
+under `FITNESS_STATE_DIR/play-sessions/YYYY-MM-DD/`, including across deployment
+and rollback. Historical records are retained until an operator removes them;
+the endpoint bounds each body to 2 KiB and new records to 10,000 per UTC day.
+There is no historical backfill from page views or optional ratings. This API is
+provided by the GCP gateway; the separate Sites Worker does not collect it.
