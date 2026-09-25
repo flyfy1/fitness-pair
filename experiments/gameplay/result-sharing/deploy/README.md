@@ -1,7 +1,11 @@
-# GCP deployment
+# Historical GCP deployment
 
-Explicit user destination: `https://fitness.integ.life` on the existing GCP server.
-This exploration does not use Sites hosting or the Raspberry Pi.
+The legacy sharing runtime moved with the arcade to `songyy-pi` on 2026-09-25.
+Use the [Pi operations guide](../../../../apps/arcade/deploy/pi/README.md).
+The GCP-only instructions below describe the historical deployment.
+
+The original destination was `https://fitness.integ.life` on the existing GCP
+server. This historical installer targets GCE, not Sites hosting or Raspberry Pi.
 
 The full arcade now owns the domain root. Use the
 [arcade GCP deployment workflow](../../../../apps/arcade/deploy/gcp/README.md)

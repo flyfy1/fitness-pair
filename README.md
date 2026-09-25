@@ -73,10 +73,14 @@ Accounts can choose 1, 7, 30, or 90 days, or no expiry; private links let friend
 separate, disabled gallery configuration.
 See [arcade details](apps/arcade/README.md) and [GCP setup](apps/arcade/server/README.md).
 
-The complete arcade also has an independent GCP deployment at
-[fitness.integ.life](https://fitness.integ.life). See the
-[GCP deployment workflow](apps/arcade/deploy/gcp/README.md). It keeps the GPT Sites
-deployment separate and preserves the original sharing studio at `/highlights`.
+The complete arcade is hosted on the Raspberry Pi `songyy-pi` at
+[fitness.integ.life](https://fitness.integ.life), through Cloudflare Tunnel `integ-pi`.
+Video uploads go directly from the browser to private Google Cloud Storage using
+single-object upload sessions; the Pi validates and publishes them. See the
+[Pi deployment workflow](apps/arcade/deploy/pi/README.md) and
+[migration evidence](apps/arcade/deploy/pi/EVIDENCE.md). GPT Sites remains separate,
+and the original sharing studio stays at `/highlights`. GCP VM releases are retained
+for rollback; they are no longer the production application host.
 
 ## Team map
 

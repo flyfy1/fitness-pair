@@ -1,6 +1,11 @@
-# Independent GCP deployment
+# Legacy GCP deployment
 
-The complete Hopmodo landing page and all five mounted games are deployed to
+As of 2026-09-25, production runs on `songyy-pi`. Use the
+[Pi workflow](../pi/README.md) for releases. This document describes the retained
+GCE rollback deployment; do not run its installer against the public domain
+without a deliberate reverse migration of the latest Pi state.
+
+The complete Hopmodo landing page and all five mounted games were deployed to
 `https://fitness.integ.life` on the existing `integ-prod` VM, project
 `project-e8ef2daf-0520-4018-b9f`, zone `asia-southeast1-b`.
 The GPT Sites deployment and `.openai/hosting.json` are not modified or published

@@ -113,8 +113,9 @@ never overwrites newer account data.
 5. Verify Cloudflare DNS and healthy Pi connector, public `X-Fitness-Origin`, exact
    frontend asset hashes, gallery read/playback/ranges, direct synthetic upload/delete,
    OAuth callback and session continuity, and actual desktop/mobile browser flow.
-6. Disable old GCE application units after acceptance. Retain original release,
-   private migration backup and transitional forwarding for rollback/cached DNS.
+6. Disable old GCE application units after acceptance. Once DNS caches expire,
+   stop and disable the transitional proxy and verify public access again.
+   Retain original releases, private migration backups and proxy configurations.
 
 Validate a synthetic upload larger than 100 MB directly to GCS from the browser,
 with only small preparation/completion requests reaching the public Tunnel.
