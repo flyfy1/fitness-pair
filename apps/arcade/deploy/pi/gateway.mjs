@@ -1,13 +1,17 @@
 import {readFileSync} from 'node:fs';
 import {createGateway} from '../gcp/gateway.mjs';
 import {createFederatedTokenProvider} from './identity.mjs';
+import worker from '../../server/worker.js';
+import {chunkedWorker} from './chunk-uploads.mjs';
 
 // Reuse the deployed application unchanged, replacing only its host identity.
 const release=JSON.parse(readFileSync(new URL('../../../../release.json',import.meta.url),'utf8'));
 const env={...process.env,GCP_ACCESS_TOKEN_PROVIDER:createFederatedTokenProvider()};
 delete env.GCP_IMPERSONATE_SERVICE_ACCOUNT;
 delete env.GCP_SERVICE_ACCOUNT_JSON;
-const server=createGateway({release:{...release,host:'songyy-pi'},env});
+const galleryWorker=await chunkedWorker(worker,{directory:env.FITNESS_STATE_DIR+'/upload-staging'});
+const server=createGateway({release:{...release,host:'songyy-pi'},env,galleryWorker});
+server.on('close',()=>galleryWorker.close());
 server.requestTimeout=300000;
 server.headersTimeout=15000;
 server.listen(8411,'127.0.0.1',()=>console.log('Fitness arcade Pi gateway listening on 127.0.0.1:8411'));

@@ -32,8 +32,19 @@ The helper's short-lived token is consumed through a private child-process pipe,
 cached in memory, and never logged or written to disk. The 30-second refresh
 timeout, early renewal and concurrent refresh coalescing bound failures.
 
-The Pi launcher imports the existing GCP gateway and replaces only its credential
-provider. This permits migrating a served release without deploying newer game code.
+The Pi launcher imports the existing GCP gateway and adapts its credential
+provider and large-upload transport. This permits migrating a served release
+without deploying newer game code.
+
+The Free Cloudflare plan limits each request to 100 MB. The narrow browser
+transport adapter splits gallery Blob uploads above 64 MB into 8 MB requests.
+Pi holds one incomplete upload on private disk, bounds it at 200 MB and ten
+minutes, and validates origin, consent and account/CSRF or device identity before
+accepting bytes. It revalidates identity on each request, then sends the assembled
+stream to the original gallery worker for ownership/quota/publication checks.
+Cancellation, expiry, failure and restart remove incomplete data. No cloud object
+or quota is reserved until finalization. Existing pages loaded before cutover
+need a reload to upload files over Cloudflare's request limit.
 
 ## Install and update
 
@@ -49,13 +60,13 @@ node --test apps/arcade/deploy/pi/*.test.mjs apps/arcade/deploy/gcp/*.test.mjs a
 python3 apps/arcade/deploy/pi/deploy.py
 ```
 
-For the initial move preserving every existing frontend/backend source byte:
+For the initial move preserving the served game bundles and backend source:
 
 ```sh
 python3 apps/arcade/deploy/pi/deploy.py --from-gce
 ```
 
-This adds the Pi adapter and records both the original `commit` and
+This adds the Pi adapter plus one script tag in the landing HTML and records both the original `commit` and
 `deploymentCommit` in `/healthz`. It does not transfer private state or change DNS.
 The installer validates Caddy before changes, snapshots stopped application state,
 and restores the previous code/proxy on startup failure. A normal code rollback
@@ -77,8 +88,8 @@ never overwrites newer account data.
 6. Disable old GCE application units after acceptance. Retain original release,
    private migration backup and transitional forwarding for rollback/cached DNS.
 
-Cloudflare plan request-size limits also apply to proxied uploads; the application
-has a 200 MB limit. Confirm the account's limit before changing ingress.
+Validate a synthetic upload larger than 100 MB through the public Tunnel before
+declaring the 200 MB upload transport migrated.
 
 ## Rollback
 
