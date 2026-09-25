@@ -149,16 +149,18 @@ export function createWorker({fetcher=fetch,now=()=>Date.now(),audit=event=>cons
     if(!user&&!/^[A-Za-z0-9_-]{32,128}$/.test(managementKey))throw fail(400,'A device management key is required for anonymous uploads.');if(uploadBusy)throw fail(429,'Another clip is uploading. Please retry shortly.');uploadBusy=true;
     try{
      try{const existing=await record(env,id);if(existing.ownerId){if(existing.ownerId!==user?.userId)throw fail(409,'This clip was published by another account.');}else await manageAnonymous(request,existing);return json(publicClip(existing));}catch(error){if(error.status!==404)throw error;}
-     const body=await readBounded(request);const valid=info.mime==='video/webm'?body[0]===26&&body[1]===69&&body[2]===223&&body[3]===163:String.fromCharCode(...body.slice(4,8))==='ftyp';if(!valid)throw fail(415,'The recording does not match its video format.');
+     // The host may provide a verified private GCS object; this is never a request field.
+     const prepared=env.PREPARED_UPLOAD?.id===id?env.PREPARED_UPLOAD:null;
+     const body=prepared?prepared.head:await readBounded(request);const valid=info.mime==='video/webm'?body[0]===26&&body[1]===69&&body[2]===223&&body[3]===163:String.fromCharCode(...body.slice(4,8))==='ftyp';if(!valid)throw fail(415,'The recording does not match its video format.');
      const createdAt=now();
-     const entry={...info,id,createdAt,expiresAt:info.retention==='never'?null:createdAt+Number(info.retention)*86400000,bytes:body.length,ownerId:user?.userId||null,...(!user?{keyHash:await digest(managementKey)}:{}),...(info.visibility==='private'?{shareToken:base64(crypto.getRandomValues(new Uint8Array(32)))}:{})};
+     const entry={...info,id,createdAt,expiresAt:info.retention==='never'?null:createdAt+Number(info.retention)*86400000,bytes:prepared?prepared.bytes:body.length,ownerId:user?.userId||null,...(!user?{keyHash:await digest(managementKey)}:{}),...(info.visibility==='private'?{shareToken:base64(crypto.getRandomValues(new Uint8Array(32)))}:{})};
      let victims=[],reserved=false,staged=false;
      if(!user){await anonymousQuota(env);victims=await env.ACCOUNTS.anonymousEvictions(entry);}
      else{await env.ACCOUNTS.reserve(entry.ownerId,publicClip(entry));reserved=true;}
      try{
       // New bytes must be durable before any older anonymous publication is revoked.
       staged=!user;
-      const upload=await gcp(env,`videos/${id}`,{method:'POST',body,mime:info.mime,expiresAt:entry.expiresAt});
+      const upload=prepared?await prepared.upload(entry):await gcp(env,`videos/${id}`,{method:'POST',body,mime:info.mime,expiresAt:entry.expiresAt});
       if(upload.status===412)staged=false;
       if(!upload.ok)throw fail(503,'Upload did not finish. Check your shared clips before retrying.');staged=true;
       for(const victim of victims){

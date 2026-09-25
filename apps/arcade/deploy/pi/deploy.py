@@ -41,6 +41,8 @@ with tarfile.open(source,'r:gz') as original, tarfile.open(archive,'w:gz') as bu
     manifest = {'commit':commit,'origin':'https://fitness.integ.life'}
     for member in original:
         name = member.name.removeprefix('./')
+        if name == 'apps/arcade/server/worker.js':
+            continue
         if name == 'release.json':
             manifest = json.load(original.extractfile(member))
             continue
@@ -56,6 +58,7 @@ with tarfile.open(source,'r:gz') as original, tarfile.open(archive,'w:gz') as bu
         bundle.add(root/'dist/client',arcname='client',filter=lambda m: None if m.name=='client/index.html' else m)
         html=(root/'dist/client/index.html').read_text().replace('<head>','<head><script src="/pi-upload-transport.js"></script>',1)
         data=html.encode();entry=tarfile.TarInfo('client/index.html');entry.size=len(data);entry.mode=0o644;bundle.addfile(entry,io.BytesIO(data))
+    bundle.add(root/'apps/arcade/server/worker.js',arcname='apps/arcade/server/worker.js')
     bundle.add(root/'apps/arcade/deploy/pi/upload-transport.js',arcname='client/pi-upload-transport.js')
     bundle.add(root/'apps/arcade/deploy/pi',arcname='apps/arcade/deploy/pi',filter=lambda m: None if '__pycache__' in m.name else m)
     manifest = {**manifest,'sourceRelease':manifest.get('release'),'release':release,'deploymentCommit':commit,'host':'songyy-pi'}

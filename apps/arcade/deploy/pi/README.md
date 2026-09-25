@@ -32,19 +32,47 @@ The helper's short-lived token is consumed through a private child-process pipe,
 cached in memory, and never logged or written to disk. The 30-second refresh
 timeout, early renewal and concurrent refresh coalescing bound failures.
 
-The Pi launcher imports the existing GCP gateway and adapts its credential
-provider and large-upload transport. This permits migrating a served release
-without deploying newer game code.
+## Direct Google Cloud Storage upload
 
-The Free Cloudflare plan limits each request to 100 MB. The narrow browser
-transport adapter splits gallery Blob uploads above 64 MB into 8 MB requests.
-Pi holds one incomplete upload on private disk, bounds it at 200 MB and ten
-minutes, and validates origin, consent and account/CSRF or device identity before
-accepting bytes. It revalidates identity on each request, then sends the assembled
-stream to the original gallery worker for ownership/quota/publication checks.
-Cancellation, expiry, failure and restart remove incomplete data. No cloud object
-or quota is reserved until finalization. Existing pages loaded before cutover
-need a reload to upload files over Cloudflare's request limit.
+Target user: a player sharing an explicitly consented local video, up to 200 MB.
+The job is to upload without sending video bytes through the Pi or Cloudflare's
+100 MB request limit. The risky assumption is browser CORS and preservation of
+private/permanent publication semantics. The bounded acceptance loop is:
+request a scoped session, upload directly, verify and publish, play, then remove
+one disposable synthetic test. Game changes and upload UI redesign are out of scope.
+
+`POST /api/direct-uploads/:clipId` verifies origin, account/CSRF or anonymous
+device identity, consent, metadata, advertised size and account quota. It creates
+a GCS resumable upload to a random private `videos/.pending/` object. Only this
+single-object session URL reaches the browser; server OAuth tokens, cookies and
+CSRF credentials never go to Google from the browser. The returned upload URL
+is a bearer capability and must never be logged, persisted or shared.
+
+The browser sends the video directly to `storage.googleapis.com`, then calls
+`POST /api/direct-uploads/:clipId/complete`. Pi reads object metadata and 12 bytes
+for MP4/WebM signature checks. It pins the source generation and uses GCS rewrite
+to create the final video inside the bucket. The original gallery worker retains
+ownership, quota reservation, anonymous replacement and publication semantics.
+Private videos remain private; permanent copies clear staging expiry metadata.
+The server rechecks quota at publication, so another concurrent legacy upload
+can require the user to free storage even after preparation succeeded.
+
+There is at most one pending direct upload, capped at 200 MB and ten minutes.
+The mode-0600 pending record survives restarts and contains no credentials.
+Cancellation revokes the GCS session when available and deletes staged bytes.
+Expired pending state is cleaned on the next direct request; staged objects have
+custom-time expiry under the existing bucket lifecycle. A restart does not
+persist the session URL, so an abandoned session can remain valid at Google for
+up to its one-week maximum; its single temporary object is never published after
+the application deadline and remains subject to lifecycle cleanup. Completion
+retries recognize already published clips without duplicating quota or objects.
+
+This replaces the temporary Pi chunk-assembly transport. The deployed game
+bundles remain unchanged: the landing HTML adds a narrow upload adapter and the
+Worker gets an internal prepared-object hook. `commit` in health identifies the
+original application; `deploymentCommit` identifies these host/upload changes.
+Existing open pages must reload to use direct uploads. Legacy small-body uploads
+remain compatible with the original API.
 
 ## Install and update
 
@@ -60,7 +88,7 @@ node --test apps/arcade/deploy/pi/*.test.mjs apps/arcade/deploy/gcp/*.test.mjs a
 python3 apps/arcade/deploy/pi/deploy.py
 ```
 
-For the initial move preserving the served game bundles and backend source:
+For the initial move preserving the served game bundles:
 
 ```sh
 python3 apps/arcade/deploy/pi/deploy.py --from-gce
@@ -83,13 +111,13 @@ never overwrites newer account data.
 4. Add `fitness.integ.life` to `integ-pi` with `http://127.0.0.1:18411`, then change
    only that DNS record to the tunnel CNAME. Preserve every unrelated tunnel route.
 5. Verify Cloudflare DNS and healthy Pi connector, public `X-Fitness-Origin`, exact
-   frontend asset hashes, gallery read/playback/ranges, synthetic upload/delete,
+   frontend asset hashes, gallery read/playback/ranges, direct synthetic upload/delete,
    OAuth callback and session continuity, and actual desktop/mobile browser flow.
 6. Disable old GCE application units after acceptance. Retain original release,
    private migration backup and transitional forwarding for rollback/cached DNS.
 
-Validate a synthetic upload larger than 100 MB through the public Tunnel before
-declaring the 200 MB upload transport migrated.
+Validate a synthetic upload larger than 100 MB directly to GCS from the browser,
+with only small preparation/completion requests reaching the public Tunnel.
 
 ## Rollback
 

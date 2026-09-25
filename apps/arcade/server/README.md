@@ -17,6 +17,15 @@ credentials for the dedicated storage account, scoped to Cloud Storage access.
 
 Grant the service account object create/get/list/delete permissions only on this bucket. Keep uniform bucket-level access and public-access prevention enabled. Configure the custom-time lifecycle rule using the [retention migration](../deploy/gcp/README.md#sharing-expiry-migration) before enabling sharing; the app denies expired records immediately, while lifecycle cleanup removes stored bytes. Supply the chosen project/bucket through normal configuration, not pasted private keys in chat.
 
+## Pi direct uploads
+
+The Pi deployment uses a single-object GCS resumable session so the browser sends
+video bytes directly to Google Storage. Pi validates metadata and a 12-byte media
+signature, then performs a generation-pinned copy inside GCS and uses the same
+Worker ownership/quota/publication logic. The internal `PREPARED_UPLOAD` hook is
+server-only and cannot be set by request headers or JSON. See the
+[Pi direct-upload protocol](../deploy/pi/README.md#direct-google-cloud-storage-upload).
+
 ## Flow
 
 1. Gameplay automatically creates an unbranded local replay of up to the latest 90 seconds in IndexedDB. Recordings stay at normal speed. This upload endpoint accepts up to 90 seconds / 200 MB.
