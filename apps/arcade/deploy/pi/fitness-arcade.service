@@ -1,0 +1,28 @@
+[Unit]
+Description=Hopmodo arcade on Raspberry Pi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fitness-arcade
+Group=fitness-arcade
+WorkingDirectory=/opt/fitness-arcade/current
+EnvironmentFile=/etc/fitness-arcade.env
+Environment=FITNESS_STATE_DIR=/var/lib/fitness-arcade
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/etc/fitness-arcade/gcs-wif.json
+ExecStart=/opt/fitness-arcade/node/bin/node /opt/fitness-arcade/current/apps/arcade/deploy/pi/gateway.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+StateDirectory=fitness-arcade
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

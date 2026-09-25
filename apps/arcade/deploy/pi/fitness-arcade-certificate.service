@@ -1,0 +1,6 @@
+[Unit]
+Description=Renew Fitness Pair Pi workload certificate
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /opt/fitness-arcade/current/apps/arcade/deploy/pi/renew-certificate.sh
