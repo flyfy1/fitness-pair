@@ -191,3 +191,18 @@ All playable routes use the common entry screen and the same left-hand start
 confirmation for standing games. Push-up Flight keeps its head/shoulder start.
 See [the experience review](../../docs/game-entry-review.md) and the
 [shared startup boundary](../../packages/gameplay/README.md#camera-start-gesture).
+
+## First-play entry refinement
+
+The homepage recommends Motion Quest with a direct **Start five squats** action.
+It reuses the game's illustrated guide and remembered skip choice; opening the
+guide never requests a camera. Mobile navigation uses two compact rows with
+44px targets. Games precede the decorative playground, whose image loads lazily,
+and the build story lives in a collapsed **About Hopmodo** section. English and
+Simplified Chinese retain the same path. The existing shared entry and readiness
+flow remain responsible for camera permission, calibration and countdown.
+
+Acceptance covers 320px and 390px first-screen entry in both languages, tutorial
+focus restoration without camera access, loader recovery at 320/390/768/1440px,
+and camera denial/retry/cleanup. These checks establish software flow and layout;
+real-person recognition and physical phone performance still require trials.

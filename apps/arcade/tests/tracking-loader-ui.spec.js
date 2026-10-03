@@ -30,7 +30,7 @@ for (const width of [320, 390, 768, 1440]) {
     await expect(progress).toHaveAttribute('max', '8000000');
     await expect(progress).toHaveAttribute('aria-valuetext', '37% · 3.0 / 8.0 MB');
     await expect(status).toContainText('Downloading movement controls');
-    const cta = page.locator('.hero').getByRole('link', { name: 'Take me to the arcade' });
+    const cta = page.locator('.hero').getByRole('link', { name: 'Start five squats' });
     const ctaBounds = await cta.boundingBox();
     const loaderBounds = await loader.boundingBox();
     expect(loaderBounds.y).toBeGreaterThanOrEqual(ctaBounds.y + ctaBounds.height + 20);
@@ -62,7 +62,6 @@ for (const width of [320, 390, 768, 1440]) {
     await page.screenshot({ path: testInfo.outputPath(`ready-${width}.png`) });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await cta.click();
-    await expect(page).toHaveURL(/#arcade$/);
-    await expect(page.getByRole('heading', { name: 'PICK A GAME. GET MOVING.' })).toBeInViewport();
+    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Motion Quest' })).toBeVisible();
   });
 }

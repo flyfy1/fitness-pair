@@ -11,7 +11,7 @@ test('landing has a direct arcade path and a factual build story',async({page})=
  await expect(page.getByRole('heading',{name:/Games that get you moving\./i})).toBeVisible();
  await page.getByRole('link',{name:'Take me to the arcade',exact:true}).first().click();await expect(page).toHaveURL(/#arcade$/);
  await expect(page.locator('.game-art').first()).toBeInViewport();
- await page.getByRole('link',{name:'How we built it',exact:true}).click();await expect(page.getByRole('heading',{name:'BUILDING THE ARCADE WITH ASTRA.'})).toBeInViewport();
+ await page.getByRole('link',{name:'About Hopmodo',exact:true}).click();await page.locator('.about-build > summary').click();await expect(page.getByRole('heading',{name:'BUILDING THE ARCADE WITH ASTRA.'})).toBeInViewport();
  expect(errors).toEqual([]);
 });
 test('mobile layout fits and reduced motion starts paused',async({page})=>{
@@ -19,6 +19,22 @@ test('mobile layout fits and reduced motion starts paused',async({page})=>{
  await expect(page.getByRole('button',{name:'Play motion',exact:true})).toHaveAttribute('aria-pressed','true');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await expect(page.getByRole('link',{name:'Take me to the arcade',exact:true}).first()).toBeInViewport();
+});
+test('first game stays reachable on small screens and opens a guide without camera access',async({page})=>{
+ await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:null}}));
+ await page.addInitScript(()=>{window.cameraRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;throw new Error('Unexpected camera request');};});
+ for(const width of [320,390]){
+  await page.setViewportSize({width,height:740});await page.goto('/');
+  for(const language of ['en','zh']){
+   await page.locator('#site-language').selectOption(language);
+   const start=page.locator('.first-game .hero-cta');await expect(start).toBeInViewport({ratio:1});
+   expect((await page.locator('header.nav').boundingBox()).height).toBeLessThanOrEqual(110);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   await start.click();await expect(page.getByRole('dialog')).toBeVisible();
+   expect(await page.evaluate(()=>window.cameraRequests)).toBe(0);
+   await page.keyboard.press('Escape');await expect(start).toBeFocused();
+  }
+ }
 });
 test('concept is labeled and can complete with a keyboard',async({page})=>{
  await page.goto('/play/orbit-pop');await expect(page.getByText('Interactive concept · button simulation · no camera')).toBeVisible();

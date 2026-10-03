@@ -899,5 +899,14 @@
   {"id":"entry.shared.13","en":"Move your head to fly a tiny helicopter. Keep your head and either shoulder in view.","zh":"用头部动作驾驶小直升机。保持头部和任一侧肩膀入镜。"},
   {"id":"dino.confirmGesture.left","en":"Raise your left hand above your shoulder for 1 second to confirm.","zh":"将左手举过肩膀并保持一秒以确认。"},
   {"id":"dino.oneHand.left","en":"Left hand up: confirm / next","zh":"举起左手：确认／下一步"},
-  {"id":"entry.settings","en":"Game settings","zh":"游戏设置"}
+  {"id":"entry.settings","en":"Game settings","zh":"游戏设置"},
+  {"id":"landing.quickBreak","en":"A quick play break, powered by your body.","zh":"动一动身体，玩一局小游戏。"},
+  {"id":"landing.noLogin","en":"No login needed to play. Camera tracking stays on your device.","zh":"无需登录即可游玩，摄像头识别在你的设备上完成。"},
+  {"id":"landing.startHere","en":"Start here · five squats","zh":"从这里开始 · 五次深蹲"},
+  {"id":"landing.fiveMoves","en":"Squat to charge. Stand to cast. Defeat the guardian in five moves.","zh":"下蹲蓄力，站起施法。完成五次动作，击败守护者。"},
+  {"id":"landing.startSquats","en":"Start five squats","zh":"开始五次深蹲"},
+  {"id":"landing.cameraGuide","en":"Camera + space to move. A guide shows you how.","zh":"准备好摄像头和活动空间，跟随图解开始。"},
+  {"id":"landing.about","en":"About Hopmodo","zh":"关于 Hopmodo"},
+  {"id":"landing.replayInvitation","en":"Play a game. Watch your replay, play again, or send it to a friend. Replays stay on this device until you choose to upload. Download videos you want to keep.","zh":"玩一局，看看回放、再玩一次，或发给朋友。回放保存在此设备，只有主动上传才会分享。请下载想保留的视频。"},
+  {"id":"landing.playgroundAbove","en":"Playground illustration · games are above","zh":"游乐场插画 · 游戏在上方"}
 ]

@@ -112,3 +112,49 @@
 }
 
 .other-games{margin-top:2.5rem;border-top:1px solid #18234633;padding-top:1rem}.other-games>summary{cursor:pointer;font-size:1rem;font-weight:600}.other-games[open]>.game-grid{margin-top:1.5rem}.stats-table{overflow-x:auto;margin:1.5rem 0}.stats-table table{width:100%;border-collapse:collapse;font-size:.875rem}.stats-table th,.stats-table td{text-align:left;padding:.65rem;border-bottom:1px solid #18234633;white-space:nowrap}#stats-filters{display:flex;gap:1rem;flex-wrap:wrap}#stats-filters label{display:grid;gap:.3rem}
+
+/* Put a playable choice ahead of decoration and background information. */
+.landing-page .hero-copy { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px 48px; max-width: 1200px; margin: auto; padding-top: 48px; text-align: left; align-items: center; }
+.landing-page .hero-note { justify-content: flex-start; margin-bottom: 16px; }
+.landing-page .hero h1 { font-size: clamp(42px, 5.2vw, 68px); }
+.landing-page .hero-description { margin: 20px 0 8px; font-size: 18px; }
+.landing-page .hero-privacy { color: var(--muted); font-size: 13px; max-width: 380px; }
+.landing-page .first-game { padding: 24px; border: 1px solid #25282430; border-radius: 16px; background: #eeeee7; min-width: 0; }
+.landing-page .first-game-heading { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.landing-page .first-game-heading > div { min-width: 0; }
+.landing-page .first-game .kicker { margin-bottom: 8px; font-size: 12px; }
+.landing-page .first-game h2 { font-size: 30px; margin: 0; }
+.landing-page .first-game canvas { width: 100px; height: auto; border-radius: 10px; flex: 0 0 100px; }
+.landing-page .first-game > p { font-size: 15px; margin: 16px 0; }
+.landing-page .first-game .hero-cta { width: 100%; }
+.landing-page .first-game .first-game-note { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
+.landing-page .hero .tracking-preload { grid-column: 1 / -1; width: 100%; margin: 0; max-width: none; }
+.landing-page .arcade-section { padding-top: 48px; }
+.landing-page .illustration-section { padding: 0 6% 40px; }
+.landing-page .illustration-section .playground { width: 100%; margin: 0; }
+.landing-page .about-build { margin: 0; padding: 24px 6%; border-top: 1px solid #25282425; }
+.landing-page .about-build > summary { display: list-item; min-height: 44px; padding: 12px 0; font-size: 16px; }
+.landing-page .about-build .built-section { padding: 32px 0; }
+@media (max-width: 800px) {
+  .landing-page header.nav { display: grid; grid-template-columns: minmax(0, 1fr) auto; height: auto; min-height: 0; padding: 8px 5%; gap: 0 12px !important; }
+  .landing-page header.nav .brand { grid-column: 1; grid-row: 1; font-size: 24px; min-height: 44px; }
+  .landing-page header.nav [data-account-nav] { grid-column: 2; grid-row: 1; margin: 0; }
+  .landing-page header.nav [data-account-nav] a { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; }
+  .landing-page header.nav nav { grid-column: 1; grid-row: 2; width: auto; justify-content: flex-start; }
+  .landing-page header.nav > .language-control { grid-column: 2; grid-row: 2; margin: 0; }
+  .landing-page header.nav > .language-control > span { display: none; }
+  .landing-page header.nav > .language-control select { max-width: 120px; font-size: 12px; }
+  .landing-page .hero-copy { gap: 24px; padding-top: 28px; }
+  .landing-page .first-game { padding: 20px; }
+}
+@media (max-width: 600px) {
+  .landing-page .hero-copy { grid-template-columns: 1fr; padding-inline: 5%; gap: 20px; }
+  .landing-page .hero-note { margin-bottom: 12px; }
+  .landing-page .hero h1, .landing-page:lang(zh-CN) .hero h1 { font-size: clamp(38px, 10vw, 52px); }
+  .landing-page .hero-description { font-size: 16px; margin-top: 12px; }
+  .landing-page .hero-privacy { margin-bottom: 4px; }
+  .landing-page .first-game .first-game-note { font-size: 11px; }
+  .landing-page .first-game canvas { width: 80px; flex-basis: 80px; }
+  .landing-page .first-game h2 { font-size: 27px; }
+  .landing-page .arcade-section { padding-top: 32px; }
+}
