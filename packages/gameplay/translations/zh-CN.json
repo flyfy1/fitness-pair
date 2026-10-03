@@ -923,5 +923,7 @@
   {"id":"clip.updating","en":"Updating sharing status…","zh":"正在更新分享状态…"},
   {"id":"clip.pauseSuccess","en":"Public sharing paused. Your video is kept.","zh":"公开分享已暂停，视频已保留。"},
   {"id":"clip.resumeSuccess","en":"Public sharing restored. The same link works again.","zh":"公开分享已恢复，原链接重新可用。"},
-  {"id":"clip.statusFailure","en":"Sharing status could not be checked. Retry before changing it.","zh":"无法确认分享状态，请重试后再更改。"}
+  {"id":"clip.statusFailure","en":"Sharing status could not be checked. Retry before changing it.","zh":"无法确认分享状态，请重试后再更改。"},
+  {"id":"clip.openViewer","en":"Open shared video →","zh":"查看分享的视频 →"},
+  {"id":"clip.publicReady","en":"Public in the gallery","zh":"已公开展示在作品展廊中"}
 ]

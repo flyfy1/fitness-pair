@@ -63,6 +63,7 @@ test('anonymous local owners can pause, reload, inspect and restore without uplo
  await page.locator('#site-language').selectOption('zh');
  await expect(page.locator('[data-clip-state]')).toHaveText('公开分享已暂停');
  await expect(page.getByRole('button',{name:'恢复公开分享',exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'查看分享的视频',exact:false})).toBeVisible();
  await page.locator('#site-language').selectOption('en');
  await page.goto('/clips/'+f.current().id);await expect(page.getByRole('button',{name:'Resume public sharing',exact:true})).toBeVisible();
  await expect(page.locator('.clip-view .share-message')).toHaveCount(0);await expect(page.locator('video')).not.toHaveAttribute('src');
@@ -73,6 +74,8 @@ test('anonymous local owners can pause, reload, inspect and restore without uplo
  await page.getByRole('button',{name:'Resume public sharing',exact:true}).click();
  await expect(page.getByRole('button',{name:'Pause public sharing',exact:true})).toBeVisible();
  await page.goto('/library');await expect(page.locator('[data-clip-state]')).toHaveText('Public in the gallery');
+ await page.locator('#site-language').selectOption('zh');await expect(page.locator('[data-clip-state]')).toHaveText('已公开展示在作品展廊中');
+ await page.locator('#site-language').selectOption('en');
  expect(f.uploads()).toBe(1);expect(await hash(page)).toBe(before);
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:info.outputPath('sharing-mobile.png')});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
