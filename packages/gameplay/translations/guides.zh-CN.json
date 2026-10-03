@@ -102,5 +102,12 @@
   {"id":"guide.concept.tapLabel","en":"Tap the star","zh":"点击星星"},
   {"id":"guide.shared.leftSetup","en":"Place your camera so your shoulders, hips and hands stay in view. Enable the camera, stand still with both hands down, and complete calibration. Raise your LEFT hand above your shoulder for one second with your right hand down, then lower both hands to start.","zh":"调整摄像头，让肩膀、髋部和双手保持入镜。开启摄像头，放下双手并站稳，完成校准。将左手举过肩膀保持一秒，右手放下，再放下双手开始。"},
   {"id":"guide.motion.leftSetup","en":"Enable the camera, keep shoulders through ankles visible, turn slightly sideways and stand upright for about two seconds to calibrate. Raise your LEFT hand for one second, then lower both hands for the countdown.","zh":"开启摄像头，让肩膀到脚踝保持入镜，略微侧身，站直约两秒完成校准。举起左手保持一秒，再放下双手进入倒计时。"},
-  {"id":"guide.jump.leftReleaseSetup","en":"Enable the camera and stand still to calibrate. Raise your LEFT hand above your shoulder for one second with your right hand down. Lower both hands, then follow the three-second countdown.","zh":"开启摄像头并站稳以完成校准。将左手举过肩膀保持一秒，右手放下。放下双手后跟随三秒倒计时开始。"}
+  {"id":"guide.jump.leftReleaseSetup","en":"Enable the camera and stand still to calibrate. Raise your LEFT hand above your shoulder for one second with your right hand down. Lower both hands, then follow the three-second countdown.","zh":"开启摄像头并站稳以完成校准。将左手举过肩膀保持一秒，右手放下。放下双手后跟随三秒倒计时开始。"},
+  {"id":"forest.waveGoal","en":"Repel five approaching guardians with squat-and-stand spells.","zh":"下蹲蓄力、站起施法，击退五只不断靠近的森林守卫。"},
+  {"id":"forest.waveCast","en":"Stand upright again to cast at the front guardian. It recoils and dissolves while the next one approaches. Staying crouched does not score another repetition.","zh":"重新站直，向前排守卫施法。它会后退并消散，下一只守卫接着靠近。一直蹲着不会重复计分。"},
+  {"id":"forest.waveRepeat","en":"Return to standing between repetitions. Clear the wave with five completed actions; guardians wait at the front if you need a breather.","zh":"每次动作之间恢复站立。完成五次动作清空这一波；需要休息时，守卫会在前方等候。"},
+  {"id":"forest.waveDescription","en":"Stand tall to calibrate. Squat to charge and stand to cast. Repel five approaching guardians to clear the wave.","zh":"站直完成校准。下蹲蓄力，站起施法。击退五只靠近的守卫，清空这一波怪兽。"},
+  {"id":"forest.waveLabel","en":"Guardian wave","zh":"守卫来袭"},
+  {"id":"forest.repelled","en":"REPELLED!","zh":"击退！"},
+  {"id":"forest.waveCleared","en":"WAVE CLEARED!","zh":"怪兽潮已击退！"}
 ]

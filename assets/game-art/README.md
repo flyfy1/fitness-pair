@@ -8,6 +8,7 @@ participant recordings belong here.
 | --- | --- | --- |
 | `covers/` | Ten landscape covers and their generation prompts | Cards, entries, themed references |
 | `sprites/` | Transparent dinosaur, guardian, mage and side-view helicopter | Live canvas rendering |
+| `sprites/*-idle/charge/cast/step/hit-v1.webp` | Six Forest Guardian action poses | State-driven character animation |
 | `poses/` | Six transparent movement illustrations | Setup, confirmation and instructions |
 | `source/` | Original generated atlases, helicopter and generation briefs | Re-cut, regenerate or develop variants |
 
@@ -46,3 +47,10 @@ well. Gameplay uses the separate side-profile version to fit the flight's
 existing collision envelope. Movement figures were separated by their alpha
 components because some limbs extend beyond the nominal atlas cells; do not
 blindly slice that atlas into equal rectangles.
+
+Forest Guardian now uses six poses from `source/forest-animation-v1.png`:
+mage idle/charging/casting and guardian alternating strides/hit recoil. Each
+selected frame uses a common 640×448 transparent canvas, bottom aligned; the
+charging pose retains its shorter body height. The second walk frame was
+mirrored to face the mage. `apps/motion-quest/src/character-art.js` loads these
+frames. No scenery or floor is part of them.

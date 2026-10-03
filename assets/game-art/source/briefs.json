@@ -5,22 +5,60 @@
   "outputs": [
     {
       "file": "characters-v1.png",
-      "referenceImages": ["../covers/jump-game-v1.jpg", "../covers/motion-quest-v1.jpg", "../covers/plank-flight-v1.jpg"],
+      "referenceImages": [
+        "../covers/jump-game-v1.jpg",
+        "../covers/motion-quest-v1.jpg",
+        "../covers/plank-flight-v1.jpg"
+      ],
       "brief": "One square transparent two-by-two sprite atlas. Top-left: green dinosaur facing right with cream belly, expressive eye and running pose. Top-right: full moss-covered stone guardian facing left with spiral shoulder, glowing eyes and leaves. Bottom-left: full forest mage facing right with teal pointed hat, cape, boots and blue crystal staff. Bottom-right: teal helicopter facing right with coral rotor, cream skids and dark cockpit. Match the cover characters and clay material. No text, grid, scenery or ground shadows.",
-      "selectedAssets": ["../sprites/dino-v1.webp", "../sprites/guardian-v1.webp", "../sprites/mage-v1.webp"]
+      "selectedAssets": [
+        "../sprites/dino-v1.webp",
+        "../sprites/guardian-v1.webp",
+        "../sprites/mage-v1.webp"
+      ]
     },
     {
       "file": "movement-poses-v1.png",
-      "referenceImages": ["../covers/jump-game-v1.jpg"],
+      "referenceImages": [
+        "../covers/jump-game-v1.jpg"
+      ],
       "brief": "One transparent three-by-two atlas of the same friendly adult clay training figure, teal shirt, cream trousers, coral shoes and peach skin. Top row: front-view standing with arms down; side-view comfortable squat facing right with bent knees, hips back and heels grounded; front-view hand raised on viewer's left with opposite arm down. Bottom row: wrist aiming on viewer's right below the shoulder; side-view push-up plank facing right with hands beneath shoulders; small front-view jump with arms down and feet airborne. No arrows, labels, backgrounds, borders or ground shadows. All body parts visible.",
-      "selectedAssets": ["../poses/pose-stand-v1.webp", "../poses/pose-squat-v1.webp", "../poses/pose-raise-v1.webp", "../poses/pose-aim-v1.webp", "../poses/pose-pushup-v1.webp", "../poses/pose-jump-v1.webp"],
+      "selectedAssets": [
+        "../poses/pose-stand-v1.webp",
+        "../poses/pose-squat-v1.webp",
+        "../poses/pose-raise-v1.webp",
+        "../poses/pose-aim-v1.webp",
+        "../poses/pose-pushup-v1.webp",
+        "../poses/pose-jump-v1.webp"
+      ],
       "extraction": "Separate the six substantial alpha-connected figures; keep edge alpha and transparent padding. Equal grid cropping would cut some limbs."
     },
     {
       "file": "helicopter-side-v1.png",
-      "referenceImages": ["../covers/plank-flight-v1.jpg"],
+      "referenceImages": [
+        "../covers/plank-flight-v1.jpg"
+      ],
       "brief": "One transparent orthographic side-profile clay helicopter facing right. Long teal tail to the left, rounded teal cabin to the right, large dark cockpit, cream landing skids, coral horizontal main rotor and small tail rotor. Approximately 1.9:1 width-to-height including tail, rotor and skids. Match the cover's miniature tactile material. No pilot, clouds, scenery, text or ground shadow.",
-      "selectedAssets": ["../sprites/helicopter-v1.webp"]
+      "selectedAssets": [
+        "../sprites/helicopter-v1.webp"
+      ]
+    },
+    {
+      "file": "forest-animation-v1.png",
+      "referenceImages": [
+        "../sprites/mage-v1.webp",
+        "../sprites/guardian-v1.webp"
+      ],
+      "brief": "Transparent three-by-two clay character atlas preserving the reference identities. Top row: right-facing mage idle planted stance, charging crouch, horizontal staff casting lunge. Bottom row: left-facing moss guardian alternating walking strides, backward hit recoil. Full bodies, consistent lighting and scale, no text, scenery or ground.",
+      "selectedAssets": [
+        "../sprites/mage-idle-v1.webp",
+        "../sprites/mage-charge-v1.webp",
+        "../sprites/mage-cast-v1.webp",
+        "../sprites/guardian-step-a-v1.webp",
+        "../sprites/guardian-step-b-v1.webp",
+        "../sprites/guardian-hit-v1.webp"
+      ],
+      "extraction": "Isolated six substantial alpha-connected silhouettes with edge alpha; bottom-align on common 640x448 transparent frames. Preserve crouch relative height; flip the second guardian walk pose to face left."
     }
   ]
 }

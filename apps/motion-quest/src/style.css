@@ -1,4 +1,6 @@
 :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f3f8e9; background: #101511; font-synthesis: none; color-scheme: dark; }
+.clay-play #app .stats { background: transparent; border: 0; box-shadow: none; padding: 8px; }
+.clay-play #app .stats :is(strong,small,span) { color: #fffdf5; text-shadow: 0 1px 5px #173c36, 0 0 12px #173c36; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 [hidden] { display: none !important; }

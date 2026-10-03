@@ -102,6 +102,33 @@
       "sha256": "b605aa838c6b6539b5787901a5260d2c3912935071243fee4891a306238aa18a"
     },
     {
+      "path": "sprites/guardian-hit-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 448,
+      "transparent": true,
+      "bytes": 74952,
+      "sha256": "c3b1edb81904d2004452ccb120e0af5f8b0e6575c440d32c9744c56797e612a9"
+    },
+    {
+      "path": "sprites/guardian-step-a-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 448,
+      "transparent": true,
+      "bytes": 63872,
+      "sha256": "8a58a1d3161828c0eecf5008c607fcbe379c16fe90d4f853a29c41bbf00a8d8b"
+    },
+    {
+      "path": "sprites/guardian-step-b-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 448,
+      "transparent": true,
+      "bytes": 64230,
+      "sha256": "272a906856d930ed8d2c56e2a2370d4e1a2724cd5e93b43eff9d0df527940e3c"
+    },
+    {
       "path": "sprites/guardian-v1.webp",
       "role": "sprites",
       "width": 552,
@@ -118,6 +145,33 @@
       "transparent": true,
       "bytes": 43696,
       "sha256": "f211e11b513b141f561a94eef5f22d2fa8b7fa2515cd08db4851ee1715276f0b"
+    },
+    {
+      "path": "sprites/mage-cast-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 448,
+      "transparent": true,
+      "bytes": 60046,
+      "sha256": "83e9010f4b9a2bd1ab4f6919e7326629d85e353364f2ae18fb6803801e56efbf"
+    },
+    {
+      "path": "sprites/mage-charge-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 448,
+      "transparent": true,
+      "bytes": 44980,
+      "sha256": "ffe0234a53e313c99c3fb068366a6ef47507446fb59e91d1f77ed7c12bf13934"
+    },
+    {
+      "path": "sprites/mage-idle-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 448,
+      "transparent": true,
+      "bytes": 54440,
+      "sha256": "62deba8c061822c6e3554dbc0e30b986561714567596ea84691b39040b766b02"
     },
     {
       "path": "sprites/mage-v1.webp",
@@ -190,6 +244,15 @@
       "transparent": true,
       "bytes": 1705229,
       "sha256": "626e2c97a2768b0091d85c5e085e818b6a7a171803cef48d84eb54579417fa0e"
+    },
+    {
+      "path": "source/forest-animation-v1.png",
+      "role": "source",
+      "width": 1536,
+      "height": 1024,
+      "transparent": true,
+      "bytes": 2570528,
+      "sha256": "b5698da453d8909f37d61848ddd4b5af26e68b6dfedc4a71741fa9e39433e979"
     },
     {
       "path": "source/helicopter-side-v1.png",

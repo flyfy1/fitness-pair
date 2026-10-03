@@ -87,6 +87,17 @@ The unrecorded live camera stops on victory, cancellation, failure or leaving th
 page; the result screen uses a neutral background. Preview mode uses a neutral
 background and explicitly synthetic controls, without activating a camera.
 
+Forest Guardian's current presentation is a five-enemy wave. Guardians walk in
+from the right during active play, wait at a safe front line, and freeze their
+approach during setup or missing tracking. Each scored squat-and-stand action
+casts from the mage's staff, knocks back one guardian and brings the next forward.
+The mage has idle, crouch and cast poses; guardians alternate walking poses and
+show a hit pose before dissolving. The existing five completions, event
+deduplication and immediate camera cleanup remain unchanged. There is no timed
+loss or penalty for taking a breather. Only characters and local spell effects
+occupy the transparent game canvas; opaque terrain, trees and the lower stats
+panel background have been removed. See [the bounded loop](../../docs/forest-horde.md).
+
 Verification for this change: 17 app/shared checks and 7 production Chrome checks
 passed. Browser checks include public-image local inference with no external
 requests, full-viewport transparent layers at 1440×1080 and 390×844, a 844×390

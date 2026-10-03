@@ -30,10 +30,11 @@ test('game sound is controllable and reduced motion retains readable attack feed
     window.AudioContext = class extends Context { createOscillator() { window.soundNodes++; return super.createOscillator(); } };
   });
   await page.goto('/');
+  await page.locator('#demo').click();
   const sound = page.getByRole('button', { name: 'Game sound', exact:true });
   await expect(sound).toHaveAttribute('aria-pressed','true');
   await sound.click(); await expect(sound).toHaveAttribute('aria-pressed','false');
-  await sound.click(); await page.locator('#demo').click();
+  await sound.click();
   await page.locator('#demo-action').focus(); await page.keyboard.down('Space');
   await expect(page.locator('#charge-value')).toHaveText('100%');
   await page.keyboard.up('Space');
