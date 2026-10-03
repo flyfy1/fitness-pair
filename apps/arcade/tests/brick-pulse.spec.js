@@ -8,11 +8,16 @@ const state=game=>game.locator('body').evaluate(()=>window.integAR.getState());
 
 test('Brick Pulse keeps one camera round and local replay through two misses, including frozen serve preparation',async({page},info)=>{
  await syntheticCamera(page);
- const errors=[],uploads=[],playSessions=[];
+ const errors=[],uploads=[],playSessions=[],telemetry=[];
  page.on('pageerror',error=>errors.push(error.message));
  page.on('request',request=>{
   if(!['PUT','POST'].includes(request.method()))return;
-  if(new URL(request.url()).pathname==='/api/play-sessions')playSessions.push(request.postDataJSON());
+  const url=new URL(request.url());
+  if(url.pathname==='/api/play-sessions')playSessions.push(request.postDataJSON());
+  // Production also sends existing page/performance facts. Keep unknown writes
+  // in the upload assertion, and bound/check those known telemetry bodies below.
+  else if((url.hostname==='www.google-analytics.com'&&url.pathname==='/g/collect')
+    || (url.origin===new URL(page.url()).origin&&url.pathname==='/cdn-cgi/rum'))telemetry.push(request);
   else uploads.push(request.url());
  });
  await page.goto('/play/ar-breakout');const game=page.frameLocator('#game-frame');
@@ -76,4 +81,10 @@ test('Brick Pulse keeps one camera round and local replay through two misses, in
  expect(new Set(playSessions.map(item=>item.id)).size).toBe(1);
  expect(playSessions.at(-1).endReason).toBe('completed');
  for(const item of playSessions)expect(Object.keys(item).sort()).toEqual(['version','id','gameId','playerId','startedAt','inputSource','sequence','activeMs','updatedAt','endReason'].sort());
+ for(const request of telemetry){
+  expect(request.headers()['content-type']||'').not.toMatch(/video|audio|octet-stream|multipart/i);
+  const body=request.postData()||'';
+  expect(Buffer.byteLength(body)).toBeLessThan(64000);
+  expect(body).not.toMatch(/"joints"|leftShoulder|rightShoulder|leftHip|data:image|base64|manageToken/);
+ }
 });
