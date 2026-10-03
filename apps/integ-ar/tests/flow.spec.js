@@ -62,13 +62,14 @@ for (const slug of ['breakout', 'invaders', 'stack', 'knife', 'bubble', 'fruit-m
     expect(errors).toEqual([]);
   });
 }
-test('missing tracking pauses physics, clears old bones and needs deliberate recovery', async ({page}) => {
+test('Stay paused opts out of tracking recovery while keeping held hands from firing', async ({page}) => {
   await syntheticCamera(page); await page.goto('/?game=invaders'); await page.locator('#tutorial-skip').click(); await page.locator('#start').click();
   await startWithHands(page); await expect.poll(async () => (await state(page)).phase).toBe('playing');
   await pose(page, {missing: true}); await expect.poll(async () => (await state(page)).phase).toBe('paused');
   const frozen = (await state(page)).game;
   await page.waitForTimeout(350); expect((await state(page)).game).toEqual(frozen);
   expect(await page.locator('#skeleton').evaluate(c => c.getContext('2d').getImageData(0, 0, c.width, c.height).data.every((v,i) => i % 4 !== 3 || v === 0))).toBe(true);
+  await expect(page.locator('#pause')).toHaveText('Stay paused');
   await page.locator('#pause').click(); expect((await state(page)).phase).toBe('paused');
   await pose(page, {missing: false, hand: 'up'}); await page.waitForTimeout(300);
   await page.locator('#pause').click(); await page.waitForTimeout(300);

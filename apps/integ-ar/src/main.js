@@ -13,6 +13,7 @@ import {drawBody} from '../../camera-start/src/body-overlay.js';
 import {setupFullscreen} from '../../../packages/gameplay/fullscreen.js';
 import {BodyArcadeRecognizer} from '../../../experiments/action-recognition/body-arcade/index.js';
 import {createBodyInput} from './input.js';
+import {TrackingRecovery,trackingGrace} from './tracking-recovery.js';
 import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
 const $ = id => document.getElementById(id);
@@ -33,7 +34,7 @@ let hosted = false;
 let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
 const listeners = new Set(), changed = () => listeners.forEach(callback => callback());
-const trackingPublisher = createTrackingPublisher();
+const trackingPublisher = createTrackingPublisher(), recovery = new TrackingRecovery();
 const storage = {
   get(key, fallback) { try { return JSON.parse(localStorage.getItem('integ-ar:' + key)) ?? fallback; } catch { return fallback; } },
   set(key, value) { try { localStorage.setItem('integ-ar:' + key, JSON.stringify(value)); } catch {} },
@@ -50,7 +51,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
   onStatus(status) {
     if (status.state === 'requesting') {
       session = {sessionId: status.sessionId, source: status.source};
-      round = status.sessionId; recognizer.reset(session); gestures.reset(session); startGate.reset(session);
+      round = status.sessionId; recovery.reset(session); pauseReason = null; recognizer.reset(session); gestures.reset(session); startGate.reset(session);
       feed = createBodyInput(session, game); readySince = null; action = null; pose = null;
       game.restart(); game.pause(); tutorial?.reset(session); setPhase('setup');
       $('start').hidden = true; $('stop').hidden = false; $('camera-error').hidden = true;
@@ -64,14 +65,15 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
   onPose(frame) {
     if (disposed) return;
     trackingPublisher.emit(frame);
-    if (performance.now() - frame.tMs > 250) return;
+    if (performance.now() - frame.tMs >= 250) return;
+    if (phase === 'paused') recognizer.release();
     pose = frame; action = recognizer.update(frame); const hands = gestures.update(frame);
     if (!action) return;
     const valid = ['active', 'ready', 'completed'].includes(action.phase);
     $('tracking').textContent = action.phase === 'missing' ? 'Tracking needs attention' : action.phase === 'calibrating' ? 'Calibrating torso' : 'Torso tracked · on device';
     $('movement').textContent = valid ? `Body ${Math.abs(action.controls.horizontal) < .1 ? 'center' : action.controls.horizontal < 0 ? 'left' : 'right'} · ${Math.round(Math.abs(action.controls.horizontal) * 100)}%` : action.cue;
     $('hand').textContent = action.controls.leftRaised ? 'Left hand raised · lower to rearm' : 'Left hand lowered';
-    if (valid) lastValidAt = performance.now();
+    if (valid) lastValidAt = frame.tMs;
     const started = startGate.update(frame, valid && ((!tutorialWanted && phase === 'setup') || (phase === 'tutorial' && tutorial.completed)), hands);
     if (phase === 'tutorial' && tutorial.completed && started) leaveTutorial();
     if (phase === 'setup') {
@@ -94,13 +96,18 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
       if (before === 'fire' && tutorial.step === 'lower') tutorialView.shoot(action.controls.horizontal);
       updatePracticeView(valid ? '' : friendlyCue(action.cue));
     }
-    if (phase === 'playing' && !valid) pause('tracking');
-    if (hands?.event?.kind === 'both-hands' && ['playing', 'paused'].includes(phase)) togglePause();
-    if (phase === 'playing' && valid) feed(action);
-    if (phase === 'paused') $('cue').textContent = valid ? 'Tracking ready. Lower your hands, then resume.' : action.cue;
+    let resumed = false;
+    if (hands?.event?.kind === 'both-hands' && ['playing', 'paused'].includes(phase)) resumed = togglePause('gesture');
+    if (phase === 'paused' && pauseReason === 'tracking') {
+      const state = recovery.observe(action, hands, performance.now());
+      if (state.status === 'ready') { resume(); resumed = true; }
+      else showRecovery(state);
+    }
+    if (phase === 'playing' && valid && !resumed) feed(action);
+    if (phase === 'paused' && pauseReason !== 'tracking') $('cue').textContent = valid ? 'Tracking ready. Lower your hands, then resume.' : action.cue;
   },
   onStop({reason}) {
-    startGate.hide();
+    startGate.hide(); recovery.cancel(); pauseReason = null;
     pose = null; action = null; drawBody($('skeleton'), null);
     $('tracking').textContent = 'Camera off';
     $('recalibrate').disabled = true;
@@ -121,12 +128,12 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
 });
 
 function setPhase(next) {
-  phase = next; $('arena').dataset.phase = next;
+  phase = next; if (next !== 'paused') recovery.cancel(); $('arena').dataset.phase = next;
   tutorialView?.show(tutorialWanted && ['idle','setup','tutorial'].includes(next));
   $('panel').hidden = ['playing', 'paused'].includes(next);
   $('setup-copy').hidden = next === 'complete';
   $('pause').disabled = !['playing', 'paused'].includes(next);
-  $('pause').textContent = next === 'paused' ? 'Resume' : 'Pause';
+  $('pause').textContent = next === 'paused' ? pauseReason === 'tracking' ? message('arRecovery.stayPaused') : 'Resume' : 'Pause';
   $('recalibrate').disabled = !camera?.running;
   $('finish').hidden = !['playing', 'paused'].includes(next);
   $('cue').textContent = config.action;
@@ -140,19 +147,34 @@ function leaveTutorial() {
   tutorialWanted = false; recognizer.release(); readySince = null;
   setPhase(camera.active ? 'setup' : 'idle');
 }
+function showRecovery(state) {
+  const text = state.status === 'countdown' ? message('arRecovery.countdown', [Math.ceil(state.remainingMs / 1000)])
+    : message(state.status === 'hands' ? 'arRecovery.lowerHands' : state.status === 'steady' ? 'arRecovery.steady' : 'arRecovery.return');
+  if ($('cue').textContent !== text) $('cue').textContent = text;
+}
 function pause(reason = 'manual') {
   if (phase !== 'playing') return;
-  game.pause(); recognizer.release(); pauseReason = reason; setPhase('paused');
-  $('cue').textContent = reason === 'tracking' ? 'Tracking lost. Return to view, then resume.' : 'Paused. Lower your hands, then resume.';
+  game.pause(); recognizer.release(); pauseReason = reason;
+  if (reason === 'tracking') recovery.begin(); else recovery.cancel();
+  setPhase('paused');
+  if (reason === 'tracking') showRecovery(recovery.read(performance.now()));
+  else $('cue').textContent = 'Paused. Lower your hands, then resume.';
 }
-function togglePause() {
-  if (phase === 'playing') { pause(); return; }
-  if (phase !== 'paused') return;
-  if (!camera.running || performance.now() - lastValidAt > 250 || action?.phase === 'missing') {
-    $('cue').textContent = 'Show your shoulders, hips and required hands before resuming.'; return;
+function resume() {
+  // Neither the recovery observation nor its gesture may become a primary action.
+  recognizer.release(); recovery.cancel(); pauseReason = null; game.resume(); setPhase('playing');
+}
+function togglePause(source = 'button') {
+  if (phase === 'playing') { pause(); return false; }
+  if (phase !== 'paused') return false;
+  if (pauseReason === 'tracking' && source === 'button') {
+    pauseReason = 'manual'; recovery.cancel(); setPhase('paused');
+    $('cue').textContent = 'Paused. Lower your hands, then resume.'; return false;
   }
-  // The resume gesture itself cannot become a primary action; lowering rearms it.
-  recognizer.release(); pauseReason = null; game.resume(); setPhase('playing');
+  if (!camera.running || performance.now() - lastValidAt >= 250 || !['active', 'ready', 'completed'].includes(action?.phase)) {
+    $('cue').textContent = 'Show your shoulders, hips and required hands before resuming.'; return false;
+  }
+  resume(); return true;
 }
 function finish() {
   if (!['playing', 'paused'].includes(phase)) return;
@@ -162,7 +184,7 @@ function finish() {
   $('start').textContent = 'Play again'; $('start').hidden = false; $('stop').hidden = true; $('calibration').hidden = true;
 }
 $('start').addEventListener('click', () => camera.start());
-$('pause').addEventListener('click', togglePause);
+$('pause').addEventListener('click', () => togglePause());
 $('stop').addEventListener('click', () => camera.stop('stopped'));
 $('finish').addEventListener('click', finish);
 $('recalibrate').addEventListener('click', () => {
@@ -188,12 +210,16 @@ function render(now) {
   // Clear old bodies when inference stops; never draw a frozen person as live tracking.
   drawBody($('skeleton'), camera.running && pose && now - pose.tMs < 250 ? pose : null);
   if (phase === 'tutorial' && now - lastValidAt >= 250) updatePracticeView('Tracking needs attention. Keep your shoulders, hips and left hand in view.');
-  if (phase === 'playing' && now - lastValidAt >= 250) pause('tracking');
+  if (phase === 'playing' && trackingGrace(lastValidAt, now).expired) pause('tracking');
+  if (phase === 'paused' && pauseReason === 'tracking') showRecovery(recovery.read(now));
+  const holding = phase === 'playing' && (trackingGrace(lastValidAt, now).holding || !['active', 'ready', 'completed'].includes(action?.phase));
+  if (holding) $('cue').textContent = message('arRecovery.grace');
+  else if (phase === 'playing' && config.slug !== 'breakout' && $('cue').textContent === message('arRecovery.grace')) $('cue').textContent = translateText(config.action);
   const state = game.getState(); $('score').textContent = String(state.score);
   if (config.slug === 'breakout') {
     const lives = `${state.lives} / 3`;
     if ($('lives').textContent !== lives) $('lives').textContent = lives;
-    if (phase === 'playing') {
+    if (phase === 'playing' && !holding) {
       const cue = state.serveRemainingMs > 0
         ? message('brickPulse.serveCue',[Math.ceil(state.serveRemainingMs / 1000)])
         : translateText(config.action);
@@ -205,7 +231,7 @@ function render(now) {
 }
 function dispose() {
   if (disposed) return;
-  disposed = true; camera.stop('dispose'); game.destroy(); tutorialView?.dispose(); cancelAnimationFrame(raf); listeners.clear(); trackingPublisher.clear();
+  disposed = true; recovery.cancel(); camera.stop('dispose'); game.destroy(); tutorialView?.dispose(); cancelAnimationFrame(raf); listeners.clear(); trackingPublisher.clear();
 }
 window.addEventListener('pagehide', dispose, {once: true});
 window.gameplay = {
@@ -216,7 +242,7 @@ window.gameplay = {
   configureHost({homeURL, recordingNote}) { hosted = true; $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
   dispose,
 };
-window.integAR = {getState: () => ({phase, round, pauseReason, game: game.getState(), action, tutorial: tutorial?.snapshot(), camera: camera.running})};
+window.integAR = {getState: () => ({phase, round, pauseReason, recovery: recovery.read(performance.now()), trackingGrace: trackingGrace(lastValidAt, performance.now()), game: game.getState(), action, tutorial: tutorial?.snapshot(), camera: camera.running})};
 raf = requestAnimationFrame(render);
 
 if (tutorialWanted) { tutorialView.show(true); tutorialView.update('intro'); }

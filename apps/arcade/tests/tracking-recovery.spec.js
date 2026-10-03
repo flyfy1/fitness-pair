@@ -1,0 +1,48 @@
+import {test, expect} from '@playwright/test';
+import {syntheticCamera} from '../../integ-ar/tests/synthetic-camera.js';
+import {startWithHands} from '../../integ-ar/tests/start-hands.js';
+import {readStoredClip} from './read-stored-clip.js';
+import {openReplay} from './open-replay.js';
+
+test('tracking grace and recovery retain one local replay, camera and round on mobile', async ({page}, info) => {
+  await syntheticCamera(page); const errors = [], uploads = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    if (['PUT', 'POST'].includes(request.method()) && new URL(request.url()).pathname !== '/api/play-sessions') uploads.push(request.url());
+  });
+  await page.goto('/play/ar-knife'); const game = page.frameLocator('#game-frame');
+  const state = () => game.locator('#arena').evaluate(() => window.integAR.getState());
+  const pose = value => game.locator('#arena').evaluate((element, value) => Object.assign(window.poseTest, value), value);
+  await game.locator('#start').click(); await startWithHands(game);
+  await expect(page.locator('#record-panel')).toHaveAttribute('data-state', 'recording');
+  const original = await state();
+  await game.locator('#arena').evaluate(() => { window.originalWorker = window.testWorker; window.originalStream = window.testStream; });
+  await pose({missing: true}); await page.waitForTimeout(700);
+  expect((await state()).phase).toBe('playing');
+  await expect(page.locator('#record-panel')).toHaveAttribute('data-state', 'recording');
+  await pose({missing: false}); await page.waitForTimeout(300);
+  await pose({missing: true}); await expect(game.locator('#pause')).toHaveText('Stay paused');
+  await page.setViewportSize({width: 320, height: 844});
+  await game.locator('#language').selectOption('zh');
+  await expect(game.locator('#pause')).toHaveText('保持暂停');
+  await expect(game.locator('#pause')).toBeInViewport();
+  const cue = await game.locator('#cue').boundingBox(), controls = await game.locator('.controls').boundingBox();
+  expect(cue.y + cue.height).toBeLessThanOrEqual(controls.y);
+  await pose({missing: false}); await expect(game.locator('#cue')).toContainText('秒后继续');
+  await expect(page.locator('#record-panel')).toHaveAttribute('data-state', 'recording');
+  await page.screenshot({path: info.outputPath('recovery-mobile.png')});
+  await expect(game.locator('#arena')).toHaveAttribute('data-phase', 'playing');
+  const resumed = await state();
+  expect(resumed.round).toBe(original.round); expect(resumed.action.sessionId).toBe(original.action.sessionId);
+  expect(resumed.game.throws).toBe(0);
+  expect(await game.locator('#arena').evaluate(() => window.testWorker === window.originalWorker && window.testStream === window.originalStream)).toBe(true);
+  await game.locator('#language').selectOption('en');
+  await game.locator('#finish').click(); await expect(page.locator('#local-result video')).toHaveCount(1, {timeout: 12000});
+  const stored = await readStoredClip(page, 'ar-knife');
+  expect(stored.sessionId).toBe(original.round); expect(stored.tracking.sampleSessionIds).toEqual([original.round]);
+  expect(stored.tracking.sampleCount).toBeGreaterThan(30);
+  await openReplay(page.locator('#local-result video'));
+  expect(await page.locator('#local-result video').evaluate(video => video.duration)).toBeGreaterThan(5);
+  expect(await game.locator('#arena').evaluate(() => window.testWorker.terminated && window.testStream.getTracks().every(track => track.readyState === 'ended'))).toBe(true);
+  expect(uploads).toEqual([]); expect(errors).toEqual([]);
+});

@@ -11,6 +11,14 @@ or a keyboard-controlled preview. Games receive semantic controls after
 The existing pose camera, body-gesture pause command, model assets and recording
 host are reused. No new runtime dependency or model is required.
 
+Tracking gaps have a 1.5-second grace period: physics continues while controls
+hold their last valid position and missing observations cannot fire actions.
+Fresh tracking within that window continues immediately. Longer loss pauses
+the game; visible, lowered hands held for 500 ms start a 1.5-second countdown
+to resume the same round. Stay paused cancels automatic recovery, and manual
+pauses require a deliberate resume. Stop, finish, recalibration and camera
+failure cancel recovery. See [the recovery behavior and evidence](../../docs/ar-tracking-recovery.md).
+
 Every camera start creates a UUID v4 shared by its PoseFrames and Arcade
 presentation. The six games publish validated named-joint frames through the
 same optional presentation boundary. Hopmodo records only the frames emitted
