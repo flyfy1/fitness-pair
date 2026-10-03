@@ -1,0 +1,22 @@
+[
+ {"id":"gameShare.invite","en":"Try {0} on Hopmodo!","zh":"来 Hopmodo 试试《{0}》吧！"},
+ {"id":"gameShare.open","en":"Share game","zh":"分享游戏"},
+ {"id":"gameShare.title","en":"Share {0}","zh":"分享《{0}》"},
+ {"id":"gameShare.note","en":"Invite friends to this game. Instagram copies the invitation for you to paste into a message or story. No video is included.","zh":"邀请朋友来玩这个游戏。Instagram 入口会复制邀请文案，方便你粘贴到私信或快拍中。此链接不包含视频。"},
+ {"id":"gameShare.label","en":"Game invitation","zh":"游戏邀请文案"},
+ {"id":"gameShare.close","en":"Close game sharing","zh":"关闭游戏分享"},
+ {"id":"gameShare.copy","en":"Copy invitation","zh":"复制邀请文案"},
+ {"id":"gameShare.link","en":"Copy game link","zh":"复制游戏链接"},
+ {"id":"gameShare.native","en":"More apps…","zh":"更多应用…"},
+ {"id":"gameShare.platform","en":"Share game on {0}","zh":"通过 {0} 分享游戏"},
+ {"id":"gameShare.instagram","en":"Copy the invitation, then open Instagram","zh":"复制邀请文案，然后打开 Instagram"},
+ {"id":"gameShare.prefill","en":"Open X with your invitation prefilled","zh":"打开 X 并填入邀请文案"},
+ {"id":"gameShare.review","en":"Review and send your invitation on {0}.","zh":"在 {0} 中确认并发送邀请。"},
+ {"id":"gameShare.paste","en":"Invitation copied. Paste it into your {0} message or post, then review and send it there.","zh":"邀请文案已复制。粘贴到 {0} 的私信或帖子中，确认后发送。"},
+ {"id":"gameShare.linkCopied","en":"Game link copied.","zh":"游戏链接已复制。"},
+ {"id":"gameShare.copied","en":"Game invitation copied.","zh":"游戏邀请文案已复制。"},
+ {"id":"gameShare.manual","en":"Select and copy the invitation above. Automatic copying is unavailable.","zh":"请选择并复制上方邀请文案，当前无法自动复制。"},
+ {"id":"gameShare.shared","en":"Share dialog completed.","zh":"系统分享已完成。"},
+ {"id":"gameShare.cancelled","en":"Sharing cancelled.","zh":"已取消分享。"},
+ {"id":"gameShare.unavailable","en":"Sharing is unavailable. Copy the invitation instead.","zh":"当前无法使用系统分享，请复制邀请文案。"}
+]

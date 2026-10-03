@@ -5,12 +5,13 @@ import {mountDebugReport} from './debug-report.js';
 import './shell.css';
 import '../../../../packages/gameplay/play-style.css';
 import {mountPlayStats} from './play-stats.js';
+import {mountGameShareButton} from '../game-sharing.js';
 
 export function mountGame(container,game){
  document.body.classList.add('game-mode');
  document.documentElement.classList.add('clay-play');
  container.innerHTML=`<main id="main" class="game-play" aria-label="${game.title}">
-  <iframe id="game-frame" src="${game.path}" title="${game.title} game" allow="camera; microphone; fullscreen" referrerpolicy="same-origin"></iframe>
+  <iframe id="game-frame" src="${game.path}" title="${game.title} game" allow="camera; microphone; fullscreen; web-share" referrerpolicy="same-origin"></iframe>
   <div class="game-replay-tools"><a class="back" href="/#arcade">← Back to the arcade</a><div class="record-bar" id="record-panel"></div></div>
   <section class="local-result" id="local-result" hidden></section><div id="game-feedback-root"></div><div id="debug-report-root"></div></main>`;
  const frame=container.querySelector('#game-frame');
@@ -25,7 +26,9 @@ export function mountGame(container,game){
  function controls(){
   disposeControls();
   const doc=frame.contentDocument;if(!doc?.body)return;
-  disposeControls=mountConversationControls(doc,element=>{recorder.connectControls(element);feedback.connectControls(element);debug.connectControls(element);});
+  let disposeSharing=()=>{};
+  const disposeCommon=mountConversationControls(doc,element=>{recorder.connectControls(element);feedback.connectControls(element);debug.connectControls(element);disposeSharing=mountGameShareButton(element.querySelector('[data-share-game]'),game);});
+  disposeControls=()=>{disposeSharing();disposeCommon();};
  }
  frame.addEventListener('load',controls);if(frame.contentDocument?.readyState==='complete')controls();
  let disposed=false;

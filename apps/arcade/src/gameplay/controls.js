@@ -38,6 +38,8 @@ export function mountConversationControls(doc,connect){
  language.querySelector('option[value=en]').textContent='EN';
  language.querySelector('option[value=zh]').textContent='中文';
  element.prepend(language);
+ const share=doc.createElement('button');share.type='button';share.dataset.shareGame='';share.setAttribute('aria-label','Share game');share.title='Share game';
+ share.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg>';element.append(share);
  localizeDocument(doc);
  const note=doc.querySelector('[data-game-note]'),footer=doc.querySelector('[data-game-footer]');
  const layout=doc.documentElement.style;

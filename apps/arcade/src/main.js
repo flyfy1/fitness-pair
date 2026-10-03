@@ -1,4 +1,6 @@
 import {languageControl, localizeDocument} from '../../../packages/gameplay/localize-dom.js';
+import {saveLanguage} from '../../../packages/gameplay/locale.js';
+import {mountGameShareButton} from './game-sharing.js';
 import '../../../packages/gameplay/language.css';
 import {mountAccountNav,renderShared} from './account.js';
 import {mountTrackingLoader} from './tracking-loader.js';
@@ -39,10 +41,13 @@ if(g.id!==id)history.replaceState(null,'',`/play/${g.id}${location.search}${loca
 if(g.kind==='playable'){mountGame(app,g);return;}
 document.documentElement.classList.add('clay-play');
 app.innerHTML=`${nav()}<main id="main" class="play-page"><div class="play-heading"><a class="back" href="/#arcade">← All games</a><h1>${g.title}</h1><p>${g.description}</p></div><section class="concept-stage"><img class="concept-cover" src="${g.cover.src}" alt="${g.cover.alt}" width="1536" height="1024"><p class="concept-label">Interactive concept · button simulation · no camera</p><div class="concept-score"><strong id="pop-score">0</strong> / 10 pops</div><div id="pop-field"><button id="pop-target" aria-label="Pop the orbit">✳</button></div><p id="pop-status" role="status">Tap the star ten times. This preview uses buttons; camera controls are planned.</p><button class="button primary" id="pop-restart">Start again ↻</button></section></main>${footer()}`;
+const share=document.createElement('button');share.type='button';share.className='game-share-trigger';share.dataset.textShare='';app.querySelector('.play-heading').append(share);mountGameShareButton(share,g);
 startConcept({onChange:frame=>{conceptFrame=frame;for(const notify of listeners)notify();}});
 let conceptFrame=null;const listeners=new Set();mountPlayStats(g,{readFrame:()=>conceptFrame,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);}});
 }
 const path=location.pathname;
+const invitationLanguage=new URLSearchParams(location.search).get('lang');
+if(['en','zh'].includes(invitationLanguage))saveLanguage(invitationLanguage);
 if(path.startsWith('/play/'))play(path.split('/')[2]);
 else if(path==='/admin/games'){app.innerHTML=`${nav()}<main class="utility section" id="main"></main>${footer()}`;renderGameStats(app.querySelector('main'));}
 else if(path==='/library'||path==='/gallery'||path==='/shared'||path.startsWith('/clips/')){
