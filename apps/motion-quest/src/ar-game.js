@@ -2,6 +2,7 @@ import {translateText} from '../../../packages/gameplay/i18n.js';
 import { ForestGame } from '@fitness-pair/game-forest/renderer';
 import { cameraPoint } from './camera-projection.js';
 import { QuestSound } from './quest-sound.js';
+import {clayLandscape,clayBackdrop} from '../../../packages/gameplay/clay-draw.js';
 
 const TAU = Math.PI * 2;
 const easeOut = p => 1 - Math.pow(1 - p, 3);
@@ -32,12 +33,13 @@ export class ARGame extends ForestGame {
   }
   effectsFinished(time = performance.now()) { return time >= this.attackAt + SPELL_SETTLE_MS; }
   getAudioStream() { return this.sound.stream; }
-  draw(time) {
+  draw(time,{camera=false}={}) {
     const c = this.ctx, w = this.width, h = this.height;
     if (!w || !h) return;
     c.clearRect(0, 0, w, h);
+    if(!camera)clayBackdrop(c,w,h,'forest');
     const scale = Math.min(w / 500, h / 620) * 1.15;
-    const bossX = w * .79, ground = h * .56, targetY = ground - 65 * scale;
+    const bossX = w * .79, ground = h * (h<550?.87:.69), targetY = ground - 65 * scale;
     const age = time - this.attackAt, hitAge = time - this.damageAt;
     const origin = this.origin(time), t = this.reducedMotion ? 0 : time / 1000;
     const striking = age >= 0 && age < SPELL_SETTLE_MS;
@@ -45,6 +47,8 @@ export class ARGame extends ForestGame {
     if (this.canvas.dataset.effectPhase !== phase) this.canvas.dataset.effectPhase = phase;
     this.sound.charge(this.charge);
     c.save();
+    clayLandscape(c,w,h,h*(h<550?.89:.70),'forest');
+    this.hero(w*(h<550?.56:.22),h*(h<550?.89:.70),scale*.9,t);
     c.strokeStyle = '#d2f399aa'; c.lineWidth = 2;
     c.beginPath(); c.ellipse(bossX, ground + 5, 65 * scale, 16 * scale, 0, 0, TAU); c.stroke();
     const impact = hitAge >= 0 && hitAge < 1000 ? Math.exp(-hitAge / 260) : 0;

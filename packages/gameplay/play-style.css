@@ -62,3 +62,35 @@ html.clay-play{--play-ink:#203d39;--play-teal:#277e78;--play-cream:#fff8e9;--pla
 .clay-play .clip-preview-play span:last-child{background:var(--play-cream);color:var(--play-ink)}
 .clay-play .clip-actions .share-file{background:linear-gradient(#38988d,#277e78);color:#fffdf5;border-color:#226c65;box-shadow:inset 0 2px 0 #ffffff40,0 3px 0 #205d57,0 7px 16px #173c3626}
 @media(prefers-reduced-motion:reduce){.clay-play button{transition:none}}
+
+/* Illustrated play surfaces keep instructions readable beside the live scene. */
+.clay-play :is(.guidance,.arena-message){color:var(--play-ink);text-shadow:none;background:linear-gradient(135deg,#fffdf2f5,#f5ecdbea);border:1px solid #d6ddd0;border-radius:24px;box-shadow:inset 0 2px 0 #fff,0 10px 35px #173c3626;padding:20px 24px}
+.clay-play :is(.guidance,.arena-message) :is(.status,span,p){color:#365d53;text-shadow:none}
+.clay-play #app .arena-message{width:min(560px,92%);top:calc(var(--hopmodo-hud-bottom,90px) + 94px);transform:translateX(-50%);padding:14px 20px}
+.clay-play .camera-stage{background:radial-gradient(ellipse at 50% 30%,#d6e7c4,#96b2a0)}
+.clay-play .session-info{color:var(--play-ink);background:#fff8e9eb;padding:6px 8px;border-radius:14px;text-shadow:none;font-size:10px;line-height:1.4}
+.clay-play .arena-message h2{font-size:clamp(26px,3.5vw,44px);margin:10px 0}
+.clay-play .arena-message p{font-size:clamp(16px,2vw,23px)}
+.clay-play .arena-message .arena-detail{font-size:14px;line-height:1.4;margin-top:8px;color:#365d53}
+.clay-play .arena-message .arena-charge{width:100%;margin-top:12px}
+.clay-play .arena-message .charge-row{font-size:11px;margin-bottom:5px}
+.clay-play .playing .guidance{width:min(650px,92%)}
+.clay-play .playing #instruction{font-size:clamp(28px,4vw,46px);letter-spacing:-1px}
+.clay-play .playing #detail{font-size:clamp(16px,2vw,23px);margin:10px auto}
+.clay-play .playing .status{font-size:14px}
+.clay-play .playing .guidance :is(.status,#feedback){color:#365d53;text-shadow:none}
+.clay-play .playing .guidance{padding:14px 20px}
+.clay-play .playing .guidance #detail{font-size:16px;line-height:1.4}
+.clay-play .playing .guidance #feedback{font-size:12px;margin:10px auto}
+.clay-play .playing #body-overlay{opacity:.35}
+.clay-play .hands-start{max-width:720px;margin-inline:auto;justify-content:center;gap:12px;background:linear-gradient(135deg,#fffdf2f0,#f5ecdbe8);border:1px solid #d6ddd0}
+.clay-play .hands-start-art{display:block;max-height:40%;height:170px;width:150px;object-fit:contain;flex-shrink:1;min-height:0}
+.clay-play .hands-start .hands-start-title{font-size:clamp(30px,4.5vw,58px);letter-spacing:-1px;margin:0}
+.clay-play .hands-start .hands-start-detail{font-size:clamp(17px,2.2vw,26px);line-height:1.4;color:#365d53;max-width:570px}
+.clay-play #arena:is([data-phase=playing],[data-phase=paused],[data-phase=complete]) #skeleton{opacity:.2}
+.clay-play #arena .scrim{background:linear-gradient(#e8e6d84d,transparent 25%,transparent 70%,#e8e6d866)}
+.clay-play .movement-art svg{box-shadow:inset 0 1px 0 #fff,0 5px 18px #173c3620}
+.clay-play .movement-art figcaption{color:var(--play-ink)}
+.clay-play #tutorial{border:1px solid #d6ddd0;border-radius:26px;box-shadow:inset 0 2px 0 #fff,0 10px 35px #173c3626}
+@media(max-height:550px){.clay-play .hands-start{padding:12px 20px;gap:8px}.clay-play .hands-start-art{height:70px;max-height:30%}.clay-play .hands-start .hands-start-title{font-size:28px}.clay-play .hands-start .hands-start-detail{font-size:16px}.clay-play :is(.guidance,.arena-message){padding:10px 16px}.clay-play .arena-message h2{font-size:26px}.clay-play .arena-message p{font-size:16px}}
+@media(max-height:550px) and (min-width:701px){.clay-play #app .arena-message{left:70%;width:55%;top:calc(var(--hopmodo-hud-bottom,80px) + 12px);padding:10px 16px}.clay-play #app .arena-message .arena-detail{font-size:12px}.clay-play .arena-message h2{font-size:24px;margin:6px 0}}

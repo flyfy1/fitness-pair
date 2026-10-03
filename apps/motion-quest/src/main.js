@@ -285,7 +285,7 @@ function render(time) {
     } else if (mode === 'demo' && reps < 5 && time >= statusUntil) {
       status('Get a feel for the game', 'Hold the button or Space to charge, then release. This is a simulation.', false, 'Hold to charge');
     }
-    game.draw(time);
+    game.draw(time,{camera:mode==='camera'});
     if (replayPhase === 'ending' && game.effectsFinished(time)) {
       $('victory').hidden = false;
       setReplayPhase('complete');

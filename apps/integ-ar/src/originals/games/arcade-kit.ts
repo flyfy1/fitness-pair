@@ -1,4 +1,5 @@
-export {clayBall,clayRect,clayPaint} from '../../../../../packages/gameplay/clay-draw.js';
+import {clayBoard} from '../../../../../packages/gameplay/clay-draw.js';
+export {clayBall,clayRect,clayPaint,clayShip} from '../../../../../packages/gameplay/clay-draw.js';
 import {translateText} from '../../../../../packages/gameplay/i18n.js';
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
 import type { GameServices } from '../core/game-types';
@@ -36,13 +37,13 @@ export function makeKit(host: HTMLElement, services: GameServices, slug: string,
   };
 
   const kctx = ctx;
-  return { canvas, ctx, width, height, keys, on, score, fx, point: e => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX-r.left)*width/r.width, y: (e.clientY-r.top)*height/r.height }; }, clear: () => ctx.clearRect(0,0,width,height), dispose: () => { fx.clear(); listeners.forEach(([t,n,f]) => t.removeEventListener(n,f)); canvas.remove(); } };
+  return { canvas, ctx, width, height, keys, on, score, fx, point: e => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX-r.left)*width/r.width, y: (e.clientY-r.top)*height/r.height }; }, clear: () => { ctx.clearRect(0,0,width,height); clayBoard(ctx,width,height,slug); }, dispose: () => { fx.clear(); listeners.forEach(([t,n,f]) => t.removeEventListener(n,f)); canvas.remove(); } };
 }
 
 
-export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size = 16, color = '#f7f9ff', align: CanvasTextAlign = 'center') {
-  ctx.fillStyle=color; ctx.font=`700 ${size}px system-ui`; ctx.textAlign=align;
-  ctx.save(); ctx.shadowColor='#173c36'; ctx.shadowBlur=4; ctx.shadowOffsetY=1;
+export function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size = 16, color = '#203d39', align: CanvasTextAlign = 'center') {
+  ctx.fillStyle=['#a8b1c5','#70f0c2'].includes(color)?'#203d39':color; ctx.font=`700 ${size}px system-ui`; ctx.textAlign=align;
+  ctx.save(); ctx.shadowColor='#fff8e9'; ctx.shadowBlur=3; ctx.shadowOffsetY=1;
   ctx.fillText(translateText(value),x,y); ctx.restore();
 }
 export function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }

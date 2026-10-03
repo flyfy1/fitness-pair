@@ -26,7 +26,7 @@ export const fruitMerge: GameModule = {
       c.fillStyle='#203d39';for(const dx of [-.2,.2]){c.beginPath();c.arc(x+dx*r,y+r*.06,Math.max(1,r*.06),0,7);c.fill();}
       c.strokeStyle='#203d39';c.lineWidth=Math.max(1,r*.045);c.lineCap='round';c.beginPath();c.arc(x,y+r*.21,r*.12,.15,Math.PI-.15);c.stroke();c.restore();
     };
-    const draw = () => { const c = k.ctx; k.clear();  c.strokeStyle = '#ff8f70'; c.lineWidth = 3; c.strokeRect(15, 42, 330, 500); text(c, `ORBIT MASS ${score}  ·  TIER ${level}`, 180, 27, 14, '#a8b1c5');
+    const draw = () => { const c = k.ctx; k.clear();  c.strokeStyle = '#fff3d9'; c.lineWidth = 7; c.beginPath();c.roundRect(15,42,330,500,16);c.stroke(); text(c, `ORBIT MASS ${score}  ·  TIER ${level}`, 180, 27, 14, '#a8b1c5');
       c.strokeStyle = '#273149'; c.beginPath(); c.moveTo(held, 42); c.lineTo(held, 72); c.stroke(); drawFruit(held,64,next);
       fruits.forEach(f => drawFruit(f.x,f.y,f.level));
       k.fx.draw(); if (paused) text(c, 'PAUSED', 180, 280, 27); if (lost) { text(c, 'ORBIT OVERFLOW', 180, 260, 23, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 290, 15); }

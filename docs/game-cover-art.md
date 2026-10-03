@@ -25,7 +25,7 @@ The covers are illustrative game artwork, not gameplay screenshots or participan
 recordings. They use the built-in image-generation tool, one independent prompt
 per game. Titles and instructions remain accessible HTML outside the image.
 Original generated PNGs remain in the tool's output directory; production JPEGs
-are in `packages/gameplay/assets/covers/` and are bundled by Vite for both Arcade
+are in `assets/game-art/covers/` and are bundled by Vite for both Arcade
 and standalone game entry pages. The shared cover metadata supplies the same
 image and alternate description to both consumers.
 
@@ -58,7 +58,7 @@ layered background, and no text, logos, UI, watermarks or photoreal people.
   orbit rings in pastel purple space; an inviting target-tapping concept.
 
 The exact prompt set is saved in
-`packages/gameplay/assets/covers/prompts.json`. All ten generated outputs were
+`assets/game-art/covers/prompts.json`. All ten generated outputs were
 visually inspected, then encoded as JPEG at quality 82 without cropping. Combined
 production image size is approximately 2.7 MB; card images load lazily, while an
 entry prioritizes its own cover.

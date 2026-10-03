@@ -1,7 +1,7 @@
 # Arcade artwork and typography
 
 Each current game has a dedicated illustrated cover in
-`packages/gameplay/assets/covers/`. Cards and introductions reuse these
+`assets/game-art/covers/`. Cards and introductions reuse these
 production JPEGs through shared metadata; Vite bundles their local URLs.
 See [cover artwork, prompts and evidence](../../../../docs/game-cover-art.md).
 

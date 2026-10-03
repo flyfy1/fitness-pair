@@ -1,4 +1,5 @@
 import {clayPaint} from '../gameplay/clay-draw.js';
+import {drawGameArt} from '../gameplay/game-art.js';
 const TAU = Math.PI * 2;
 const rounded = (ctx, x, y, w, h, r, color) => { ctx.fillStyle = clayPaint(ctx,x,y,w,h,color); ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
 
@@ -80,6 +81,7 @@ export class ForestGame {
   }
   hero(x, y, scale, t) {
     const c = this.ctx; const crouch = this.charge * 15;
+    if(drawGameArt(c,'mage',x-52*scale,y-(125-crouch)*scale,124*scale,(125-crouch)*scale))return;
     c.save(); c.translate(x, y); c.scale(scale, scale);
     c.fillStyle = '#10281966'; c.beginPath(); c.ellipse(0, 3, 39, 9, 0, 0, TAU); c.fill();
     if (this.charge > .05) {
@@ -97,6 +99,7 @@ export class ForestGame {
     c.shadowColor = '#6ecfdf'; c.shadowBlur = 10 + this.charge * 22; c.fillStyle = '#c8f5fb'; c.beginPath(); c.moveTo(40, -115); c.lineTo(48, -101); c.lineTo(40, -88); c.lineTo(32, -101); c.closePath(); c.fill(); c.restore();
   }
   boss(x, y, scale, t, hitAge) {
+    if(drawGameArt(this.ctx,'guardian',x-61*scale,y-137*scale+Math.sin(t*1.8)*2,124*scale,137*scale))return;
     const c = this.ctx; c.save(); c.translate(x, y); c.scale(scale, scale);
     c.fillStyle = '#10281966'; c.beginPath(); c.ellipse(0, 3, 53, 12, 0, 0, TAU); c.fill();
     c.translate(0, Math.sin(t * 1.8) * 3);

@@ -5,6 +5,7 @@
 .game-guide{background:linear-gradient(135deg,#fffdf2,#f5ecdb);border-color:#d6ddd0;box-shadow:inset 0 2px 0 #fff,0 20px 70px #173c3640;color:#203d39}
 .game-guide .guide-setup{background:#e7efe0;border-color:#c3d6c2;border-radius:18px}
 .game-guide .guide-footer{background:#fff8e9;border-color:#d6ddd0}
+.game-guide .guide-footer .button:hover{transform:none;filter:brightness(1.04)}
 .game-guide .button.primary,.movement-art figcaption span{background:linear-gradient(#38988d,#277e78);color:#fffdf5}
 .game-guide .button{border-radius:16px;box-shadow:inset 0 2px 0 #ffffff60,0 3px 0 #c8cdbd}
 .movement-art svg{border-radius:20px;box-shadow:0 5px 16px #173c361a}

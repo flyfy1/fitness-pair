@@ -1,5 +1,6 @@
 import { MOTION_MAX_HEIGHT } from './runner.js';
-import {clayPaint,clayRect} from '../../../packages/gameplay/clay-draw.js';
+import {clayPaint,clayRect,clayLandscape,clayBall} from '../../../packages/gameplay/clay-draw.js';
+import {drawGameArt} from '../../../packages/gameplay/game-art.js';
 
 /** Same center-cropped, mirrored transform as the video; input stays unmirrored. */
 export function videoProjection(image, width, height) {
@@ -52,6 +53,8 @@ export function drawSkeleton(canvas, frame) {
 }
 
 function drawDino(c, player, runner, debug) {
+  const painted=drawGameArt(c,'dino',player.x-player.w*.55,player.y,player.w*1.55,player.h);
+  if(!painted){
   const scale = player.h / 44;
   c.save(); c.translate(player.x, player.y); c.scale(scale, scale);
   c.fillStyle = clayPaint(c,0,0,32,44,runner.status === 'over' ? '#e88e72' : '#7eb98b');
@@ -69,6 +72,7 @@ function drawDino(c, player, runner, debug) {
   c.fillStyle='#173827';c.beginPath();c.ellipse(26,6,1.8,2.4,0,0,Math.PI*2);c.fill();c.fillRect(26,13,6,1);
   c.fillStyle='#f1d7ab';c.beginPath();c.ellipse(12,27,5,6,0,0,Math.PI*2);c.fill();
   c.restore();
+  }
   if (debug) {
     c.strokeStyle = '#fff'; c.lineWidth = 2; c.setLineDash([5,4]);
     c.strokeRect(player.x,player.y,player.w,player.h); c.setLineDash([]);
@@ -79,14 +83,7 @@ export function drawWorld(canvas, runner, debug = false) {
   const { c, width, height } = context(canvas);
   const g = sceneGeometry(width, height);
   runner.width = g.worldWidth;
-  const ground = c.createLinearGradient(0,g.origin.y,0,height);
-  ground.addColorStop(0,'#d8b992e0'); ground.addColorStop(1,'#b69068f5');
-  c.fillStyle = ground; c.fillRect(0,g.origin.y,width,height-g.origin.y);
-  c.strokeStyle = '#f1d7ab'; c.lineWidth = Math.max(3,g.sx * 2);
-  c.beginPath(); c.moveTo(0,g.origin.y); c.lineTo(width,g.origin.y); c.stroke();
-  c.fillStyle = '#96b46c';
-  const spacing = 60 * g.sx, offset = (runner.distance * 20 * g.sx) % spacing;
-  for (let x = -offset; x < width; x += spacing) c.fillRect(x,g.origin.y+10*g.sy,18*g.sx,2*g.sy);
+  clayLandscape(c,width,height,g.origin.y,'desert',runner.distance*20*g.sx);
   for (const o of runner.obstacles) {
     const box = g.obstacle(o);
     clayRect(c,box.x,box.y,box.w,box.h,'#579786',5*g.sx);
@@ -94,6 +91,7 @@ export function drawWorld(canvas, runner, debug = false) {
     c.beginPath(); c.moveTo(box.x,box.y+box.h*.65); c.lineTo(box.x-7*g.sx,box.y+box.h*.65); c.lineTo(box.x-7*g.sx,box.y+box.h*.25);
     c.moveTo(box.x+box.w,box.y+box.h*.45); c.lineTo(box.x+box.w+7*g.sx,box.y+box.h*.45); c.lineTo(box.x+box.w+7*g.sx,box.y+box.h*.1); c.stroke();
     c.fillStyle = '#ffe6b9'; c.fillRect(box.x+box.w*.25,box.y+3*g.sy,Math.max(2,g.sx),box.h*.65);
+    for(let i=0;i<4;i++)clayBall(c,box.x+box.w*.7,box.y+box.h*(.16+i*.2),1.1*g.sx,'#f7dfb8');
     if (debug) { c.strokeStyle='#fff'; c.lineWidth=2; c.strokeRect(box.x,box.y,box.w,box.h); }
   }
   const player = g.player(runner.y);

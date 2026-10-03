@@ -14,10 +14,10 @@ export const breakout: GameModule = {
     k.on('keydown', event => { if ((event as KeyboardEvent).key === ' ' && engine.over) reset(); });
     const draw = () => {
       const c = k.ctx, {ball, paddle, score, level, lives, serveRemainingMs, over} = engine;
-      k.clear(); c.fillStyle = '#273149'; c.fillRect(0, 40, 360, 2);
+      k.clear(); c.strokeStyle = '#fff8e95c'; c.beginPath(); c.ellipse(180,505,145,25,0,0,Math.PI*2);c.stroke();
       text(c, `SCORE ${score}   LEVEL ${level}`, 180, 27, 15, '#a8b1c5');
       text(c, `LIVES ${lives} / 3`, 180, 58, 13, '#70f0c2');
-      for (const brick of engine.bricks) { clayRect(c,brick.x,brick.y,36,18,brick.hp===2?'#e8bd60':'#4ea79b'); }
+      for (const brick of engine.bricks) { clayRect(c,brick.x,brick.y,36,18,brick.hp===2?'#e8bd60':brick.x%3===0?'#5ba4bf':'#4ea79b'); }
       clayRect(c,paddle,500,80,11,'#e88e72',5);
       clayBall(c,ball.x,ball.y,6,'#fff0c9'); k.fx.draw();
       if (over) { text(c, 'PULSE LOST', 180, 250, 26, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 282, 15); }

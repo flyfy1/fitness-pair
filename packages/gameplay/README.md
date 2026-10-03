@@ -54,6 +54,11 @@ recording, optional microphone/debug controls, feedback and statistics.
 hosts retain their own layouts and control handlers. `clay-draw.js` shades native
 canvas pieces using bounded gradients and shadows without owning physics or
 camera input. See [the visual loop and evidence](../../docs/clay-play-style.md).
+The playable renderers now use transparent cover-matched characters and cached
+miniature boards. Illustrated movement poses are shared by guides and hand-start
+confirmation. All reusable visual files and original generated sheets live in
+[assets/game-art](../../assets/game-art/README.md), including an asset index and
+generation briefs. See [the playable visual correction](../../docs/cover-matched-gameplay.md).
 
 ## Language preference
 

@@ -1,4 +1,5 @@
-import {clayPaint,clayRect} from '../../../../packages/gameplay/clay-draw.js';
+import {clayPaint,clayRect,clayLandscape,clayBackdrop} from '../../../../packages/gameplay/clay-draw.js';
+import {drawGameArt} from '../../../../packages/gameplay/game-art.js';
 import {t} from './i18n.js';
 import { gateOpening } from './difficulty.js';
 import { FRAME_FRESH_MS } from './tracking-gate.js';
@@ -6,8 +7,10 @@ import { projectHead, helicopterScale } from './projection.js';
 const links = [['Shoulder','Elbow'],['Elbow','Wrist'],['Shoulder','Hip'],['Hip','Knee'],['Knee','Ankle']];
 export function render(ctx, state, { width: w, height: h, pose, pilot, time, mode }) {
   ctx.clearRect(0, 0, w, h);
-  const wash = ctx.createLinearGradient(0, 0, 0, h); wash.addColorStop(0, '#092c3e70'); wash.addColorStop(.55, '#092c3e08'); wash.addColorStop(1, '#092c3eaa');
+  if(mode!=='camera')clayBackdrop(ctx,w,h);
+  const wash = ctx.createLinearGradient(0, 0, 0, h); wash.addColorStop(0, '#c3e8e535'); wash.addColorStop(.55, '#c3e8e500'); wash.addColorStop(1, '#86b7ae35');
   ctx.fillStyle = wash; ctx.fillRect(0, 0, w, h);
+  clayLandscape(ctx,w,h,h*.94,'garden');
   if (pose && mode === 'camera' && time - pose.tMs < FRAME_FRESH_MS) {
     const scale = Math.max(w / pose.image.width, h / pose.image.height);
     const point = p => { const projected=projectHead({...p,image:pose.image},w,h);return [projected.x*w,projected.y*h]; };
@@ -27,7 +30,7 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
     for (const [y,height] of [[0,gapTop],[gapBottom,h-gapBottom]]) {
       clayRect(ctx,x-17,y,34,height,'#f1d7ab',12);
     }
-    ctx.fillStyle='#e4ffea';ctx.font='12px system-ui';ctx.fillText(t('FLY THROUGH'),x-48,gapTop+22);
+    ctx.fillStyle='#365d53';ctx.font='12px system-ui';ctx.fillText(t('FLY THROUGH'),x-48,gapTop+22);
   }
   const x=state.x*w,y=Math.min(state.y,1.12)*h;
   const size=helicopterScale(w);
@@ -35,6 +38,8 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
   if (state.status==='crashing') ctx.rotate(Math.min(state.crashSeconds*1.4,1.5));
   // Anchor the cockpit center exactly on the projected head position.
   ctx.translate(-15,1);
+  const painted=drawGameArt(ctx,'helicopter',-92,-46,161,86);
+  if(!painted){
   ctx.shadowColor='#071f3355';ctx.shadowBlur=20;
   ctx.fillStyle=clayPaint(ctx,-49,-29,98,58,'#328d85');ctx.beginPath();ctx.ellipse(0,0,49,29,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.moveTo(-38,-9);ctx.lineTo(-92,-23);ctx.lineTo(-89,1);ctx.lineTo(-38,11);ctx.fill();
@@ -43,6 +48,7 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
   ctx.beginPath();ctx.moveTo(-3,-28);ctx.lineTo(-3,-43);ctx.stroke();
   const rotor=state.status==='finished'?45:55+Math.sin(time*.06)*15;
   ctx.strokeStyle='#e88e72';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-3-rotor,-43);ctx.lineTo(-3+rotor,-43);ctx.stroke();
+  }
   ctx.save();ctx.beginPath();ctx.arc(15,-1,23,0,Math.PI*2);ctx.clip();
   ctx.fillStyle='#476c76';ctx.fillRect(-8,-24,46,46);
   if (pilot) ctx.drawImage(pilot,-8,-24,46,46);

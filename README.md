@@ -55,6 +55,8 @@ at <http://127.0.0.1:5284/?game=breakout>, or choose a game in the arcade below.
 Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
 `npm run build:motion-quest` retains the standalone baseline build.
 The arcade lives in `apps/arcade/`; game sources remain independently owned.
+Reusable covers, gameplay sprites, movement illustrations and original generated
+sources are kept together in [assets/game-art](assets/game-art/README.md).
 Gameplay records automatically to IndexedDB on the player’s device. Branded MP4
 exports use a supported native encoder, with an explicitly labeled WebM fallback.
 Full replays can produce a short local copy for website sharing. Gallery publication is enabled on

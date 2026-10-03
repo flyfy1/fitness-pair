@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "date": "2026-10-03",
+  "assets": [
+    {
+      "path": "covers/ar-breakout-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 233664,
+      "sha256": "39c192fe1633d069bdb7af623ed15613e921d183cbf4e36bd99a20ca08d7f043"
+    },
+    {
+      "path": "covers/ar-bubble-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 253407,
+      "sha256": "3b20f24c3f2a19d908fcbe72fd2ce530a78ced719e5514463522b7bc40b4373a"
+    },
+    {
+      "path": "covers/ar-fruit-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 264291,
+      "sha256": "27dd0a92eccf887389c865c1d55113024e5175e06567fa79d69c3c5cc2c16071"
+    },
+    {
+      "path": "covers/ar-invaders-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 218099,
+      "sha256": "8e9b55de593def509cd705d9f9f7352e81c30c74cd0783e18aa1771b8d051f43"
+    },
+    {
+      "path": "covers/ar-knife-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 297449,
+      "sha256": "b473174209ac969e237fdb7e6400e1637f54093e38cfc57459a1478dd93aeb2c"
+    },
+    {
+      "path": "covers/ar-stack-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 268297,
+      "sha256": "aafeb52583b2f05d1fb97bf02884082568ca10c7954543c2ad649d0866698064"
+    },
+    {
+      "path": "covers/jump-game-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 262072,
+      "sha256": "28c3c5003f688fc474b3ee08f28f8c259d9470effa5215c80934364edc3cf9bf"
+    },
+    {
+      "path": "covers/motion-quest-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 400940,
+      "sha256": "8d7c236cf68b389c45afe18a4d13f1ce1c77254bb87b2d02876e093df3208d9b"
+    },
+    {
+      "path": "covers/orbit-pop-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 240578,
+      "sha256": "08dc3fe8d457110340444b844eceb03785e99cfba9a70603c6f93b3d81abb785"
+    },
+    {
+      "path": "covers/plank-flight-v1.jpg",
+      "role": "covers",
+      "width": 1536,
+      "height": 1024,
+      "transparent": false,
+      "bytes": 258631,
+      "sha256": "4b9b1abdf3b8d2937d00d397b99ebcf121b885e9dab58e503a8ddefcbd393dd3"
+    },
+    {
+      "path": "sprites/dino-v1.webp",
+      "role": "sprites",
+      "width": 551,
+      "height": 512,
+      "transparent": true,
+      "bytes": 62282,
+      "sha256": "b605aa838c6b6539b5787901a5260d2c3912935071243fee4891a306238aa18a"
+    },
+    {
+      "path": "sprites/guardian-v1.webp",
+      "role": "sprites",
+      "width": 552,
+      "height": 607,
+      "transparent": true,
+      "bytes": 132952,
+      "sha256": "a1c9b150719dece3700feb9ed3df5f52bd023d60e5d140ba91f9bad2db54c52b"
+    },
+    {
+      "path": "sprites/helicopter-v1.webp",
+      "role": "sprites",
+      "width": 640,
+      "height": 296,
+      "transparent": true,
+      "bytes": 43696,
+      "sha256": "f211e11b513b141f561a94eef5f22d2fa8b7fa2515cd08db4851ee1715276f0b"
+    },
+    {
+      "path": "sprites/mage-v1.webp",
+      "role": "sprites",
+      "width": 571,
+      "height": 573,
+      "transparent": true,
+      "bytes": 94998,
+      "sha256": "f21bcc5f4d66642decc9cd8fca5c3d981cb1ac11f48e8711b0c3728d123a1987"
+    },
+    {
+      "path": "poses/pose-aim-v1.webp",
+      "role": "poses",
+      "width": 370,
+      "height": 537,
+      "transparent": true,
+      "bytes": 39004,
+      "sha256": "41d5c0ebb7da6409807226ccbd8409c7fdefa3b5eeead868fdbe9b8738eea74f"
+    },
+    {
+      "path": "poses/pose-jump-v1.webp",
+      "role": "poses",
+      "width": 243,
+      "height": 530,
+      "transparent": true,
+      "bytes": 36758,
+      "sha256": "f5161f89c88fc1021ba4fb2b0b5ee17a801357731e221ad5b660b30de7e843c8"
+    },
+    {
+      "path": "poses/pose-pushup-v1.webp",
+      "role": "poses",
+      "width": 545,
+      "height": 351,
+      "transparent": true,
+      "bytes": 29708,
+      "sha256": "0ac3ded9c8f9d4bf3ababc8a14fb552f249ca0d9194d04c3b2302da804adb95d"
+    },
+    {
+      "path": "poses/pose-raise-v1.webp",
+      "role": "poses",
+      "width": 269,
+      "height": 554,
+      "transparent": true,
+      "bytes": 40188,
+      "sha256": "eb760309ca66db667ca3ce7f68caacb7c7740c9a0e4d00b5d7e6d9af08b28f87"
+    },
+    {
+      "path": "poses/pose-squat-v1.webp",
+      "role": "poses",
+      "width": 368,
+      "height": 458,
+      "transparent": true,
+      "bytes": 29228,
+      "sha256": "badcf0217cdc6ca562bfb9a1758a3bd4481c3e98a53dbf4921a8c8ac6c10a486"
+    },
+    {
+      "path": "poses/pose-stand-v1.webp",
+      "role": "poses",
+      "width": 245,
+      "height": 556,
+      "transparent": true,
+      "bytes": 40806,
+      "sha256": "f3376c0f455c4936a241eb3f9408270ad8fdcfbe249980f8db00b71f7bbce7f1"
+    },
+    {
+      "path": "source/characters-v1.png",
+      "role": "source",
+      "width": 1254,
+      "height": 1254,
+      "transparent": true,
+      "bytes": 1705229,
+      "sha256": "626e2c97a2768b0091d85c5e085e818b6a7a171803cef48d84eb54579417fa0e"
+    },
+    {
+      "path": "source/helicopter-side-v1.png",
+      "role": "source",
+      "width": 1728,
+      "height": 910,
+      "transparent": true,
+      "bytes": 1109477,
+      "sha256": "44b3b2624d9cf92246042e8d03a95c906ce8ac44e0c4d039d6cd05a95ff2d964"
+    },
+    {
+      "path": "source/movement-poses-v1.png",
+      "role": "source",
+      "width": 1254,
+      "height": 1254,
+      "transparent": true,
+      "bytes": 968363,
+      "sha256": "b7540766a9634e1222d385da06cb642b4866da4ac7ce9308455e2697304d4813"
+    }
+  ]
+}
