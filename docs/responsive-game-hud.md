@@ -36,6 +36,6 @@ fullscreen, entry/retry, feedback cleanup, bilingual Flight footers, six AR loca
 camera replays and Flight grace/recovery/audio. All camera input is synthetic.
 
 The expanded stop-path check uncovered a separate existing behavior: shared Stop
-game saves a local clip but disposes the inline replay presenter and offers no
-View replay action in its feedback dialog. Layout is a separately verified
-checkpoint; the stopped-round replay entry remains the next repair.
+game saved a local clip but disposed the inline replay presenter and offered no
+View replay action in its feedback dialog. That path is repaired in the
+[stopped-round replay checkpoint](stopped-round-replay.md).

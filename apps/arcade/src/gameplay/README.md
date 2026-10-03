@@ -32,7 +32,12 @@ latest 90 seconds, then remuxes the retained packets at normal speed. It rotates
 independently decodable segments and preserves a shared video/audio timeline.
 Once a round reaches `playing`, the shared HUD also exposes **Stop game**. That
 action releases the game runtime and owned media before showing one thumbs-up or
-thumbs-down prompt. A naturally completed round shows the same prompt without
+thumbs-down prompt. Its partial recording finishes locally; the prompt exposes
+preparing, ready or unavailable replay states without requiring a rating. View
+replay focuses that exact clip, and Play again opens a fresh game entry. Camera,
+model and capture teardown does not dispose the pending replay presenter. See
+[stopped-round replay evidence](../../../../docs/stopped-round-replay.md).
+A naturally completed round shows the same prompt without
 interrupting local replay finalization. The GCP gateway records the rating with
 bounded session and request facts; the browser never sends camera frames,
 landmarks or credentials.

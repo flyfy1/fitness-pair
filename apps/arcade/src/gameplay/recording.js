@@ -27,7 +27,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  const cameraActive=video=>!!video?.srcObject?.getVideoTracks().some(track=>track.readyState==='live');
  const cameraLive=video=>cameraActive(video)&&video.readyState>=2&&video.videoWidth>0&&video.videoHeight>0;
  const supported=typeof MediaRecorder!=='undefined'&&typeof HTMLCanvasElement.prototype.captureStream==='function';
- let active=null,handledRound=null,watcher=0,unloading=false;
+ let active=null,handledRound=null,watcher=0,unloading=false,stopped=false,stoppedResult=null;
  const sessions=new Set(),readyRounds=new Map(),failedRounds=new Map();let shareRound=null,shareButton=null,completedRound=null,revealing=false;
  async function revealResult(){
   if(unloading||revealing||shareRound===null||!readyRounds.has(shareRound)||document.hidden)return;
@@ -60,8 +60,8 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
   if(result.hidden){result.hidden=false;result.innerHTML='<h2 tabindex="-1">Your replay is ready.</h2><p>Watch it, then send it to a friend or keep it for yourself. Nothing has been uploaded.</p><div class="clip-grid"></div>';}
   if(!result.querySelector(`[data-clip-id="${clip.id}"]`)){
    const card=mountClipCard(result.querySelector('.clip-grid'),clip);
-   const back=document.createElement('button');back.type='button';back.className='replay-return';back.textContent='Back to game';
-   back.onclick=()=>{result.querySelectorAll('video').forEach(video=>video.pause());onReturnToGame();};
+   const back=document.createElement('button');back.type='button';back.className='replay-return';back.textContent=stopped?'Play again':'Back to game';
+   back.onclick=()=>{result.querySelectorAll('video').forEach(video=>video.pause());if(stopped)location.reload();else onReturnToGame();};
    const actions=card.querySelector('.clip-actions');actions.classList.add('replay-actions');actions.prepend(back);
    const options=document.createElement('details');options.className='replay-options';
    const summary=document.createElement('summary');summary.textContent='More replay options';
@@ -155,7 +155,7 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
   }catch(error){stopTracks();if(active===session)active=null;recordingFailed(session,error);}
  }
  function watchForStart(){
-  if(unloading||document.hidden)return;
+  if(unloading||stopped||document.hidden)return;
   try{
    const snapshot=readGame();
    const complete=snapshot?.phase==='complete';
@@ -189,6 +189,18 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
  const unsubscribe=runtime.subscribe(watchForStart);
  const unsubscribeTracking=runtime.subscribeTracking(frame=>active?.tracking?.add(frame));
  return {
+  stopRound(){
+   if(stopped)return stoppedResult;
+   const snapshot=readGame(),current=active||[...sessions].find(session=>session.round===snapshot?.round);
+   stopped=true;conversation.disable();clearInterval(watcher);unsubscribe();unsubscribeTracking();document.removeEventListener('visibilitychange',visibility);
+   for(const button of result.querySelectorAll('.replay-return'))button.textContent='Play again';
+   if(current){current.finalScore??=snapshot?.score;current.stopReason??='Stopped by player';}
+   // Finalize our captures before the shell releases the game's source tracks.
+   for(const session of sessions)session.saveNow();
+   const readyId=readyRounds.get(snapshot?.round);
+   stoppedResult=current?.finished||listClips().then(clips=>clips.find(clip=>clip.id===readyId)||null).catch(()=>null);
+   return stoppedResult;
+  },
   async captureDebug(){
    const snapshot=readGame();
    let session=active||[...sessions].find(item=>item.round===snapshot?.round);

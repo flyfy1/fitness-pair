@@ -16,17 +16,29 @@ export function mountGameFeedback(game, runtime, {container, stopGame}) {
   }
  }
  const interval=setInterval(observe,100),unsubscribe=runtime.subscribe(observe);observe();
- function showPrompt(snapshot,stoppedAt,naturalCompletion){
+ function showPrompt(snapshot,stoppedAt,naturalCompletion,replay=null){
   const feedbackId=crypto.randomUUID();
   const overlay=document.createElement('section');overlay.className='game-feedback';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','game-feedback-title');
-  overlay.innerHTML=`<div class="game-feedback-card"><p class="kicker">${message('gameFeedback.kicker')}</p><h1 id="game-feedback-title"></h1><p>${message('gameFeedback.detail')}</p><div class="game-feedback-rating" role="group"></div><p class="game-feedback-status" role="status"></p><div class="game-feedback-actions">${naturalCompletion?`<button type="button" data-view-replay>${message('record.viewReplay')}</button>`:''}<button type="button" data-play-again>${message('common.playAgain')}</button><a href="/#arcade">${message('gameFeedback.back')}</a></div></div>`;
+  overlay.innerHTML=`<div class="game-feedback-card"><p class="kicker">${message('gameFeedback.kicker')}</p><h1 id="game-feedback-title"></h1><p>${message('gameFeedback.detail')}</p><div class="game-feedback-rating" role="group"></div><p class="game-feedback-status" role="status"></p><div class="game-feedback-actions"><button type="button" data-view-replay ${naturalCompletion?'':'disabled'}>${message(naturalCompletion?'record.viewReplay':'record.preparingVideo')}</button><button type="button" data-play-again>${message('common.playAgain')}</button><a href="/#arcade">${message('gameFeedback.back')}</a></div></div>`;
   overlay.querySelector('h1').textContent=message('gameFeedback.title',[game.title]);
   const group=overlay.querySelector('.game-feedback-rating');
   for(const [rating,label,icon] of [['up',message('gameFeedback.like'),'👍'],['down',message('gameFeedback.dislike'),'👎']]){
    const button=document.createElement('button');button.type='button';button.dataset.rating=rating;button.setAttribute('aria-label',label);button.innerHTML=`<span aria-hidden="true">${icon}</span><b>${label}</b>`;group.append(button);
   }
   const status=overlay.querySelector('[role=status]');
-  if(naturalCompletion)overlay.querySelector('[data-view-replay]').onclick=()=>{overlay.remove();document.querySelector('#local-result h2')?.focus({preventScroll:true});};
+  const viewReplay=overlay.querySelector('[data-view-replay]');let readyClip=null;
+  viewReplay.onclick=()=>{
+   overlay.remove();
+   if(!readyClip){document.querySelector('#local-result h2')?.focus({preventScroll:true});return;}
+   const target=document.querySelector(`#local-result [data-clip-id="${readyClip.id}"]`),heading=target?.querySelector('h3');
+   if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}
+   target?.scrollIntoView({behavior:'instant',block:'start'});
+  };
+  if(!naturalCompletion)Promise.resolve(replay).then(clip=>{
+   if(!overlay.isConnected)return;
+   readyClip=clip;viewReplay.disabled=!clip;
+   viewReplay.textContent=message(clip?'record.viewReplay':'record.videoUnavailable');
+  }).catch(()=>{if(overlay.isConnected){viewReplay.disabled=true;viewReplay.textContent=message('record.videoUnavailable');}});
   overlay.querySelector('[data-play-again]').onclick=()=>location.reload();
   for(const button of group.querySelectorAll('button'))button.onclick=async()=>{
    for(const choice of group.querySelectorAll('button'))choice.disabled=true;
@@ -44,8 +56,8 @@ export function mountGameFeedback(game, runtime, {container, stopGame}) {
  }
  async function finish(snapshot,stoppedAt,naturalCompletion){
   await document.exitFullscreen?.().catch(()=>{});
-  if(!naturalCompletion)stopGame();
-  showPrompt(snapshot,stoppedAt,naturalCompletion);
+  const replay=naturalCompletion?null:stopGame();
+  showPrompt(snapshot,stoppedAt,naturalCompletion,replay);
  }
  async function stop(){
   if(stopped||startedAt===null)return;
