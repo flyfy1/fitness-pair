@@ -929,5 +929,6 @@
   {"id":"arRecovery.lowerHands","en":"Show both hands below your shoulders to continue.","zh":"让双手出现在肩膀下方的画面中以继续。"},
   {"id":"arRecovery.steady","en":"Tracking recovered. Keep your hands down for a moment.","zh":"跟踪已恢复。请继续放下双手片刻。"},
   {"id":"arRecovery.countdown","en":"Continuing in {0}… Keep your hands down.","zh":"将在 {0} 秒后继续…请保持双手放下。"},
-  {"id":"arRecovery.grace","en":"Tracking interrupted. Holding your last position for a moment.","zh":"跟踪暂时中断。短时间内保持你最后的有效位置。"}
+  {"id":"arRecovery.grace","en":"Tracking interrupted. Holding your last position for a moment.","zh":"跟踪暂时中断。短时间内保持你最后的有效位置。"},
+  {"id":"flight.trackingPause","en":"Flight paused. Show your head and either shoulder to continue.","zh":"飞行已暂停。让头部和任意一侧肩膀进入画面即可继续。"}
 ]

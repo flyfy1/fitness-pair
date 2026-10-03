@@ -34,8 +34,9 @@ where your head and at least one shoulder are visible during push-ups. Hips, kne
 ankles and wrists are not required. After 0.8 seconds of continuous reliable head/shoulder detection, a 3-second
 "Three, two, one, start!" countdown begins; no extra gesture, plank hold, or
 standing calibration is required. Moving during setup does not reset it. Once the countdown begins, tracking loss
-holds the last position without restarting the countdown. Flight time and obstacles
-start after "Start!". The synthetic demo uses the same countdown.
+holds the last position for a 1.5-second grace period. Longer loss freezes the
+remaining countdown; fresh tracking resumes it without restarting. Flight time
+and obstacles start after "Start!". The synthetic demo uses the same countdown.
 
 Your helicopter's cockpit is anchored to your head in the mirrored video. Moving
 lower makes it descend; pushing up makes it rise; sideways movement follows too.
@@ -54,8 +55,8 @@ The timer shows **flight time**, not detected exercise time. Gates are game obst
 not repetition events. Head tracking can also respond to seated or standing motion;
 this is intentional game control, not verification that a push-up happened.
 
-**Finish & rest** stops the owned camera/worker immediately and plays the 1.6-second
-crash/encouragement sequence. Gate collisions play that sequence and release the
+**Finish & rest**, including during a tracking pause, stops the owned camera/worker
+immediately and plays the 1.6-second crash/encouragement sequence. Gate collisions play that sequence and release the
 camera when it finishes. Before takeoff, **Stop camera** simply cancels setup.
 The separate **Try a demo** mode follows pointer/touch position or arrow keys and
 is labeled synthetic. Demo input cannot override a camera session.
@@ -141,8 +142,9 @@ local model → PoseFrame + optional head → ActionFrame + headControl → Game
   throughout a flight, and handles gates, collisions and crash completion. Contact
   is debounced for 180 ms at normal speed. At higher speeds the debounce is capped
   at half the gate crossing time, with small simulation steps to prevent tunneling.
-- `src/tracking-gate.js`: holds position on missing/stale tracking and requires
-  200 ms of consecutive good observations before resuming head control.
+- `src/tracking-gate.js`: holds position on missing/stale tracking, expires a 1.5-second
+  capture-time grace period and requires 200 ms of consecutive fresh observations
+  before resuming head control. The host freezes countdown/flight after expiry.
 - `src/difficulty.js`: shared gate geometry, speed and incremental acceleration.
 - `src/camera.js`: existing Dino camera lifecycle copied into this experiment, with
   bounded initialization and inference, cancellation and owned-resource cleanup.
@@ -155,18 +157,20 @@ local model → PoseFrame + optional head → ActionFrame + headControl → Game
 The initial model download uses the baseline's pinned SHA-256. Model/runtime files
 are ignored and processed locally. The optional head crop stays in memory and is
 cleared on manual stop, restart or round completion. During tracking loss it stays
-with the helicopter until the round ends. The standalone experiment saves no
-camera pixels, landmarks or participant recordings. When embedded in Hopmodo,
+with the helicopter through grace and recovery until the round ends. The
+standalone experiment saves no camera pixels, landmarks or participant recordings. When embedded in Hopmodo,
 the disclosed Arcade recorder stores the local replay and aligned named-joint
 tracking sidecar; neither is uploaded automatically or committed.
 
 Model initialization is bounded at 330 seconds, stalled inference at 3 seconds.
-Camera frames older than 400 ms cannot start/control a round. During a flight,
+Camera frames at least 400 ms old cannot start/control a round. During a flight,
 missing head/shoulder tracking or a head outside the visible crop holds the last
-helicopter position. Flight time, acceleration and obstacles keep moving; there is
-no tracking-loss reset or timeout. Stable tracking resumes control in the same
-round. Persistent loss can end in a normal obstacle collision. A terminal camera
-error releases owned resources while the world continues at the held position.
+helicopter position. Flight time, acceleration and obstacles keep moving during
+the 1.5-second grace period, then pause together. Consecutive fresh head/shoulder
+observations resume the same countdown or flight after 200 ms, retaining the
+camera, world, audio stream and local replay. Missing/stale input cannot advance
+recovery. A terminal camera error freezes play, releases owned resources and
+offers an explicit fresh start. See [the recovery slice](TRACKING-RECOVERY.md).
 
 Window blur, hidden tab and explicit pause still release resources and pause play.
 Starting again creates a fresh session. Late-arriving permission streams are
@@ -195,6 +199,9 @@ Escape outside fullscreen pauses. Camera permission and background-tab policies 
 
 ## Verification
 
+The 2026-10-03 tracking-recovery checks and boundary are documented in
+[the recovery evidence](TRACKING-RECOVERY.md).
+
 From this experiment folder:
 
 ```sh
@@ -206,7 +213,7 @@ npm run test:browser
 Browser tests use production preview port 5185 and installed Chrome. The live developer
 preview stays on 5184. Generated screenshots, runtime files and model weights are ignored.
 
-2026-09-13 updated evidence:
+Historical evidence from 2026-09-13, before the bounded tracking grace:
 
 - Seventeen synthetic unit checks: close-up automatic takeoff, missing/low-confidence
   input, stale and foreign frames, down/up/sideways following, no hold-based lift,

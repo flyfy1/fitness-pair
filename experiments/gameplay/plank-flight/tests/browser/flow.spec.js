@@ -1,34 +1,7 @@
 import { test,expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-async function syntheticCamera(page){
-  await page.addInitScript(()=>{
-    window.testHeadX=.35;window.testHeadY=.3;window.testMissing=false;window.testHeadMissing=false;window.testDelay=0;
-    navigator.mediaDevices.getUserMedia=async()=>{
-      const c=document.createElement('canvas');c.width=640;c.height=480;const ctx=c.getContext('2d');
-      function draw(){
-        const x=window.testHeadX*640,y=window.testHeadY*480;
-        ctx.fillStyle='#52675f';ctx.fillRect(0,0,640,480);ctx.strokeStyle='#e8c8ac';ctx.lineWidth=24;ctx.lineCap='round';
-        ctx.beginPath();ctx.moveTo(x-60,y+90);ctx.lineTo(x+60,y+90);ctx.stroke();
-        ctx.fillStyle='#f5d3b0';ctx.beginPath();ctx.arc(x,y,30,0,Math.PI*2);ctx.fill();
-      }draw();const stream=c.captureStream(30);window.testStream=stream;
-      const timer=setInterval(()=>{if(stream.getTracks().every(t=>t.readyState==='ended'))clearInterval(timer);else draw();},33);return stream;
-    };
-    window.Worker=class{
-      constructor(){window.testWorker=this;}
-      postMessage(data){
-        if(data.type==='init'){setTimeout(()=>this.onmessage?.({data:{type:'ready'}}),0);return;}
-        data.bitmap.close();const p=[];
-        if(!window.testMissing){
-          // Deliberately only one shoulder and a nose: no hips, wrists, knees or ankles.
-          p[11]={x:window.testHeadX+.1,y:Math.min(.95,window.testHeadY+.18),visibility:.99};
-          if(!window.testHeadMissing)p[0]={x:window.testHeadX,y:window.testHeadY,visibility:.99};
-        }
-        setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:p,time:data.time}});},window.testDelay);
-      }
-      terminate(){this.terminated=true;}
-    };
-  });
-}
+import {syntheticCamera} from './synthetic-camera.js';
+
 const state=page=>page.evaluate(()=>window.plankFlight.getState());
 async function start(page){await page.getByRole('button',{name:'Enable camera',exact:true}).click();await expect.poll(async()=>(await state(page)).status).toBe('flying');}
 async function cleaned(page){expect(await page.evaluate(()=>window.testWorker.terminated&&window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);}
@@ -57,6 +30,8 @@ test('close-up camera automatically starts; helicopter follows head down/up and 
   await page.waitForTimeout(500);expect((await state(page)).status).toBe('flying');
   expect((await state(page)).x).toBe(held.x);expect((await state(page)).y).toBe(held.y);
   expect((await state(page)).flightSeconds).toBeGreaterThan(held.flightSeconds+.3);
+  await page.evaluate(()=>{window.testMissing=false;});
+  await expect.poll(async()=>(await state(page)).trackingHeld).toBe(false);
   await expect.poll(async()=>(await state(page)).status,{timeout:14000}).toBe('crashing');
   expect((await state(page)).reason).toBe('obstacle');await page.screenshot({path:'test-results/crash.png'});
   await expect(page.getByRole('heading',{name:'You did so well.'})).toBeVisible();await cleaned(page);
@@ -82,12 +57,13 @@ test('brief loss and delayed frames hold position and automatically recover in t
   await page.evaluate(()=>{window.testHeadMissing=false;});await expect.poll(async()=>(await state(page)).status).toBe('flying');
   const initial=await state(page);await page.evaluate(()=>{window.testMissing=true;});
   await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
-  await page.waitForTimeout(3600);expect((await state(page)).status).toBe('flying');expect((await state(page)).cameraActive).toBe(true);
+  await page.waitForTimeout(600);expect((await state(page)).status).toBe('flying');expect((await state(page)).cameraActive).toBe(true);
   expect((await state(page)).flightSeconds).toBeGreaterThan(initial.flightSeconds);expect((await state(page)).x).toBe(initial.x);
   await page.evaluate(()=>{window.testMissing=false;});await followsHead(page,.45,.3);
   await expect.poll(async()=>(await state(page)).trackingHeld).toBe(false);expect((await state(page)).sessionId).toBe(initial.sessionId);
   await page.evaluate(()=>{window.testDelay=650;});await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
-  expect((await state(page)).status).toBe('flying');
+  await expect.poll(async()=>(await state(page)).status).toBe('paused');
+  const held=(await state(page)).flightSeconds;await page.waitForTimeout(700);expect((await state(page)).flightSeconds).toBe(held);
   await page.evaluate(()=>{window.testDelay=0;});await expect.poll(async()=>(await state(page)).trackingHeld).toBe(false);
   expect((await state(page)).sessionId).toBe(initial.sessionId);
   await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
@@ -161,7 +137,8 @@ test('embedded fullscreen fallback and Escape preserve flight',async({page})=>{
 
 test('initial settings apply and disappear from countdown through flight, results and retry',async({page})=>{
   await page.setViewportSize({width:844,height:390});await page.goto('/');
-  for(const selector of ['.difficulty','.language-control','.current-speed'])
+  await page.locator('.game-entry-settings summary').click();
+  for(const selector of ['.difficulty','#entry-language','.current-speed'])
     await expect(page.locator(selector)).toBeVisible();
   await page.locator('#opening').press('End');await expect(page.locator('#opening-value')).toHaveText('6.0× plane');
   await page.locator('#speed').press('Home');await expect(page.locator('#speed-value')).toHaveText('0.4×');
@@ -169,7 +146,7 @@ test('initial settings apply and disappear from countdown through flight, result
   await page.getByRole('button',{name:'Try a demo'}).click();
   const settings={opening:6,speed:.4,acceleration:1.5};
   expect((await state(page)).difficulty).toEqual(settings);
-  for(const selector of ['.difficulty','.language-control','.current-speed'])
+  for(const selector of ['.difficulty','#language','.current-speed'])
     await expect(page.locator(selector)).toBeHidden();
   await expect(page.locator('#countdown')).toBeVisible();
   await expect.poll(async()=>(await state(page)).status).toBe('flying');
@@ -184,7 +161,7 @@ test('initial settings apply and disappear from countdown through flight, result
   await page.getByRole('button',{name:'Try a demo'}).click();
   expect((await state(page)).difficulty).toEqual(settings);
   await expect(page.locator('.difficulty')).toBeHidden();
-  await page.reload();await expect(page.locator('.difficulty')).toBeVisible();
+  await page.reload();await page.locator('.game-entry-settings summary').click();await expect(page.locator('.difficulty')).toBeVisible();
 });
 
 
@@ -233,9 +210,10 @@ test('camera countdown preserves held controls and starts only once after tracki
   await expect(page.locator('#countdown')).toHaveText('3');const initial=await state(page);
   await page.evaluate(()=>{window.testMissing=true;});
   await expect.poll(async()=>(await state(page)).trackingHeld).toBe(true);
-  await expect.poll(async()=>(await state(page)).status).toBe('flying');
+  await page.waitForTimeout(700);expect((await state(page)).status).toBe('countdown');
   expect((await state(page)).sessionId).toBe(initial.sessionId);expect((await state(page)).x).toBe(initial.x);
-  await page.evaluate(()=>{window.testMissing=false;});await followsHead(page,.4,.3);
+  await page.evaluate(()=>{window.testMissing=false;});
+  await expect.poll(async()=>(await state(page)).status).toBe('flying');await followsHead(page,.4,.3);
   expect((await state(page)).status).toBe('flying');
   await page.getByRole('button',{name:'Finish & rest'}).click();await cleaned(page);
 });
@@ -306,9 +284,10 @@ test('missing and stalled rotation APIs never block portrait entry',async({brows
 test('narrow phone exposes camera entry before scrolling and setup can be scrolled by touch',async({browser})=>{
   const context=await browser.newContext({viewport:{width:320,height:740},isMobile:true,hasTouch:true});
   const page=await context.newPage();await page.goto('http://127.0.0.1:5185/');
-  const panel=await page.locator('#panel').boundingBox(),start=await page.locator('#start').boundingBox();
+  const panel=await page.locator('.game-entry').boundingBox(),start=await page.locator('#start').boundingBox();
   expect(start.y).toBeGreaterThanOrEqual(panel.y);
   expect(start.y+start.height).toBeLessThanOrEqual(panel.y+panel.height);
+  await page.locator('.game-entry-settings summary').click();
   const session=await context.newCDPSession(page);
   await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:160,y:440}]});
   for(const y of [410,380,350,320]){
@@ -316,7 +295,7 @@ test('narrow phone exposes camera entry before scrolling and setup can be scroll
     await page.waitForTimeout(30);
   }
   await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await expect.poll(()=>page.locator('#panel').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(()=>page.locator('.game-entry').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
   await page.locator('#demo').click();await expect.poll(async()=>(await state(page)).status).toBe('flying');
   await context.close();
 });

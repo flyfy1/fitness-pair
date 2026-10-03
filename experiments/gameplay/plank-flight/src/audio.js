@@ -127,7 +127,7 @@ export class FlightAudio {
     if(this.session!==state.sessionId){this.clearNodes();this.session=state.sessionId;this.phase=null;this.count=null;this.passed=0;this.beat=0;this.encouragement.reset();this.lastEncouragement=null;}
     const status=state.status;
     if(status!==this.phase){
-      if(status==='flying')this.cue('start');
+      if(status==='flying'&&this.phase!=='paused')this.cue('start');
       if(status==='crashing'){this.clearNodes();this.cue('crash');}
       if(status==='finished'){this.clearNodes();this.cue('finish');}
       if(status==='paused')this.stop();

@@ -73,14 +73,14 @@ test('head provider works without hips/legs, preserves confidence and can use an
   landmarks[7]={x:.25,y:.3,visibility:.8};assert.equal(fromMediaPipe(args).head.x,.25);
 });
 
-test('brief tracking loss holds position until 200 ms of good input; there is no reset deadline',()=>{
+test('tracking recovery requires 200 ms of good input without recalibration',()=>{
   const gate=new TrackingGate();gate.reset(0);assert.equal(gate.status(100).held,false);
   assert.equal(gate.observe(false,120).held,true);assert.equal(gate.observe(true,150).held,true);
   gate.observe(false,180);gate.observe(true,200);assert.equal(gate.observe(true,350).held,true);
   assert.equal(gate.observe(true,400).held,false);assert.equal(gate.status(900).held,true);
   assert.equal(gate.status(100_000).held,true);gate.observe(true,100_010);assert.equal(gate.observe(true,100_210).held,false);
 });
-test('lost tracking keeps position but advances obstacles, elapsed time, acceleration and eventual collision',()=>{
+test('unpaused grace physics keeps position but advances obstacles, time and collisions',()=>{
   const s=flyingFlight(pose());consumeAction(s,active(0,.5,.2));stepFlight(s,.01,0,{width:640,height:480});
   s.trackingHeld=true;s.obstacles=[{x:.6,gap:.7,counted:false}];const x=s.x,y=s.y;
   for(let t=20;t<1500&&s.status==='flying';t+=20)stepFlight(s,.02,t,{width:640,height:480});
