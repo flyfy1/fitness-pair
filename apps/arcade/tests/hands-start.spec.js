@@ -8,7 +8,7 @@ for(const config of games)test(`${config.id}: camera play waits for its framing-
  if(config.id.startsWith('ar-'))await pose({upperOnly:true});
  await game.locator(config.start).click();expect(errors).toEqual([]);
  await expect(game.locator('.hands-start')).toBeVisible({timeout:12000});
- expect(await game.locator('.hands-start').evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('linear-gradient');await expect(game.locator('.hands-start progress')).toHaveCount(0);
+ expect(await game.locator('.hands-start').evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('linear-gradient');await expect(game.locator('.hands-start progress')).toBeVisible();
  await page.waitForTimeout(3500);await expect(page.locator('#record-panel')).not.toHaveAttribute('data-state','recording');
  await pose({hands:'both'});await page.waitForTimeout(1150);await expect(game.locator('.hands-start-title')).toContainText(config.id==='motion-quest'?'LEFT':'together');await pose({hands:'down'});await page.waitForTimeout(500);
  if(config.id!=='motion-quest'){await pose({hands:'left'});await page.waitForTimeout(1200);await expect(game.locator('.hands-start-title')).toContainText('together');await pose({hands:'down'});await page.waitForTimeout(500);}

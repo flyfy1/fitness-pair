@@ -43,11 +43,12 @@ export function mountConversationControls(doc,connect){
  localizeDocument(doc);
  const note=doc.querySelector('[data-game-note]'),footer=doc.querySelector('[data-game-footer]');
  const layout=doc.documentElement.style;
- const previousLayout=new Map(['--hopmodo-footer-bottom','--hopmodo-guidance-bottom','--hopmodo-hud-bottom'].map(name=>[name,layout.getPropertyValue(name)]));
+ const previousLayout=new Map(['--hopmodo-footer-bottom','--hopmodo-guidance-bottom','--hopmodo-hud-bottom','--hopmodo-controls-bottom'].map(name=>[name,layout.getPropertyValue(name)]));
  const previouslyStacked=doc.documentElement.classList.contains('hopmodo-hud-stacked');
  const position=()=>{
   const tracking=doc.querySelector('.movement-hud');
   element.style.top=tracking?`${Math.ceil(tracking.getBoundingClientRect().bottom+8)}px`:'12px';
+  layout.setProperty('--hopmodo-controls-bottom',`${Math.ceil(element.getBoundingClientRect().bottom)}px`);
   const stacked=!!hud&&!tracking&&view.innerWidth<=700;
   doc.documentElement.classList.toggle('hopmodo-hud-stacked',stacked);
   if(hud){

@@ -19,10 +19,11 @@ export class BodyGestures {
     if (frame.tMs - this.lastTMs >= GAP_MS) { this.since = null; this.releaseSince = null; }
     this.lastSeq = frame.seq; this.lastTMs = frame.tMs;
     const j = frame.joints;
-    const tracked = ['leftShoulder', 'rightShoulder', 'leftWrist', 'rightWrist'].every(n => visible(j[n]));
+    const missingJoints = ['leftShoulder', 'rightShoulder', 'leftWrist', 'rightWrist'].filter(n => !visible(j[n]));
+    const tracked = missingJoints.length === 0;
     if (!tracked) {
       this.kind = null; this.since = null; this.releaseSince = null;
-      return { inputSeq: frame.seq, side: null, kind: null, progress: 0, event: null, tracked: false, latched: this.latched };
+      return { inputSeq: frame.seq, side: null, kind: null, progress: 0, event: null, tracked: false, latched: this.latched, missingJoints };
     }
     const raised = side => j[`${side}Wrist`].y < j[`${side}Shoulder`].y - .10;
     const lowered = side => j[`${side}Wrist`].y > j[`${side}Shoulder`].y + .04;
@@ -32,11 +33,14 @@ export class BodyGestures {
     const width = Math.abs(j.leftShoulder.x - j.rightShoulder.x);
     const center = (j.leftShoulder.x + j.rightShoulder.x) / 2;
     const shoulderY = (j.leftShoulder.y + j.rightShoulder.y) / 2;
+    // Pose x/y are normalized independently. Compare vertical distances in pixels.
+    const verticalWidth = width * (frame.image?.width > 0 && frame.image?.height > 0 ? frame.image.width / frame.image.height : 1);
     const together = this.handsTogether && width >= .055
-      && Math.abs(j.leftWrist.x - j.rightWrist.x) <= width * .5
-      && Math.abs(j.leftWrist.y - j.rightWrist.y) <= width * .45
+      // Joined palms do not imply touching wrists, especially with partial occlusion.
+      && Math.abs(j.leftWrist.x - j.rightWrist.x) <= width * .8
+      && Math.abs(j.leftWrist.y - j.rightWrist.y) <= verticalWidth * .45
       && ['leftWrist', 'rightWrist'].every(name => Math.abs(j[name].x - center) <= width * .65
-        && j[name].y >= shoulderY - width * .7 && j[name].y <= shoulderY + width);
+        && j[name].y >= shoulderY - verticalWidth * .7 && j[name].y <= shoulderY + verticalWidth);
     const neutral = !together && lowered('left') && lowered('right');
     const kind = together ? 'hands-together' : left && right ? 'both-hands' : oneHand ? 'one-hand' : null;
     let event = null, progress = 0;

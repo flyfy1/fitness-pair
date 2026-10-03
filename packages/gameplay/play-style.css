@@ -87,6 +87,16 @@ html.clay-play{--play-ink:#203d39;--play-teal:#277e78;--play-cream:#fff8e9;--pla
 .clay-play .hands-start-art{display:block;max-height:40%;height:170px;width:150px;object-fit:contain;flex-shrink:1;min-height:0}
 .clay-play .hands-start .hands-start-title{font-size:clamp(30px,4.5vw,58px);letter-spacing:-1px;margin:0}
 .clay-play .hands-start .hands-start-detail{font-size:clamp(17px,2.2vw,26px);line-height:1.4;color:#365d53;max-width:570px}
+.hands-start-copy{width:100%;min-width:0}
+.hands-start-progress{display:block;width:min(320px,100%);height:10px;margin:12px auto 6px}
+.hands-start-progress[hidden]{display:none}
+.clay-play .hands-start .hands-start-status{font-size:14px;line-height:1.35;margin:8px 0 0;color:#365d53}
+/* Keep the chest and wrists visible while confirming an upper-body start. */
+.clay-play .hands-start[data-gesture="hands-together"]{inset:calc(max(var(--hopmodo-hud-bottom,70px),var(--hopmodo-controls-bottom,0px)) + 12px) 12px auto;max-width:600px;flex-direction:row;align-items:center;padding:16px;gap:12px;overflow:visible}
+.clay-play .hands-start[data-gesture="hands-together"] .hands-start-art{width:70px;height:90px;max-height:none;flex-shrink:0}
+.clay-play .hands-start[data-gesture="hands-together"] .hands-start-title{font-size:clamp(23px,3vw,36px)}
+.clay-play .hands-start[data-gesture="hands-together"] .hands-start-detail{font-size:clamp(15px,1.8vw,20px)}
+@media(max-width:500px),(max-height:550px){.clay-play .hands-start[data-gesture="hands-together"]{padding:12px;gap:8px}.clay-play .hands-start[data-gesture="hands-together"] .hands-start-art{width:45px;height:65px}.clay-play .hands-start[data-gesture="hands-together"] .hands-start-title{font-size:23px}.clay-play .hands-start[data-gesture="hands-together"] .hands-start-detail{font-size:15px}.clay-play .hands-start .hands-start-status{font-size:12px}}
 .clay-play #arena:is([data-phase=playing],[data-phase=paused],[data-phase=complete]) #skeleton{opacity:.2}
 .clay-play #arena .scrim{background:linear-gradient(#e8e6d84d,transparent 25%,transparent 70%,#e8e6d866)}
 .clay-play .movement-art svg{box-shadow:inset 0 1px 0 #fff,0 5px 18px #173c3620}

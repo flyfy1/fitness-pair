@@ -173,5 +173,40 @@
     "id": "framing.distance",
     "en": "Return to your starting distance, or recalibrate.",
     "zh": "回到起始位置与摄像头的距离，或重新校准。"
+  },
+  {
+    "id": "start.hold",
+    "en": "Start gesture hold",
+    "zh": "开始手势保持进度"
+  },
+  {
+    "id": "start.shoulders",
+    "en": "Keep both shoulders visible.",
+    "zh": "保持双肩入镜。"
+  },
+  {
+    "id": "start.hands",
+    "en": "Keep both hands visible.",
+    "zh": "保持双手入镜。"
+  },
+  {
+    "id": "start.recognized",
+    "en": "Gesture recognized. Separate and lower your hands.",
+    "zh": "手势已识别，请分开并放下双手。"
+  },
+  {
+    "id": "start.release",
+    "en": "Lower and separate your hands first, then try again.",
+    "zh": "请先放下并分开双手，再重新尝试。"
+  },
+  {
+    "id": "start.recognizing",
+    "en": "Hold steady. Recognizing your gesture…",
+    "zh": "保持不动，正在识别手势…"
+  },
+  {
+    "id": "start.waiting",
+    "en": "Waiting for your start gesture.",
+    "zh": "等待开始手势。"
   }
 ]

@@ -45,3 +45,37 @@ test('missing wrists cannot rearm a held command; stale and foreign frames are r
   assert.equal(g.update({ ...frame(), sessionId: 'foreign' }), null);
   hold('neutral', 10); assert.equal(hold('one-hand').filter(v => v.event).length, 1);
 });
+
+// Invented geometry motivated by the visible failure, not saved participant joints.
+function closeFraming({image={width:640,height:480}, height=0, span=.24}={}) {
+  const g=new BodyGestures({handsTogether:true});g.reset(session);let seq=0;
+  const pose=tMs=>({...session,seq:++seq,tMs,image,joints:{
+    leftShoulder:{x:.32,y:.5,confidence:.99},rightShoulder:{x:.68,y:.5,confidence:.99},
+    leftWrist:{x:.5-span/2,y:.5+height,confidence:.99},rightWrist:{x:.5+span/2,y:.5+height,confidence:.99},
+  }});
+  return {g,pose,hold:()=>Array.from({length:25},(_,i)=>g.update(pose((i+1)*50)))};
+}
+test('centered joined hands tolerate separated wrist estimates, while still requiring a full hold',()=>{
+  const {hold}=closeFraming();const values=hold();
+  assert.equal(values[10].kind,'hands-together');assert.equal(values[10].event,null);
+  assert.equal(values.filter(v=>v.event?.kind==='hands-together').length,1);
+});
+test('chest and face bands use pixel proportions in landscape and portrait inputs',()=>{
+  for(const image of [{width:1280,height:720},{width:480,height:640}]) {
+    const {hold}=closeFraming({image,span:.04,height:-.36*(image.width/image.height)*.6});
+    assert.equal(hold().filter(v=>v.event?.kind==='hands-together').length,1);
+  }
+});
+test('near-center arms kept apart and wrists far below the chest cannot confirm',()=>{
+  for(const options of [{span:.32},{span:.04,image:{width:480,height:640},height:.3}]) {
+    assert.equal(closeFraming(options).hold().some(v=>v.event),false);
+  }
+});
+test('a single occluded wrist cannot confirm and identifies the missing observation',()=>{
+  const {g,pose}=closeFraming();
+  for(let i=0;i<30;i++) {
+    const frame=pose((i+1)*50);frame.joints.leftWrist.confidence=.3;
+    const result=g.update(frame);assert.equal(result.tracked,false);assert.equal(result.event,null);
+    assert.deepEqual(result.missingJoints,['leftWrist']);
+  }
+});
