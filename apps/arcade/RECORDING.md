@@ -6,8 +6,10 @@
 - Job: keep the game in view until Share is selected; retain only the two latest videos.
 - Risk: asynchronous encoding must not steal focus from a new round, resurrect an
   evicted clip, change the gallery source, or lose synchronized game audio.
-- Loop: play → native Replay or Share → unbranded preview/upload; Download alone
-  makes a temporary copy with only the existing three-second invitation appended.
+- Loop: play → native Replay or Share → preview/upload. Normal formats remain
+  unbranded; Download makes a temporary copy with the three-second invitation.
+  Formats without fast ending support capture the invitation before saving;
+  replay, download and explicitly selected upload all reuse that file.
 - Recordings keep up to the latest 90 seconds at original speed. New footage
   replaces old footage while play continues. This also bounds optional voice
   capture, whose offset is adjusted to the retained video window.
@@ -37,10 +39,11 @@ to the ending encoder's former SPS identifier.
 This avoids both the AVC3 format rejected by macOS native decoding and player
 failures when switching multiple sample descriptions. The original file stays
 unchanged. There is no whole-replay re-encoding on the normal recording path.
-Legacy AVC3, non-Baseline profiles, unsupported parameter layouts or exhausted
-compatible parameter identifiers use an explicitly labeled single-encoder MP4
+Existing unbranded AVC3, non-Baseline profiles, unsupported parameter layouts or
+exhausted compatible parameter identifiers retain the labeled single-encoder
 compatibility export. Missing WebCodecs and transformed legacy media retain the
-existing explicitly labeled playback-length fallback.
+labeled playback-length fallback. Newly captured recordings avoid that delay
+through the capture-time invitation described below.
 
 VP8/VP9 WebM retains compressed-packet copying and its original audio; its
 invitation uses 72 timed frames. The original audio ends with gameplay and the
@@ -70,11 +73,30 @@ synthetic-fixture measurements, not performance guarantees on other devices.
 
 ## Rolling capture
 
-The shared recorder rotates native MediaRecorders every five seconds and evicts
+Video capture finalizes a one-second first segment to inspect the actual codec
+header early, then rotates native MediaRecorders every five seconds and evicts
 segments ending before the rolling window. At most one extra segment overlaps
 the cutoff, plus the current segment. Each segment has a container header and
 an initial keyframe; dropping arbitrary MediaRecorder timeslice chunks would
 produce broken MP4/WebM files. Video requests a one-second keyframe interval.
+
+The header check uses the same AVC parameter validation and encoder settings as
+download export, without decoding gameplay or starting another encoder. At
+natural completion, a compatible format saves immediately. An unsupported or
+still unknown format pauses segment rotation and paints the existing invitation
+into the current capture canvas for three seconds, using the same recorder.
+Owned cloned audio tracks are disabled during the invitation; conversation and
+pose capture end with gameplay. The saved clip records `hasEnding` and the actual
+`endingSeconds`, so download never appends a second ending or converts the replay.
+The invitation counts toward the total 90-second rolling/upload limit. A new
+round can start while the old invitation finishes, without a late replay reveal.
+Exit, hidden-tab and camera-loss paths still release owned tracks immediately;
+an interrupted invitation saves its actual partial duration.
+
+`tests/recording-ending.spec.js` uses actual Chrome recordings with Main AVC and
+with WebCodecs unavailable. It checks silent ending pixels and duration, identical
+replay/download/upload bytes, native macOS video/audio decoding, and immediate
+background cleanup. These are synthetic game recordings, not participant trials.
 
 Mediabunny is the sole new runtime dependency required to demux these bounded
 segments and remux compressed video/audio packets without another encode or a

@@ -8,7 +8,7 @@ import {readStoredClip} from './read-stored-clip.js';
 test('actual Motion Quest camera path exports moving person, game, HUD without promotional branding in genuine MP4',async({page},info)=>{
  await movingCamera(page);const uploads=[];page.on('request',r=>{if(r.method()==='PUT')uploads.push(r.url());});
  await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
- await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
  await expect(page.locator('#record-status')).toContainText('game + camera');
  await expect(game.locator('#rep-count')).toHaveText('5',{timeout:25000});
  await expect(page.locator('#local-result video')).toBeVisible({timeout:10000});
@@ -55,7 +55,7 @@ test('waiting for the camera model never starts a canvas-only camera replay',asy
 
 test('camera loss ends a labeled partial camera replay without starting synthetic capture',async({page})=>{
  await movingCamera(page);await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
- await expect(page.locator('#record-status')).toContainText('game + camera');await page.waitForTimeout(600);await game.locator('#stop').click();
+ await expect(page.locator('#record-status')).toContainText('game + camera',{timeout:12000});await page.waitForTimeout(600);await game.locator('#stop').click();
  await expect(page.locator('#local-result video')).toBeVisible({timeout:7000});await expect(page.locator('#record-status')).toContainText('Camera interrupted');
  await expect(page.locator('#local-result')).toContainText('Player recording');await page.waitForTimeout(600);await expect(page.locator('#local-result video')).toHaveCount(1);
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','idle');

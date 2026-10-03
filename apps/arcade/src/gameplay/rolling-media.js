@@ -1,5 +1,6 @@
 import {startVideoRecorder} from '../video-format.js';
 import {captureClipThumbnail} from '../clip-thumbnail.js';
+import {probeDownloadEnding} from '../download-ending.js';
 import {Input,ALL_FORMATS,BlobSource,EncodedPacketSink,Output,BufferTarget,Mp4OutputFormat,WebMOutputFormat,EncodedVideoPacketSource,EncodedAudioPacketSource} from 'mediabunny';
 
 export const REPLAY_SECONDS=90;
@@ -9,10 +10,16 @@ const AUDIO_FORMATS=['audio/webm;codecs=opus','audio/webm','audio/mp4;codecs=mp4
 // Each segment has its own container header and initial keyframe. MediaRecorder
 // timeslice chunks alone cannot be discarded or concatenated into playable media.
 export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1024,onError=()=>{},maxSeconds=REPLAY_SECONDS,segmentSeconds=SEGMENT_SECONDS}={}){
- const startedAt=performance.now();let segments=[],current,timer,stopped=false,failure=null,result;
+ const startedAt=performance.now();let segments=[],current,timer,stopped=false,failure=null,result,endingCompatibility=null,probe;
+ const probeController=new AbortController();
  const elapsed=()=> (performance.now()-startedAt)/1000;
  function prune(now){segments=segments.filter(segment=>segment.end===null||segment.end>now-maxSeconds);}
- function fail(error){if(failure)return;failure=error;clearInterval(timer);onError(error);}
+ function fail(error){if(failure)return;failure=error;clearTimeout(timer);probeController.abort();onError(error);}
+ function inspect(segment){
+  if(audioOnly||stopped||endingCompatibility!==null||probe||!segment.chunks.length)return probe;
+  probe=probeDownloadEnding(new Blob(segment.chunks),{signal:probeController.signal}).then(value=>{if(value!==null)endingCompatibility=value;}).finally(()=>{probe=null;});
+  return probe;
+ }
  function begin(){
   const segment={start:elapsed(),end:null,chunks:[],bytes:0,recorder:null};
   segment.done=new Promise(resolve=>{segment.resolve=resolve;});
@@ -25,7 +32,7 @@ export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1
     segment.chunks.push(event.data);
    };
    recorder.onerror=()=>fail(new Error('This browser could not record the replay.'));
-   recorder.onstop=()=>{clearTimeout(segment.timeout);segment.resolve();};
+   recorder.onstop=()=>{clearTimeout(segment.timeout);inspect(segment);segment.resolve();};
   };
   if(audioOnly){
    for(const mimeType of AUDIO_FORMATS){
@@ -43,17 +50,28 @@ export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1
   if(segment.recorder.state!=='inactive')segment.recorder.stop();else{clearTimeout(segment.timeout);segment.resolve();}
  }
  begin();
- timer=setInterval(()=>{
+ function rotate(){
   if(stopped||failure)return;
-  try{const previous=current;begin();end(previous);prune(elapsed());}catch(error){fail(error);}
- },segmentSeconds*1000);
+  try{const previous=current;begin();end(previous);prune(elapsed());timer=setTimeout(rotate,segmentSeconds*1000);}catch(error){fail(error);}
+ }
+ // Native MP4 may publish codec headers only on stop. Finalize a short first
+ // gameplay segment to learn the actual format early, without pausing capture.
+ timer=setTimeout(rotate,(audioOnly?segmentSeconds:Math.min(1,segmentSeconds))*1000);
  return {
   get state(){return stopped?'inactive':'recording';},
   get bufferedBytes(){return segments.reduce((sum,item)=>sum+item.bytes,0);},
   get segmentCount(){return segments.length;},
+  async prepareEnding(){
+   // Keep this exact encoder alive through the invitation, including rounds
+   // ending near a normal segment rotation. Never start an independent ending.
+   clearTimeout(timer);
+   await probe;
+   if(endingCompatibility===null)await inspect(current);
+   return endingCompatibility===true;
+  },
   stop({startSeconds=0}={}){
    if(result)return result;
-   stopped=true;clearInterval(timer);const endSeconds=elapsed();end(current);prune(endSeconds);
+   stopped=true;probeController.abort();clearTimeout(timer);const endSeconds=elapsed();end(current);prune(endSeconds);
    result=(async()=>{
     try{
      await Promise.all(segments.map(segment=>segment.done));if(failure)throw failure;

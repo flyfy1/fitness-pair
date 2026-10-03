@@ -67,9 +67,10 @@ async function encodeMp4Download(clip,input,video,audio,canvas,config,{signal,on
  }catch(error){await output.cancel();throw error;}finally{await samples.return();}
 }
 
+const endingSettings=(width,height,config)=>({codec:config.codec.replace(/^avc3/,'avc1'),width,height,bitrate:1500000,framerate:24,latencyMode:'realtime',...(config.codec.startsWith('avc')?{avc:{format:'avc'}}:{})});
 async function encodeEnding(canvas,config,signal){
  if(typeof VideoEncoder==='undefined')throw new CompatibilityError('Fast encoding is unavailable.');
- const settings={codec:config.codec.replace(/^avc3/,'avc1'),width:canvas.width,height:canvas.height,bitrate:1500000,framerate:24,latencyMode:'realtime',...(config.codec.startsWith('avc')?{avc:{format:'avc'}}:{})};
+ const settings=endingSettings(canvas.width,canvas.height,config);
  if(!(await abortable(VideoEncoder.isConfigSupported(settings),signal)).supported)throw new CompatibilityError('The replay codec cannot encode an ending.');
  let encoder,frame,endingConfig,failure;const packets=[];
  // MP4 holds one sample for three seconds; WebM needs timed frames.
@@ -90,6 +91,30 @@ async function encodeEnding(canvas,config,signal){
   if(!endingConfig||!packets.length||packets[0].type!=='key')throw new CompatibilityError('The ending encoder returned no keyframe.');
   return {packets,config:endingConfig};
  }finally{frame?.close();if(encoder&&encoder.state!=='closed')encoder.close();}
+}
+
+// Inspect a native recorder header while gameplay is still being captured.
+// A partial container without its header is unknown, never assumed compatible.
+export async function probeDownloadEnding(blob,{signal}={}){
+ const input=new Input({source:new BlobSource(blob),formats:ALL_FORMATS});
+ const controller=new AbortController(),deadline=setTimeout(()=>controller.abort(),1000);
+ const abort=()=>controller.abort(signal.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
+ try{
+  let video,config;
+  try{video=await abortable(input.getPrimaryVideoTrack(),controller.signal);config=await abortable(video?.getDecoderConfig(),controller.signal);}catch{return null;}
+  if(!video||!config)return null;
+  const codec=await video.getCodec(),audio=await input.getPrimaryAudioTrack(),audioCodec=await audio?.getCodec();
+  if(!['avc','vp8','vp9'].includes(codec)||await video.getRotation()!==0||
+     (codec==='avc'?audioCodec&&audioCodec!=='aac':audioCodec&&!['opus','vorbis'].includes(audioCodec)))return false;
+  const width=await video.getDisplayWidth(),height=await video.getDisplayHeight();
+  if(width!==config.codedWidth||height!==config.codedHeight)return false;
+  if(codec==='avc'&&!config.codec.startsWith('avc1'))return false;
+  if(typeof VideoEncoder==='undefined'||!(await abortable(VideoEncoder.isConfigSupported(endingSettings(width,height,config)),controller.signal)).supported)return false;
+  // Check Baseline syntax and available IDs without running a competing hardware
+  // encoder during gameplay. Export validates the actual ending packet as well.
+  if(codec==='avc')combineAvcEnding(config,config);
+  return true;
+ }catch{return false;}finally{clearTimeout(deadline);signal?.removeEventListener('abort',abort);input.dispose();}
 }
 
 async function appendEnding(clip,{signal,onProgress}){
@@ -153,6 +178,7 @@ async function appendEnding(clip,{signal,onProgress}){
 }
 
 export async function createDownloadCopy(clip,{signal,onProgress=()=>{}}={}){
+ if(clip.hasEnding)return clip;
  const controller=new AbortController(),abort=()=>controller.abort(signal?.reason||new DOMException('Download cancelled.','AbortError'));
  const visibility=()=>{if(document.hidden)controller.abort(new Error('Keep this tab visible while preparing your download.'));};
  signal?.addEventListener('abort',abort,{once:true});window.addEventListener('pagehide',abort);document.addEventListener('visibilitychange',visibility);
