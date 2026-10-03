@@ -163,6 +163,9 @@ h1 { font-size: clamp(64px, 7.6vw, 112px); font-weight: 850; letter-spacing: -4p
 
 /* Keep the runway size fixed when opening the settings popover. */
 .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.hopmodo-hud-stacked .tools{flex-wrap:wrap;justify-content:flex-end}
+.hopmodo-hud-stacked .game-mode.playing .guidance{top:max(15%,calc(var(--hopmodo-hud-bottom,0px) + 12px))}
+.hopmodo-hud-stacked .game-mode #movement-settings{top:calc(var(--hopmodo-hud-bottom,0px) + 12px);max-height:calc(100dvh - var(--hopmodo-hud-bottom,0px) - 28px)}
 .game-mode header { align-items: flex-start; }
 .game-mode #movement-settings { position: absolute; z-index: 5; top: 132px; right: 30px; bottom: auto; left: auto; width: 340px; max-height: calc(100% - 152px); overflow: auto; margin: 0; padding: 14px 16px; box-shadow: 0 12px 40px #0008; }
 .game-mode.playing #game-world { width: 100%; }

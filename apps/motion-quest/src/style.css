@@ -99,3 +99,7 @@ kbd { font: inherit; opacity: .65; }
 @media (prefers-reduced-motion: reduce) { #hp-bar, #charge-bar { transition: none; } }
 
 #model-download{display:block;width:min(72vw,430px);height:8px;margin:14px auto 0;accent-color:#e6ff9b}
+
+.hopmodo-hud-stacked .session-info,.hopmodo-hud-stacked .stats{top:calc(var(--hopmodo-hud-bottom,0px) + 8px)}
+.hopmodo-hud-stacked .session-info{max-width:calc(100% - 200px)}
+.hopmodo-hud-stacked .arena-message{top:max(34%,calc(var(--hopmodo-hud-bottom,0px) + 100px));transform:translateX(-50%)}

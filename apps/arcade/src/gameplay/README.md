@@ -19,6 +19,10 @@
 
 `shell.js` owns the viewport, home/exit link, optional microphone control and
 replay area. `recording` owns automatic recording lifecycle and local persistence.
+Shared HUD controls use a separate row on narrow legacy game screens and measured
+width on wide screens. Native hosts can place following UI below
+`--hopmodo-hud-bottom`; the existing AR tracking row keeps its own placement. See
+[responsive HUD evidence](../../../../docs/responsive-game-hud.md).
 When the current round completes, its replay is revealed automatically after
 saving. The shared HUD shows preparation or recording failure; a newer round
 cancels the reveal. Back to game pauses replay playback and restores the game
