@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 export async function decodeUpload(raw,options){
  const url=new URL(raw);
  if(url.searchParams.get('uploadType')!=='multipart')return {body:options.body,metadata:{}};
- assert.equal(url.searchParams.get('ifGenerationMatch'),'0');
+ assert.match(url.searchParams.get('ifGenerationMatch'),/^\d+$/);
  const boundary=options.headers['Content-Type'].split('boundary=')[1];
  assert.ok(boundary);
  const bytes=Buffer.from(await new Response(options.body).arrayBuffer()),separator=Buffer.from('\r\n--'+boundary+'\r\n');

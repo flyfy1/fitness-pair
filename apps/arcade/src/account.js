@@ -1,6 +1,50 @@
 import {readLanguage,languageTag} from '../../../packages/gameplay/locale.js';
 import {mountSharedPreview} from './clip-preview.js';
 import {listClips, updateClip} from './local-clips.js';
+import {translateText} from '../../../packages/gameplay/i18n.js';
+
+export const publicationLabel = clip => clip.publicationState === 'paused'
+  ? 'Public sharing paused' : clip.visibility === 'private' ? 'Private · Link access' : 'Public in the gallery';
+export async function readManagedClip(clip) {
+  return accountAPI('/api/clips/' + encodeURIComponent(clip.id) + new URL(clip.sharedURL || '/', location.origin).search,
+    {headers:clip.manageToken ? {'X-Management-Key':clip.manageToken} : {}});
+}
+export async function changePublication(clip, publicationState, legacyKey) {
+  const session = await getSession();
+  const result = await accountAPI('/api/clips/' + encodeURIComponent(clip.id), {
+    method:'PATCH', headers:{'Content-Type':'application/json',
+      ...(session.csrfToken ? {'X-CSRF-Token':session.csrfToken} : {}),
+      ...(legacyKey ? {'X-Management-Key':legacyKey} : {}),
+      ...(publicationState === 'published' ? {'X-Sharing-Consent':'gallery-v1'} : {})},
+    body:JSON.stringify({publicationState}),
+  });
+  try {
+    const local = (await listClips()).find(item => item.id === clip.id);
+    if (local) await updateClip({...local, shared:true, sharedURL:result.url, visibility:result.visibility, publicationState:result.publicationState});
+  } catch { /* Cloud status is authoritative even when local storage is unavailable. */ }
+  return result;
+}
+export function mountPublicationControls(container, clip, {legacyKey, onChange, showViewer=false} = {}) {
+  container.replaceChildren();
+  if(showViewer&&clip.url){const link=document.createElement('a');link.className='text-link';link.href=clip.url;link.textContent=translateText('Open shared video →');container.append(link);}
+  if (clip.visibility === 'private' || clip.unavailable || (!clip.canDelete && !legacyKey)) return;
+  container.insertAdjacentHTML('beforeend','<p data-publication-note></p><div class="clip-actions"><button data-publication-toggle></button></div><p data-publication-status role="status"></p>');
+  const button=container.querySelector('[data-publication-toggle]'),note=container.querySelector('[data-publication-note]'),status=container.querySelector('[data-publication-status]');
+  function render(){
+    const paused=clip.publicationState==='paused';
+    button.textContent=translateText(paused?'Resume public sharing':'Pause public sharing');
+    note.textContent=translateText(paused?'Public sharing is paused. Your video is kept online for you; its public link and gallery entry are unavailable. Storage and expiry stay the same.':'Public sharing is on. You can pause it without deleting the video.');
+  }
+  render();button.onclick=async()=>{
+    button.disabled=true;status.textContent=translateText('Updating sharing status…');
+    try{
+      Object.assign(clip,await changePublication(clip,clip.publicationState==='paused'?'published':'paused',legacyKey));
+      render();status.textContent=translateText(clip.publicationState==='paused'?'Public sharing paused. Your video is kept.':'Public sharing restored. The same link works again.');
+      await onChange?.(clip);
+    }catch(error){status.textContent=error.message;}
+    finally{button.disabled=false;}
+  };
+}
 
 export const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function accountAPI(path, options) {
@@ -77,7 +121,8 @@ export async function renderShared(container, notice = '') {
     if (!account.clips.length) { grid.innerHTML = '<div class="empty-state"><h2>NO SHARED CLIPS YET.</h2><p>Choose a video from My local clips to publish it here.</p><a class="text-link" href="/library">Open My local clips →</a></div>'; return; }
     for (const clip of account.clips) {
       const card = document.createElement('article'); card.className = 'clip-card';
-      card.innerHTML = `${clip.unavailable ? '<p class="notice">This upload did not finish or is being removed. Remove it to release its reserved storage.</p>' : ''}<h3 translate="no">${escapeHTML(clip.title)}</h3><p>${clip.visibility === 'private' ? 'Private · Link access' : 'Public'} · ${storageLabel(clip.bytes)} · ${expiryMarkup(clip.expiresAt)}</p><div class="clip-actions">${clip.unavailable ? '' : `<a href="${escapeHTML(clip.url || '/clips/' + clip.id)}">Open shared link ↗</a>`}<button data-remove>Remove</button></div><div data-confirmation></div>`;
+      card.innerHTML = `${clip.unavailable ? '<p class="notice">This upload did not finish or is being removed. Remove it to release its reserved storage.</p>' : ''}<h3 translate="no">${escapeHTML(clip.title)}</h3><p><strong data-publication-label>${publicationLabel(clip)}</strong> · ${storageLabel(clip.bytes)} · ${expiryMarkup(clip.expiresAt)}</p><div class="clip-actions">${clip.unavailable ? '' : `<a href="${escapeHTML(clip.url || '/clips/' + clip.id)}">Open shared link ↗</a>`}<button data-remove>Remove</button></div><div data-publication-controls></div><div data-confirmation></div>`;
+      mountPublicationControls(card.querySelector('[data-publication-controls]'),clip,{onChange:updated=>{card.querySelector('[data-publication-label]').textContent=translateText(publicationLabel(updated));}});
       card.querySelector('[data-remove]').onclick = () => confirmRemoval(card.querySelector('[data-confirmation]'), async () => {
         await removeSharedClip(clip.id); await renderShared(container, 'Shared clip removed. Your storage has been updated.');
       });

@@ -909,5 +909,19 @@
   {"id":"landing.about","en":"About Hopmodo","zh":"关于 Hopmodo"},
   {"id":"landing.replayInvitation","en":"Play a game. Watch your replay, play again, or send it to a friend. Replays stay on this device until you choose to upload. Download videos you want to keep.","zh":"玩一局，看看回放、再玩一次，或发给朋友。回放保存在此设备，只有主动上传才会分享。请下载想保留的视频。"},
   {"id":"landing.playgroundAbove","en":"Playground illustration · games are above","zh":"游乐场插画 · 游戏在上方"},
-  {"id":"replay.moreOptions","en":"More replay options","zh":"更多回放选项"}
+  {"id":"replay.moreOptions","en":"More replay options","zh":"更多回放选项"},
+  {"id":"clip.localOnly","en":"Saved locally · Not publicly shared","zh":"已保存在本地 · 未公开分享"},
+  {"id":"clip.keepLocal","en":"Keep local only","zh":"仅保存在本地"},
+  {"id":"clip.localOptional","en":"Your video is already saved locally. Uploading is optional.","zh":"视频已保存在本地，上传分享由你决定。"},
+  {"id":"clip.localUnuploaded","en":"Saved locally · Not publicly shared. No upload was started.","zh":"已保存在本地 · 未公开分享，没有开始上传。"},
+  {"id":"clip.manage","en":"Manage sharing","zh":"管理分享"},
+  {"id":"clip.pause","en":"Pause public sharing","zh":"暂停公开分享"},
+  {"id":"clip.resume","en":"Resume public sharing","zh":"恢复公开分享"},
+  {"id":"clip.paused","en":"Public sharing paused","zh":"公开分享已暂停"},
+  {"id":"clip.pauseInfo","en":"Public sharing is paused. Your video is kept online for you; its public link and gallery entry are unavailable. Storage and expiry stay the same.","zh":"公开分享已暂停。线上视频为你保留，公开链接和 Gallery 展示已停用。存储占用和有效期不变。"},
+  {"id":"clip.onInfo","en":"Public sharing is on. You can pause it without deleting the video.","zh":"视频正在公开分享，你可以暂停公开，无需删除视频。"},
+  {"id":"clip.updating","en":"Updating sharing status…","zh":"正在更新分享状态…"},
+  {"id":"clip.pauseSuccess","en":"Public sharing paused. Your video is kept.","zh":"公开分享已暂停，视频已保留。"},
+  {"id":"clip.resumeSuccess","en":"Public sharing restored. The same link works again.","zh":"公开分享已恢复，原链接重新可用。"},
+  {"id":"clip.statusFailure","en":"Sharing status could not be checked. Retry before changing it.","zh":"无法确认分享状态，请重试后再更改。"}
 ]

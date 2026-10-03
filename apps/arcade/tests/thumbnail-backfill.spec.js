@@ -5,6 +5,7 @@ async function recording(page){
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(900);
  await page.evaluate(()=>{const w=document.querySelector('#game-frame').contentWindow;w.motionQuest.getReplayState=()=>({roundId:w.document.documentElement.dataset.roundId,phase:'complete'});});
  await expect(page.locator('.clip-card')).toHaveCount(1);
+ await page.locator('[data-view-replay]').click();
 }
 async function inspectStored(page,removeThumbnail=false){
  return page.evaluate(async remove=>{

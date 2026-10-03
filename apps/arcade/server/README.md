@@ -92,3 +92,20 @@ measure uploaded video bytes; bounded thumbnails are derived presentation data.
 
 Gallery and account cards do not fetch video bytes just to obtain a preview.
 Thumbnails do not change the original video, publication expiry, ownership or quota.
+
+## Reversible public sharing
+
+`PATCH /api/clips/:id` accepts only `{ "publicationState": "paused" }` or
+`{ "publicationState": "published" }` with `Content-Type: application/json`.
+Account owners supply the existing session/CSRF; anonymous owners supply their
+saved `X-Management-Key` from the same origin. Restoring also requires
+`X-Sharing-Consent: gallery-v1`. Private link-access clips retain their separate
+visibility semantics.
+
+Paused public records stay in account inventory and count toward the same quota
+until expiry/removal. Gallery excludes them. Public GET/HEAD on metadata, media
+(including ranges) and posters returns 404 with no-store caching; authenticated
+owners or the verified publishing device may inspect them. Older records default
+to published. Generation-conditional JSON object replacement preserves the
+original custom expiry time and prevents stale mutations from recreating a
+removed record. See [Cloud Storage conditional inserts](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert).

@@ -213,3 +213,26 @@ link, short-copy preparation, deletion, thumbnail repair and the attachment
 message. My clips retains the full tool set. The controls reuse existing handlers;
 opening options never starts an upload, and cancellation remains visible while
 a local copy is being prepared.
+
+## Local-only and paused public clips
+
+Every saved local card explicitly shows **Saved locally · Not publicly shared**
+until an upload succeeds. The upload form offers **Keep local only** without
+sending video bytes; automatic replay saving and the two-clip library limit still
+apply. Download videos you want to retain beyond that limit.
+
+Public owners can use **Pause public sharing** and **Resume public sharing** from
+the local card, shared-video page or account's My shared clips. Pausing retains
+the online video and poster, ownership, quota and original expiry. It removes the
+Gallery entry and rejects public metadata, media, range and thumbnail reads.
+Owners can still inspect their video. Anonymous owners use their original local
+clip's device management key; account owners can manage it across devices.
+Restoring public sharing requires explicit public consent and reuses the original
+viewer URL. Removing a shared clip still permanently removes its cloud artifacts;
+deleting a local clip is independent. Pausing does not extend an expiry.
+
+The server treats older records without a publication state as published. State
+changes use generation-pinned Cloud Storage reads and conditional replacement of
+publication metadata, so a concurrent removal cannot be overwritten by a stale
+pause/restore operation. Video and poster bytes are not rewritten. Owner checks,
+same-origin protection and account CSRF apply before mutation.
