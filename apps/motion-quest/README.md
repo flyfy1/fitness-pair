@@ -6,7 +6,8 @@ to attack, and complete five repetitions to defeat the forest guardian.
 From the repository root run `npm ci` and `npm run dev`, then open
 <http://127.0.0.1:5178>. Use a recent desktop Chrome/Edge browser. Keep shoulders
 through ankles visible, turn slightly sideways and stand upright for about two
-seconds to calibrate. No raised-hand start gesture is needed. In preview mode, hold the button or Space for 0.65 seconds,
+seconds to calibrate. Hold the left hand up, lower both hands, then wait for the
+three-second countdown. In preview mode, hold the button or Space for 0.65 seconds,
 then release. Preview input is synthetic, not evidence of real recognition.
 
 ## Ownership
@@ -137,9 +138,11 @@ The same mixed game audio feeds local replays, without microphone access.
 
 ## Start and squat input ownership
 
-Camera permission leads directly to standing calibration, then the original
-squat-to-charge and stand-to-attack loop. Hands are not required for starting or
-playing. Recalibration preserves the round; retry starts a fresh calibration.
+Camera permission leads to standing calibration and the shared start confirmation,
+then the original squat-to-charge and stand-to-attack loop. Squat scoring does not
+depend on wrists after confirmation. Recalibration preserves the round; retry
+starts a fresh calibration. Standing still after repositioning can automatically
+recover the stance baseline without another countdown, camera or model worker.
 Large guidance remains transparent over the live camera and body skeleton.
 Synthetic browser evidence covers starting without visible wrists, five attacks,
 recalibration, retry and camera cleanup. It does not establish human accuracy.

@@ -16,6 +16,11 @@ export function poseFeatures(points, aspect = 4 / 3) {
     const [shoulder, hip, knee, ankle] = p;
     const torso = Math.hypot((shoulder.x - hip.x) * aspect, shoulder.y - hip.y);
     if (torso < .07 || ankle.y < hip.y + .1 || shoulder.y > hip.y - .04) return null;
+    // Coincident joints can be reported with high visibility. They supply no
+    // usable knee angle; do not interpret a collapsed segment as a deep squat.
+    const thigh = Math.hypot((hip.x - knee.x) * aspect, hip.y - knee.y);
+    const shin = Math.hypot((ankle.x - knee.x) * aspect, ankle.y - knee.y);
+    if (Math.min(thigh, shin) < torso * .1) return null;
     return { angle: kneeAngle(hip, knee, ankle, aspect), hip: hip.y, torso,
       confidence: Math.min(...p.map(v => v.confidence)) };
   }).filter(Boolean);
@@ -32,6 +37,7 @@ export class SquatDetector {
   reset() {
     this.baseline = null;
     this.samples = [];
+    this.recoverySamples = [];
     this.lastTime = null;
     this.filtered = null;
     this.phase = 'stand';
@@ -48,9 +54,10 @@ export class SquatDetector {
       this.reset();
       this.lastTime = time;
     }
-    if (!feature) {
+    if (!feature || !['angle', 'hip', 'torso'].every(key => Number.isFinite(feature[key])) || feature.torso <= 0) {
       this.filtered = null;
       this.samples = [];
+      this.recoverySamples = [];
       this.holdSince = null;
       return { state: 'missing', progress: 0, rep: false };
     }
@@ -61,7 +68,8 @@ export class SquatDetector {
     const f = this.filtered;
     if (!this.baseline) {
       if (f.angle < 158) { this.samples = []; return { state: 'stand', progress: 0, rep: false }; }
-      if (this.samples.length && Math.abs(f.hip - this.samples[0].hip) > f.torso * .1) this.samples = [];
+      if (this.samples.length && (Math.abs(f.hip - this.samples[0].hip) > f.torso * .1 ||
+        Math.abs(f.torso / this.samples[0].torso - 1) > .12)) this.samples = [];
       this.samples.push({ ...f, time });
       const duration = time - this.samples[0].time;
       if (duration >= 1500) {
@@ -74,7 +82,31 @@ export class SquatDetector {
       return { state: 'calibrating', progress: Math.min(1, duration / 1500), rep: false };
     }
     const drop = (f.hip - this.baseline.hip) / this.baseline.torso;
-    const standing = f.angle >= 158 && drop < .13;
+    const scale = f.torso / this.baseline.torso;
+    // A sustained upright pose at a new position or scale starts a fresh
+    // baseline, discarding any partial action without resetting completion IDs.
+    // Brief rises above the baseline must return before they can score.
+    if (f.angle >= 158 && (Math.abs(drop) >= .13 || scale < .7 || scale > 1.4)) {
+      if (this.recoverySamples.length && (Math.abs(f.hip - this.recoverySamples[0].hip) > f.torso * .1 ||
+        Math.abs(f.torso / this.recoverySamples[0].torso - 1) > .12)) this.recoverySamples = [];
+      this.recoverySamples.push({ ...f, time });
+      this.holdSince = null;
+      const duration = time - this.recoverySamples[0].time;
+      if (duration >= 1500) {
+        this.baseline = {
+          hip: this.recoverySamples.reduce((sum, p) => sum + p.hip, 0) / this.recoverySamples.length,
+          torso: this.recoverySamples.reduce((sum, p) => sum + p.torso, 0) / this.recoverySamples.length,
+        };
+        this.recoverySamples = [];
+        this.phase = 'stand';
+        this.downAt = null;
+        this.armed = true;
+        return { state: 'ready', progress: 0, rep: false };
+      }
+      return { state: 'calibrating', progress: Math.min(1, duration / 1500), rep: false };
+    }
+    this.recoverySamples = [];
+    const standing = f.angle >= 158 && Math.abs(drop) < .13;
     const low = f.angle <= 148 && drop >= .18;
     const progress = Math.max(0, Math.min(1, Math.min((170 - f.angle) / 30, drop / .25)));
     if (!this.armed) {

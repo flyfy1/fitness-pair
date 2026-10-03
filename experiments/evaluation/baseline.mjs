@@ -1,8 +1,9 @@
 import { assertEvaluationResult } from '@fitness-pair/contracts';
 import { baselineActions } from '../action-recognition/baseline.mjs';
+import { RECOGNIZER_ID } from '@fitness-pair/action-squat';
 
 const result = { version: 1, runId: 'synthetic-baseline-v1', fixtureId: 'squat-step-geometry-v1',
-  evidence: 'synthetic', modelId: 'synthetic-geometry/1', recognizerId: 'squat-2d-hysteresis/1',
+  evidence: 'synthetic', modelId: 'synthetic-geometry/1', recognizerId: RECOGNIZER_ID,
   device: `Node ${process.version}; ${process.platform}/${process.arch}; no model inference`,
   expectedCount: 5, observedCount: baselineActions().filter(f => f.completion).length,
   falseCompletions: null, missedCompletions: null, matchingWindowMs: null,

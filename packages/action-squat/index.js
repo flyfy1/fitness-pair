@@ -1,7 +1,7 @@
 import { assertPoseFrame, assertActionFrame, sameSource } from '@fitness-pair/contracts';
 import { SquatDetector } from './detector.js';
 
-export const RECOGNIZER_ID = 'squat-2d-hysteresis/1';
+export const RECOGNIZER_ID = 'squat-2d-hysteresis/2';
 const phases = { missing: 'missing', stand: 'calibrating', calibrating: 'calibrating',
   ready: 'ready', lowering: 'active', down: 'active', rep: 'completed' };
 

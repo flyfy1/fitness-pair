@@ -10,6 +10,8 @@ export async function camera(page){await page.addInitScript(()=>{
   if(a.hideHands)p[ids[2]].visibility=0;
  }p[0]={x:.5,y:.18-a.rise,visibility:1};p[7]={x:.47,y:.19-a.rise,visibility:1};p[8]={x:.53,y:.19-a.rise,visibility:1};
  if(a.hideRightShoulder)p[12].visibility=0;
+ if(a.collapseKnees){p[25]={...p[23]};p[26]={...p[24]};}
+ if(a.shift)for(const joint of p)joint.y+=a.shift;
  setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:a.missing?[]:p,time:m.time,inferenceMs:1}});},0);
  }terminate(){this.terminated=true;}};
 });}

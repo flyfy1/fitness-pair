@@ -22,6 +22,7 @@
     "explore:actions": "node experiments/action-recognition/baseline.mjs",
     "explore:gameplay": "node experiments/gameplay/mock-round.mjs",
     "explore:evaluation": "node experiments/evaluation/baseline.mjs",
+    "evaluate:squat": "node experiments/evaluation/squat-robustness/evaluate.mjs",
     "build:arcade": "node scripts/build-arcade.mjs",
     "preview:arcade": "node scripts/preview-arcade.mjs",
     "test:arcade": "node --test apps/arcade/server/*.test.js",
