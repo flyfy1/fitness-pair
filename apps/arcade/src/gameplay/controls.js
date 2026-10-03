@@ -19,14 +19,14 @@ export function mountConversationControls(doc,connect){
  .hopmodo-conversation [data-replay-share]:disabled{opacity:1;cursor:default;color:#182346;border-color:#18234655}
  .hopmodo-conversation [hidden]{display:none}
  .hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}
- .hopmodo-native-hud{padding-right:calc(var(--hopmodo-native-padding,0px) + 176px)!important;gap:min(12px,2vw)!important;box-sizing:border-box}
+ .hopmodo-native-hud{padding-right:calc(var(--hopmodo-native-padding,0px) + var(--hopmodo-controls-reserve,176px))!important;gap:min(12px,2vw)!important;box-sizing:border-box}
  .hopmodo-native-hud button{white-space:nowrap}
  .hopmodo-native-hud>*{min-width:0;flex-shrink:1}
  @media(max-width:420px){.hopmodo-native-hud button{padding-inline:4px}.hopmodo-native-hud small{letter-spacing:0}}
  `;
  const hud=doc.querySelector('header,.hud');
  if(hud){
-  // Reserve space in the host, keeping native game CSS and controls untouched.
+  // Reserve space only when shared controls occupy the same row as the HUD.
   hud.style.setProperty('--hopmodo-native-padding',doc.defaultView.getComputedStyle(hud).paddingRight);
   hud.classList.add('hopmodo-native-hud');
  }
@@ -38,7 +38,11 @@ export function mountConversationControls(doc,connect){
  language.querySelector('option[value=zh]').textContent='中文';
  element.prepend(language);
  localizeDocument(doc);
- const position=()=>{const tracking=doc.querySelector('.movement-hud');element.style.top=tracking?`${Math.ceil(tracking.getBoundingClientRect().bottom+8)}px`:'12px';};position();
+ const position=()=>{
+  const tracking=doc.querySelector('.movement-hud');
+  element.style.top=tracking?`${Math.ceil(tracking.getBoundingClientRect().bottom+8)}px`:'12px';
+  hud?.style.setProperty('--hopmodo-controls-reserve',tracking?'0px':'176px');
+ };position();
  const place=()=>{(doc.fullscreenElement||doc.body).append(element);position();};place();
  view?.addEventListener('resize',position);
  doc.addEventListener('fullscreenchange',place);connect(element);

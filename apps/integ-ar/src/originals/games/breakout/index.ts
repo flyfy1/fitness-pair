@@ -1,23 +1,54 @@
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
-import type { GameController, GameModule, GameServices } from '../../core/game-types';
-import { clamp, makeKit, text } from '../arcade-kit';
-
-type Brick = { x: number; y: number; hp: number };
+import type { GameModule } from '../../core/game-types';
+import { makeKit, text } from '../arcade-kit';
+import { BrickPulseEngine } from './engine.js';
 
 export const breakout: GameModule = {
-  meta: { slug: 'breakout', title: 'Brick Pulse', category: 'arcade', description: 'A luminous brick breaker with escalating pulse rows.', instructions: 'Drag the paddle or use arrow keys; clear every brick.', accent: '#70f0c2', mechanic: 'Bounce ball and clear bricks' },
-  mount(host: HTMLElement, services: GameServices): GameController {
-    const k = makeKit(host, services, 'breakout'); let raf = 0, paused = false, over = false, score = 0, level = 1, paddle = 140;
-    let ball = { x: 180, y: 426, dx: 3.1, dy: -3.5 }, bricks: Brick[] = [];
-    const fill = () => { bricks = []; for (let row = 0; row < Math.min(8, 4 + level); row++) for (let col = 0; col < 8; col++) bricks.push({ x: 16 + col * 42, y: 70 + row * 25, hp: row > 2 ? 2 : 1 }); };
-    const reset = () => { paused = false; over = false; score = 0; level = 1; paddle = 140; ball = { x: 180, y: 426, dx: 3.1, dy: -3.5 }; k.fx.clear(); fill(); };
-    reset(); k.on('pointermove', event => { paddle = clamp(k.point(event as PointerEvent).x - 40, 8, 272); }); k.on('pointerdown', () => { if (over) reset(); }); k.on('keydown', event => { if ((event as KeyboardEvent).key === ' ' && over) reset(); });
-    const draw = () => { const c = k.ctx; k.clear();  c.fillStyle = '#273149'; c.fillRect(0, 40, 360, 2); text(c, `SCORE ${score}   LEVEL ${level}`, 180, 27, 15, '#a8b1c5'); bricks.forEach(brick => { c.fillStyle = brick.hp === 2 ? '#8b7cff' : '#70f0c2'; c.fillRect(brick.x, brick.y, 36, 18); }); c.fillStyle = '#f7f9ff'; c.fillRect(paddle, 500, 80, 11); c.beginPath(); c.arc(ball.x, ball.y, 6, 0, 7); c.fill(); k.fx.draw(); if (paused) text(c, 'PAUSED', 180, 280, 28); if (over) { text(c, 'PULSE LOST', 180, 250, 26, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 282, 15); } };
-    let lastStep = performance.now(); const loop = (now = lastStep) => { if (now - lastStep < 1000 / 60 - .1) { raf = requestAnimationFrame(loop); return; } lastStep = now - (now - lastStep) % (1000 / 60); if (!paused && !over) { if (k.keys.has('ArrowLeft') || k.keys.has('a')) paddle = clamp(paddle - 6, 8, 272); if (k.keys.has('ArrowRight') || k.keys.has('d')) paddle = clamp(paddle + 6, 8, 272); ball.x += ball.dx; ball.y += ball.dy; if (ball.x < 6 || ball.x > 354) { ball.dx *= -1; services.sound.play('move'); } if (ball.y < 45) ball.dy = Math.abs(ball.dy); if (ball.y > 540) { over = true; services.sound.play('fail'); }
-      if (ball.y > 492 && ball.y < 514 && ball.x > paddle - 5 && ball.x < paddle + 85 && ball.dy > 0) { ball.dy = -Math.abs(ball.dy); ball.dx = (ball.x - (paddle + 40)) / 12; k.fx.burst(ball.x, ball.y, '#f7f9ff', 4); services.sound.play('hit'); }
-      for (const brick of [...bricks]) if (ball.x > brick.x - 5 && ball.x < brick.x + 41 && ball.y > brick.y - 5 && ball.y < brick.y + 23) { ball.dy *= -1; k.fx.burst(ball.x, ball.y, brick.hp === 2 ? '#8b7cff' : '#70f0c2'); services.sound.play('hit'); if (--brick.hp === 0) { bricks.splice(bricks.indexOf(brick), 1); score += 10 * level; k.score(score); services.sound.play('clear'); } break; }
-      if (!bricks.length) { level++; score += 100; k.score(score); ball = { x: 180, y: 426, dx: 3 + level * .15, dy: -3.4 - level * .12 }; fill(); k.fx.flash('#70f0c2'); services.reportComplete(level); services.sound.play('upgrade'); } k.fx.step(); } draw(); raf = requestAnimationFrame(loop); };
-    loop(); return { input: command => { if (!paused && !over) paddle = 8 + (command.horizontal + 1) * 132; }, getState: () => ({phase: over ? 'lost' : paused ? 'paused' : 'playing', score, level, paddle, ball: {...ball}, bricks: bricks.length}), pause: () => { paused = true; }, resume: () => { paused = false; }, restart: reset, destroy: () => { cancelAnimationFrame(raf); k.dispose(); } };
-  }
+  meta: {slug: 'breakout', title: 'Brick Pulse', category: 'arcade', description: 'A luminous brick breaker with three lives and escalating pulse rows.', instructions: 'Move the paddle; clear bricks and keep the ball bouncing.', accent: '#70f0c2', mechanic: 'Bounce ball and clear bricks'},
+  mount(host, services) {
+    const k = makeKit(host, services, 'breakout'), engine = new BrickPulseEngine();
+    let raf = 0, paused = false, last = performance.now();
+    const reset = () => { engine.reset(); paused = false; last = performance.now(); k.fx.clear(); k.score(0); };
+    k.on('pointermove', event => { if (!paused) engine.movePaddle(k.point(event as PointerEvent).x - 40); });
+    k.on('pointerdown', () => { if (engine.over) reset(); });
+    k.on('keydown', event => { if ((event as KeyboardEvent).key === ' ' && engine.over) reset(); });
+    const draw = () => {
+      const c = k.ctx, {ball, paddle, score, level, lives, serveRemainingMs, over} = engine;
+      k.clear(); c.fillStyle = '#273149'; c.fillRect(0, 40, 360, 2);
+      text(c, `SCORE ${score}   LEVEL ${level}`, 180, 27, 15, '#a8b1c5');
+      text(c, `LIVES ${lives} / 3`, 180, 58, 13, '#70f0c2');
+      for (const brick of engine.bricks) { c.fillStyle = brick.hp === 2 ? '#8b7cff' : '#70f0c2'; c.fillRect(brick.x, brick.y, 36, 18); }
+      c.fillStyle = '#f7f9ff'; c.fillRect(paddle, 500, 80, 11);
+      c.beginPath(); c.arc(ball.x, ball.y, 6, 0, Math.PI * 2); c.fill(); k.fx.draw();
+      if (over) { text(c, 'PULSE LOST', 180, 250, 26, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 282, 15); }
+      else if (paused) text(c, 'PAUSED', 180, 280, 28);
+      else if (serveRemainingMs > 0) { text(c, `Ball in ${Math.ceil(serveRemainingMs / 1000)}`, 180, 300, 26, '#70f0c2'); text(c, 'Move into position', 180, 329, 15); }
+    };
+    const loop = (now: number) => {
+      const elapsed = now - last; last = now;
+      if (!paused && !engine.over) {
+        if (k.keys.has('ArrowLeft') || k.keys.has('a')) engine.movePaddle(engine.paddle - Math.min(elapsed, 100) * .36);
+        if (k.keys.has('ArrowRight') || k.keys.has('d')) engine.movePaddle(engine.paddle + Math.min(elapsed, 100) * .36);
+        for (const event of engine.advance(elapsed)) {
+          if (event.kind === 'brick' || event.kind === 'paddle') {
+            k.fx.burst(event.x, event.y, event.kind === 'brick' ? '#70f0c2' : '#f7f9ff', 5);
+            services.sound.play(event.kind === 'brick' && event.cleared ? 'clear' : 'hit');
+          } else if (event.kind === 'wall') services.sound.play('move');
+          else if (event.kind === 'level') { k.fx.flash('#70f0c2'); services.reportComplete(engine.level); services.sound.play('upgrade'); }
+          else if (event.kind === 'life-lost' || event.kind === 'lost') services.sound.play('fail');
+          if (event.kind === 'brick' || event.kind === 'level') k.score(engine.score);
+        }
+        k.fx.step();
+      }
+      draw(); raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return {
+      input: command => { if (!paused) engine.movePaddle(8 + (command.horizontal + 1) * 132); },
+      getState: () => ({...engine.snapshot(), phase: engine.over ? 'lost' : paused ? 'paused' : 'playing'}),
+      pause: () => { paused = true; }, resume: () => { paused = false; last = performance.now(); },
+      restart: reset, destroy: () => { cancelAnimationFrame(raf); k.dispose(); },
+    };
+  },
 };
 export default breakout;

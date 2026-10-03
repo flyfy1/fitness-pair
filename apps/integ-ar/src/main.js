@@ -1,5 +1,6 @@
 import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
+import {message,translateText} from '../../../packages/gameplay/i18n.js';
 import './style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import {InvadersTutorial} from './invaders-tutorial.js';
@@ -17,6 +18,7 @@ import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
 const config = arGames.find(game => selected ? game.slug === selected : location.pathname.split('/').includes(game.id)) || arGames[0];
+$('lives-hud').hidden = config.slug !== 'breakout';
 const startGate = createHandsStart($('arena'));
 const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures({oneHandSide:'left'});
 document.title = `${config.title} · Hopmodo`;
@@ -188,6 +190,16 @@ function render(now) {
   if (phase === 'tutorial' && now - lastValidAt >= 250) updatePracticeView('Tracking needs attention. Keep your shoulders, hips and left hand in view.');
   if (phase === 'playing' && now - lastValidAt >= 250) pause('tracking');
   const state = game.getState(); $('score').textContent = String(state.score);
+  if (config.slug === 'breakout') {
+    const lives = `${state.lives} / 3`;
+    if ($('lives').textContent !== lives) $('lives').textContent = lives;
+    if (phase === 'playing') {
+      const cue = state.serveRemainingMs > 0
+        ? message('brickPulse.serveCue',[Math.ceil(state.serveRemainingMs / 1000)])
+        : translateText(config.action);
+      if ($('cue').textContent !== cue) $('cue').textContent = cue;
+    }
+  }
   if (phase === 'playing' && ['lost', 'won'].includes(state.phase)) finish();
   raf = requestAnimationFrame(render);
 }

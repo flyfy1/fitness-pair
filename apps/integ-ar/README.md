@@ -24,6 +24,26 @@ open-source license. The source checkout has no LICENSE/COPYING/NOTICE file.
 Adaptations remove opaque backgrounds/mobile controls, expose semantic input
 and snapshots, suppress paused/finished actions, and retain original mechanics.
 
+## Brick Pulse recovery loop
+
+Brick Pulse starts each round with three lives. Missing the ball preserves the
+score and remaining bricks, holds the next ball over the moving paddle for two
+seconds, then serves automatically. The first serve and each new level have a
+short preparation countdown too. Only the third miss ends the camera round and
+finalizes its local replay. A life loss keeps the same camera session, tracking
+sidecar and recording; it never publishes a clip.
+
+Ball motion and collisions advance in fixed 120 Hz steps, using elapsed active
+time rather than render-frame counts. Manual/tracking pauses freeze the serve
+countdown and physics; a stalled frame advances at most 100 ms. This avoids a
+hidden burst of collisions after a stall. The named-joint input boundary and
+shared countdown, soundtrack, recording and pause controls are unchanged.
+
+Synthetic regressions compare motion, collision events, scores and lives at
+20/30/60/120 FPS, exercise reinforced bricks and level bonuses, and check a full
+three-life round with paused preparation and one persisted replay in Chrome.
+They do not establish human paddle-control accuracy or player enjoyment.
+
 ## Pixel Defense tutorial prototype
 
 Pixel Defense AR alone opens a full-window practice screen on entry. After an

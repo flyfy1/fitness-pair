@@ -101,6 +101,9 @@ waiting/armed, and red means a live microphone is attached to an active recorder
 Its accessible name and tooltip explain the action; only errors open a status
 bubble. Voice remains a separate local track. Replays play it in sync by default,
 with a listening toggle; including it in downloaded/shared video remains explicit.
+Layouts with a movement-status row place the shared toolbar below that row and
+retain the native header's full width for the title, lives and score. Only
+layouts sharing the header row reserve horizontal space for the toolbar.
 
 The host also owns one Debug report control. Recording keeps the latest 90 seconds
 of UUID-linked named-joint data locally. The player must explicitly confirm each

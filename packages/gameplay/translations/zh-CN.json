@@ -925,5 +925,10 @@
   {"id":"clip.resumeSuccess","en":"Public sharing restored. The same link works again.","zh":"公开分享已恢复，原链接重新可用。"},
   {"id":"clip.statusFailure","en":"Sharing status could not be checked. Retry before changing it.","zh":"无法确认分享状态，请重试后再更改。"},
   {"id":"clip.openViewer","en":"Open shared video →","zh":"查看分享的视频 →"},
-  {"id":"clip.publicReady","en":"Public in the gallery","zh":"已公开展示在作品展廊中"}
+  {"id":"clip.publicReady","en":"Public in the gallery","zh":"已公开展示在作品展廊中"},
+  {"id":"brickPulse.lives","en":"LIVES","zh":"生命"},
+  {"id":"brickPulse.livesCount","en":"LIVES {0} / 3","zh":"生命 {0} / 3"},
+  {"id":"brickPulse.serve","en":"Ball in {0}","zh":"{0} 秒后发球"},
+  {"id":"brickPulse.position","en":"Move into position","zh":"移动到合适的位置"},
+  {"id":"brickPulse.serveCue","en":"Ball in {0} · Move into position","zh":"{0} 秒后发球 · 移动到合适的位置"}
 ]

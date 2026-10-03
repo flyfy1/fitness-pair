@@ -6,7 +6,8 @@ import {arGames} from '../../integ-ar/src/catalog.js';
 import {readStoredClip} from './read-stored-clip.js';
 for(const config of arGames)test(`${config.id}: guest plays AR and receives a local camera replay`,async({page},info)=>{
  await syntheticCamera(page);const errors=[],uploads=[];
- page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(['PUT','POST'].includes(r.method()))uploads.push(r.url());});
+ // Cumulative play-session facts contain no camera or tracking data.
+ page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(['PUT','POST'].includes(r.method())&&new URL(r.url()).pathname!=='/api/play-sessions')uploads.push(r.url());});
  await page.goto('/play/'+config.id);const game=page.frameLocator('#game-frame');
  await expect(game.locator('#game-title')).toHaveText(config.title);
  await expect(page.locator('#record-panel')).not.toHaveAttribute('data-state','recording');
@@ -14,9 +15,10 @@ for(const config of arGames)test(`${config.id}: guest plays AR and receives a lo
  await game.locator('#start').click();await startWithHands(game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#record-status')).toContainText('game + camera');
  await page.waitForTimeout(900);await game.locator('#pause').click();
- await page.setViewportSize({width:config.slug==='bubble'?320:390,height:844});
+ await page.setViewportSize({width:320,height:844});
  const microphone=game.getByRole('button',{name:'Record conversation',exact:true});await expect(microphone).toBeInViewport();
  const micBox=await microphone.boundingBox(),tracking=await game.locator('.movement-hud').boundingBox();expect(micBox.y).toBeGreaterThanOrEqual(tracking.y+tracking.height);
+ const header=await game.locator('.hud').boundingBox();expect(header.y+header.height).toBeLessThanOrEqual(tracking.y);
  await expect(game.locator('#finish')).toBeInViewport();
  const cue=await game.locator('#cue').boundingBox(),buttons=await game.locator('.controls').boundingBox();expect(cue.y+cue.height).toBeLessThanOrEqual(buttons.y);
  await page.screenshot({path:info.outputPath('host-mobile.png')});
