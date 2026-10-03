@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { videoProjection, sceneGeometry } from '../src/scene.js';
-import { intersects } from '../../../../apps/dino-run/src/engine.js';
+import { intersects } from '../src/runner.js';
 
 test('mirrored cover projection matches cropped landscape and portrait video without changing input', () => {
   const joint = { x: .25, y: .25 };

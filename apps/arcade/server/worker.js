@@ -1,4 +1,4 @@
-import {isPlayableGame} from '../game-catalog.js';
+import {isPlayableGame,isRecordingGame} from '../game-catalog.js';
 const MAX_POSTER_BYTES=256*1024;
 const MAX_BYTES=200_000_000, ID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
@@ -20,7 +20,7 @@ export function validateUpload(request,url){
  const title=(url.searchParams.get('title')||'').trim(),source=url.searchParams.get('source'),game=url.searchParams.get('game'),duration=Number(url.searchParams.get('duration'));
  const mime=(request.headers.get('Content-Type')||'').split(';')[0];
  if(!title||title.length>90||/[\x00-\x1f]/.test(title))throw fail(400,'Use a title of 1–90 characters.');
- if(!['replay','synthetic'].includes(source)||!isPlayableGame(game))throw fail(400,'Unknown game or recording source.');
+ if(!['replay','synthetic'].includes(source)||!isRecordingGame(game))throw fail(400,'Unknown game or recording source.');
  if(!Number.isFinite(duration)||duration<=0||duration>90)throw fail(400,'Record a clip of 90 seconds or less.');
  if(!['video/mp4','video/webm'].includes(mime))throw fail(415,'Use an MP4 or WebM recording.');
  const length=request.headers.get('Content-Length');if(length!==null){const bytes=Number(length);if(!Number.isSafeInteger(bytes)||bytes<=0)throw fail(400,'Use a nonempty video with a valid size.');if(bytes>MAX_BYTES)throw tooLarge(bytes,'server-header');}

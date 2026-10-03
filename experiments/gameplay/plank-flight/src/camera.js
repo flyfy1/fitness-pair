@@ -1,4 +1,4 @@
-// Adapted from apps/dino-run/src/camera.js; kept local to this experiment.
+// Adapted from PoseCamera; kept local for this experiment’s head-tracking path.
 import { fromMediaPipe } from './pose-provider.js';
 
 const INITIALIZATION_TIMEOUT_MS = 330_000;

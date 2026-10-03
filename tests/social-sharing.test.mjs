@@ -23,3 +23,13 @@ test('local messages invite play and require a video attachment, without fabrica
  assert.match(message.text,/attachment/);assert.match(message.url,/\/play\/motion-quest$/);
  assert.ok(!message.text.includes('/clips/'));assert.ok(!message.text.includes('token'));
 });
+
+test('recordings of retired games invite friends to the current arcade without a dead game link',()=>{
+ for(const game of ['dino-run','dino-ar']){
+  const local=shareMessage({...clip,game},{local:true});
+  assert.match(local.url,/\/#arcade$/);assert.ok(!local.text.includes('/play/'+game));
+  const shared=shareMessage({...clip,game},{origin:'https://example.test'});
+  assert.match(shared.text,/https:\/\/example.test\/#arcade/);
+  assert.equal(new URL(shared.url).pathname,'/clips/fixture');
+ }
+});

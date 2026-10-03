@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PoseCamera } from '../src/camera.js';
+import { PoseCamera } from '../packages/pose-mediapipe/camera.js';
 
 const deferred = () => {
   let resolve;

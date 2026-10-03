@@ -12,7 +12,7 @@ Kids and adults who want a fun way to be more active at home, entering an arcade
 Make moving fun through small camera-controlled games. The primary landing-page action is “Take me to the arcade”.
 
 ## Capabilities and Constraints
-Motion Quest maps calibrated squats to five attacks. Dino Run has an experimental calibrated jump-height input. Recognition stays on device. Keyboard demonstrations and future-game simulations must be clearly labeled.
+Motion Quest maps calibrated squats to five attacks. Jump Game uses guided standing calibration and relative torso movement to control its runner. Recognition stays on device. Keyboard demonstrations and future-game simulations must be clearly labeled.
 Recording starts automatically with each game and stays on the device. A visible notice explains this before play; sharing remains a separate player action. Exported clips include the Hopmodo logo, name, game score, and canonical website. Native file sharing is available where supported, with download and copy-game-link fallbacks. Finished clips remain device-local until a separate explicit sharing action. The requested destination is a GCP bucket; its project, bucket and credentials are pending the owner. Public gallery and individual share pages bring visitors back to the arcade. Do not promise that playable videos cannot be copied.
 
 ## Brand Commitments

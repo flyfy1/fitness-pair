@@ -9,7 +9,7 @@ export function drawPreview(canvas,id){
   round(460,232,115,125,28,'#e8c77e');circle(490,264,8,'#182346');circle(547,264,8,'#182346');round(499,291,34,10,5,'#a97847');
   c.save();c.translate(222,299);c.rotate(-.15);round(-28,-7,60,85,16,'#2347ee');circle(2,-38,35,'#ffe8bb');c.fillStyle='#2347ee';c.beginPath();c.moveTo(-39,-51);c.lineTo(2,-118);c.lineTo(43,-51);c.fill();round(-22,60,22,60,10,'#152c99');round(13,60,22,60,10,'#152c99');c.restore();
   for(let i=0;i<7;i++)circle(305+i*20,258-Math.sin(i/6*Math.PI)*52,6+i%3,'#eeff41');
- }else if(id==='dino-run'){
+ }else if(id==='jump-game'){
   c.fillStyle='#ffbd88';c.fillRect(0,0,w,h);circle(544,105,66,'#fff1be');
   c.fillStyle='#e39068';c.beginPath();c.moveTo(0,350);c.lineTo(170,210);c.lineTo(340,350);c.lineTo(470,245);c.lineTo(720,375);c.lineTo(720,480);c.lineTo(0,480);c.fill();
   c.fillStyle='#f7d6a1';c.fillRect(0,369,w,111);c.fillStyle='#bc8553';c.fillRect(0,369,w,5);

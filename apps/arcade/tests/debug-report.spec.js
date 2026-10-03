@@ -17,7 +17,9 @@ test('opt-in voice command uploads recorded movement data without video by defau
  await page.setViewportSize({width:390,height:844});await speechMock(page);await camera(page);let report=null,videoUploads=0;
  await page.route(url=>url.pathname==='/api/debug-reports',async route=>{report=route.request().postDataJSON();await route.fulfill({status:201,json:{ok:true,id:report.id,video:{status:'not-requested'}}});});
  await page.route(url=>/\/api\/debug-reports\/[^/]+\/video$/.test(url.pathname),async route=>{videoUploads++;await route.fulfill({status:201,json:{ok:true}});});
- await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#start').click();
+ await expect(game.locator('.hands-start')).toBeVisible();await game.locator('body').evaluate(()=>window.startPose.hands='left');await expect(game.locator('.hands-start-title')).toContainText('lower both');await game.locator('body').evaluate(()=>window.startPose.hands='down');
+ await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:7000});
  await game.getByRole('button',{name:'Debug report'}).click();let dialog=page.getByRole('dialog',{name:'Upload debug?'});await expect(dialog.getByLabel('Include gameplay video')).not.toBeChecked();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await dialog.getByRole('button',{name:'Enable voice command'}).click();await expect(dialog.getByRole('status')).toContainText('say “我要上传 debug”');await dialog.getByRole('button',{name:'Continue playing'}).click();
@@ -30,7 +32,7 @@ test('a manual report uploads video only after the player selects it',async({pag
  let report=null,video=null;
  await page.route(url=>url.pathname==='/api/debug-reports',async route=>{report=route.request().postDataJSON();await route.fulfill({status:201,json:{ok:true,id:report.id,video:{status:'pending'}}});});
  await page.route(url=>/\/api\/debug-reports\/[^/]+\/video$/.test(url.pathname),async route=>{video={headers:route.request().headers(),bytes:route.request().postDataBuffer().length};await route.fulfill({status:201,json:{ok:true,id:report.id}});});
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');await game.locator('#demo').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await game.getByRole('button',{name:'Debug report'}).click();const dialog=page.getByRole('dialog',{name:'Upload debug?'});await dialog.getByLabel('Include gameplay video').check();await dialog.getByRole('button',{name:'Upload debug'}).click();
  await expect(dialog.getByRole('status')).toContainText('Debug uploaded. Reference:');expect(report.includeVideo).toBe(true);expect(video.bytes).toBeGreaterThan(0);expect(video.headers['x-debug-video-consent']).toBe('debug-video-v1');expect(video.headers['content-type']).toMatch(/^video\/(mp4|webm)/);
 });

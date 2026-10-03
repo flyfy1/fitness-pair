@@ -1,5 +1,5 @@
 import './style.css';
-import { PoseCamera } from '../../dino-run/src/camera.js';
+import { PoseCamera } from '@fitness-pair/pose-mediapipe/camera';
 import { drawBody } from '../../camera-start/src/body-overlay.js';
 import { squatSession } from '../../../contracts/fixtures/squat-session.js';
 import { newSession, createRecognizer, validateSession, replaySession, MAX_FRAMES, MAX_DURATION_MS, MAX_BYTES } from './session.js';

@@ -5,7 +5,7 @@ import {gameCatalog} from '../game-catalog.js';
 
 export function shareMessage(clip,{origin=SITE_URL,local=false}={}){
  const game=gameCatalog.find(game=>game.id===clip.game||game.aliases?.includes(clip.game));
- const gameURL=new URL('/play/'+encodeURIComponent(game?.id||clip.game),local?SITE_URL:origin).href;
+ const gameURL=new URL(game?'/play/'+encodeURIComponent(game.id):'/#arcade',local?SITE_URL:origin).href;
  const intro=t(clip.source==='synthetic'?`Check out my ${game?.title||'game'} demo on ${BRAND_NAME}!`:`I played ${game?.title||'a game'} on ${BRAND_NAME}!`);
  if(local)return {url:gameURL,text:`${intro}\n${t("I'm sending you my video as an attachment.")}\n${t('Try the game:')} ${gameURL}`,intro};
  // Share the viewer URL, including only its private access token, never media or management URLs.

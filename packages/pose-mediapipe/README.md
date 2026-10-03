@@ -43,3 +43,13 @@ worker/page closes if storage was denied, so a game may download again. Old
 content-addressed entries remain eligible for normal browser eviction. This is
 an asset cache, not offline installation: page/code and manifest access are still
 required. No camera frames enter this cache.
+
+## Shared camera lifecycle
+
+`@fitness-pair/pose-mediapipe/camera` exports `PoseCamera`, used by Jump Game,
+the six AR games and Recognition Lab. The host explicitly starts and stops each
+session and selects callbacks and the bounded inference timeout. This helper
+keeps MediaPipe indices inside the provider, preserves named-joint frame identity,
+and releases owned tracks and workers on cancellation, errors and hidden tabs.
+Camera frames stay on the device. Run `node --test tests/pose-camera.test.mjs`
+from the repository root for lifecycle regression coverage.

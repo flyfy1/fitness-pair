@@ -1,4 +1,4 @@
-import { MOTION_MAX_HEIGHT } from '../../../../apps/dino-run/src/engine.js';
+import { MOTION_MAX_HEIGHT } from './runner.js';
 
 /** Same center-cropped, mirrored transform as the video; input stays unmirrored. */
 export function videoProjection(image, width, height) {

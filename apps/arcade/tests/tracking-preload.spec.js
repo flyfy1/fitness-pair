@@ -23,7 +23,7 @@ test('homepage preloads without camera; real worker reuses persistent bytes acro
   const count = assets.length;
   // All mounted games use the same bytes, including their direct-entry aliases.
   await page.evaluate(async () => {
-    for (const game of ['dino-run', 'dino-ar', 'plank-flight', 'camera-start']) {
+    for (const game of ['plank-flight', 'jump-game', 'camera-start', 'ar-breakout']) {
       await new Promise((resolve, reject) => {
         const worker = new Worker(`/games/${game}/runtime/pose-worker.js`);
         const timer = setTimeout(() => { worker.terminate(); reject(Error('Worker timeout')); }, 30_000);

@@ -15,7 +15,7 @@
     const signal = controller.signal;
     // Arcade aliases must use one canonical key, including direct /games/ entry.
     const root = new URL('runtime/', base);
-    if (/^\/games\/(motion-quest|dino-run|dino-ar|plank-flight|camera-start)\//.test(root.pathname)) root.pathname = '/runtime/';
+    if (/^\/games\/(motion-quest|plank-flight|jump-game|camera-start|ar-[a-z]+)\//.test(root.pathname)) root.pathname = '/runtime/';
     let cache, persistent = true, loaded = 0, total = null;
     const report = (state, extra = {}) => onProgress({ state, loaded, total, persistent, ...extra });
     try {

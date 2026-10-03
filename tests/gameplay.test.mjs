@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createActionController} from '../packages/gameplay/input.js';
 import {createNativeAdapter} from '../apps/arcade/src/gameplay/runtime.js';
-import {Runner} from '../apps/dino-run/src/engine.js';
-import {createRunnerMotionInput} from '../apps/dino-run/src/motion-input.js';
+import {Runner} from '../apps/camera-start/src/runner.js';
+import {createRunnerMotionInput} from '../apps/camera-start/src/motion-input.js';
 
 const session={sessionId:'input-one',source:{kind:'synthetic',id:'generated-input'}};
 const action=(seq,overrides={})=>({version:1,...session,inputSeq:seq,tMs:seq*40,recognizerId:'synthetic-control',action:'jump-height',phase:'active',cue:'ready',progress:.5,calibrationProgress:null,completion:null,heightRatio:.5,calibrated:true,stage:'ready',...overrides});

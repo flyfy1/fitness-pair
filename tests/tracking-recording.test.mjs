@@ -35,7 +35,7 @@ test('camera capture keeps only the matching UUID/source and rebases a trimmed r
 test('synthetic rounds get UUIDs but no skeleton capture',()=>{
  assert.equal(isSessionUUID(sessionId),true);
  assert.equal(isSessionUUID(`keyboard-${sessionId}`),false);
- assert.equal(createTrackingCapture({sessionId,source:{kind:'synthetic',id:sessionId},game:'dino-run',startedAt:0}),null);
+ assert.equal(createTrackingCapture({sessionId,source:{kind:'synthetic',id:sessionId},game:'jump-game',startedAt:0}),null);
 });
 
 test('share-copy tracking follows the selected window and playback speed',()=>{

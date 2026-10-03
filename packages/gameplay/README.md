@@ -6,7 +6,7 @@ rejects stale or foreign frames, and deduplicates completion IDs. Each integrati
 supplies an `accept` predicate and a mapping to the game's own semantic controls.
 It does not acquire a camera, select a model, own rendering, or award points.
 
-Example: `apps/dino-run/src/motion-input.js` maps calibrated jump height to
+Example: `apps/camera-start/src/motion-input.js` maps calibrated jump height to
 `Runner.setHeightRatio()`. Keyboard controls instead call `Runner.command()`.
 The Runner engine imports neither this controller nor any recognition contract.
 A different recognizer can feed the controller without changing game physics.
@@ -32,14 +32,14 @@ freshness, left-hand hold and release from that same result.
 Standing games require a left-hand hold above the shoulder for one second with
 the right hand down, followed by 400 ms with both hands lowered. A gesture begun
 before readiness cannot authorize play. Confirmation never scores. Hosts retain
-their existing game-specific calibration and countdown; Motion Quest and Dino AR
+their existing game-specific calibration and countdown; Motion Quest and Jump Game
 use the gate's optional three-second countdown. There is exactly one countdown.
 New camera sessions reset confirmation; ordinary in-round tracking recovery does
 not add another setup gesture. Push-up Flight reuses its existing head/shoulder
 controller and countdown, with no hand gesture or extra detector.
 
 `createHandsStart` provides the common confirmation prompt. `mountGameEntry`
-provides the shared introduction, steps and controls on all 11 playable routes,
+provides the shared introduction, steps and controls on all nine playable routes,
 including standalone pages. Hosts pass their native buttons/options; the view
 moves them temporarily and restores them before their existing handlers run.
 It never requests a camera or starts inference. Keyboard/pointer alternatives

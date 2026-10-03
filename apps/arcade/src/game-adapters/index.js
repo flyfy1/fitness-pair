@@ -24,11 +24,6 @@ export const motionQuestAdapter=frame=>legacy(frame,(window,doc)=>{
  return {canvas,video:doc.querySelector('#camera'),skeleton:doc.querySelector('#skeleton'),isAR:!!doc.querySelector('.camera-stage'),round:state.roundId,sessionId:state.sessionId,source:state.source,done:state.phase==='complete',stopped:state.phase==='idle',ending:state.phase==='ending',ready:state.phase==='playing',audio:window.motionQuest.getAudioStream?.(),score:`${reps} / 5 squats`,hud:{health:doc.querySelector('#hp-label')?.textContent,cue:doc.querySelector('#arena-title')?.textContent,charge:doc.querySelector('#charge-value')?.textContent,elapsed:doc.querySelector('#elapsed')?.textContent}};
 },'motionquest:replay-state',undefined,(window,callback)=>window.motionQuest?.subscribeTracking?.(callback));
 
-export const dinoARAdapter=frame=>legacy(frame,(window,doc)=>{
- const state=window.dinoAR?.getState(),canvas=doc.querySelector('#world');if(!state||!canvas?.width)return null;
- return {canvas,video:doc.querySelector('#camera'),skeleton:doc.querySelector('#debug')?.checked?doc.querySelector('#skeleton'):null,skeletonMirrored:true,isAR:true,round:state.sessionId,sessionId:state.sessionId,source:state.source,ready:state.status==='running',paused:state.status==='paused',done:state.status==='over',score:`${state.score} points`};
-},undefined,undefined,(window,callback)=>window.dinoAR?.subscribeTracking?.(callback));
-
 export const plankFlightAdapter=frame=>legacy(frame,(window,doc)=>{
  const state=window.plankFlight?.getState(),canvas=doc.querySelector('#scene');if(!state||!canvas?.width)return null;
  return {canvas,video:doc.querySelector('#video'),skeleton:doc.querySelector('#body-overlay'),isAR:true,round:state.sessionId,sessionId:state.sessionId,source:state.source,ready:state.status==='flying',paused:state.status==='paused',ending:state.status==='crashing'||(state.finished&&state.audio?.playing),done:state.finished&&!state.audio?.playing,audio:window.plankFlight.getAudioStream?.(),score:`${Math.floor(state.flightSeconds)}s · ${state.passed} gates`};

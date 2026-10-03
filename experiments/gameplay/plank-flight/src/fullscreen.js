@@ -1,5 +1,5 @@
 import {t} from './i18n.js';
-// Adapted from apps/dino-run/src/fullscreen.js.
+// Adapted from the fullscreen helper now in packages/gameplay/fullscreen.js.
 /** Prefer browser fullscreen, with an in-window fallback for embedded browsers. */
 export function setupFullscreen(area, button, announce) {
   let expanded = false, pending = false, exitedAt = -Infinity;

@@ -19,21 +19,12 @@ and stand upright for about two seconds to calibrate. Raise your left hand for o
 Squat to charge, then stand to attack. The button/Space preview is labeled synthetic.
 The arcade homepage preloads tracking files without camera access. Games reuse verified device-cached files when browser storage is available; first-time and uncached starts show download progress in Motion Quest.
 
-Dino Run in `apps/dino-run/` now offers a calibrated jump-height POC. Start it
-with `npm run dev --workspace dino-run` at <http://127.0.0.1:5180>. Enable the camera,
-stand still, then make one maximum comfortable jump and return. Raise your left hand
-for one second to confirm the measured height, then lower both hands for a
-three-second countdown. Raise both hands for one second to pause or resume,
-lowering them between commands. Dino follows your relative torso rise and descent. Height is a percentage of
-your own calibration, not centimeters. Keyboard mode remains available separately.
-See [Dino setup and evidence](apps/dino-run/README.md).
-
 Gesture Lab is a separate hand-control POC. Start it with
 `npm run dev --workspace gesture-lab` at <http://127.0.0.1:5182>. Explore seven
 built-in hand poses and an experimental sideways wave: thumbs up confirms;
 waving side to side says No. See [the gesture catalog and trial instructions](apps/gesture-lab/README.md).
 
-A full-camera Dino flow is available at <http://127.0.0.1:5274> with
+The current Jump Game flow is available at <http://127.0.0.1:5274> with
 `npm run dev --workspace camera-start`. Large instructions guide standing, automatic movement setup,
 a large left-hand confirmation prompt and a spoken countdown into Jump Game.
 Raise your left hand for one second with your right hand down; no confirmation
@@ -60,7 +51,7 @@ at <http://127.0.0.1:5284/?game=breakout>, or choose a game in the arcade below.
 
 ## Arcade landing page and local clips
 
-`npm run build` now builds the complete arcade, including Motion Quest and Dino Run.
+`npm run build` now builds the complete arcade, including Motion Quest, Push-up Flight, Jump Game and the six AR games.
 Run `npm run preview:arcade` and open <http://127.0.0.1:5191>.
 `npm run build:motion-quest` retains the standalone baseline build.
 The arcade lives in `apps/arcade/`; game sources remain independently owned.
@@ -168,8 +159,7 @@ rules from recording, local replay and sharing. New games register once in
 `apps/arcade/game-catalog.js` and implement the presentation API; existing games
 use explicit adapters. The [action controller](packages/gameplay/README.md) maps
 recognizer output onto game controls independently of the host and recorder.
-Dino Run demonstrates direct keyboard/height controls plus an optional motion
-adapter. Conversation recording is opt-in and stored as a separate local track;
+Jump Game owns the runner engine and its optional height-input adapter. Conversation recording is opt-in and stored as a separate local track;
 players can export the original video or a version including conversation.
 
 Standing camera games use one shared deliberate start: raise the left hand above the shoulder for one second, then lower both hands for the countdown. Push-up Flight reuses its head-and-shoulder readiness without a hand gesture. Pixel Defense practice uses large instructions at the top of the AR view. See [the tutorial prototype](docs/invaders-tutorial-prototype.md).

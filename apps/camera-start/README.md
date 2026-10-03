@@ -2,8 +2,8 @@
 
 A standalone experiment for completing game setup while standing away from the
 screen. The camera fills the viewport; the current instruction is the primary UI.
-After setup, the default page runs **Dino** over the live camera. The existing
-AR scene and runner engine are reused; this app supplies the calibrated movement
+After setup, the default page runs **Dino** over the live camera. The app owns its
+AR scene and runner engine; this app supplies the calibrated movement
 controls. The standalone jump detection test remains at `/?mode=detect`.
 
 ## MVP card
@@ -53,7 +53,7 @@ The primary heading says **Raise your LEFT hand** and changes to **Hold your LEF
 hand up** while progress fills. There is no confirmation button.
 There is no separate Ready step. Right-hand-only and both-hand raises do not confirm.
 
-The existing Dino camera, torso-height recognizer, gesture recognizer and local
+The shared PoseCamera helper, torso-height recognizer, gesture recognizer and local
 model are reused directly. Only fresh, valid, steady torso tracking gates the
 countdown after confirmation.
 Interrupted tracking clearly states why the countdown stopped and restarts it
@@ -191,8 +191,11 @@ full lift). New movements during an arc do not queue or stack extra jumps.
 The automatic movement scale sets the trigger threshold; the response meter
 continues to show the raw movement mapping, not the dinosaur's animated height.
 There is no mandatory maximum jump. Half-body tracking still requires both
-shoulders and hips. The scene comes from `experiments/gameplay/dino-ar/src/scene.js`
-and the motion-mode rules from `apps/dino-run/src/engine.js`.
+shoulders and hips. The scene lives in `src/scene.js` and the runner rules in `src/runner.js`.
+The earlier Dino Run and Dino AR prototypes and their directories were removed
+on 2026-10-03; Jump Game is the retained runner. Shared camera lifecycle and
+fullscreen helpers now live in `packages/pose-mediapipe/camera.js` and
+`packages/gameplay/fullscreen.js`.
 
 The left playfield shows the dinosaur, ground and incoming cacti. The jump prompt
 moves closer to each cactus to match the shorter arc. Large cues

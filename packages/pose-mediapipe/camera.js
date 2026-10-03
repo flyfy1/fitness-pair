@@ -1,4 +1,4 @@
-import { fromMediaPipe } from '@fitness-pair/pose-mediapipe';
+import { fromMediaPipe } from './index.js';
 
 const INITIALIZATION_TIMEOUT_MS = 330_000;
 const INFERENCE_TIMEOUT_MS = 1_000;

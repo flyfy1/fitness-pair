@@ -1,5 +1,5 @@
 import {createActionController} from '../../../packages/gameplay/input.js';
-import { Runner } from '../../dino-run/src/engine.js';
+import { Runner } from './runner.js';
 
 const DELAY_S = .03, GRAVITY = 1000, LIFT = 500, MAX_LIFT_S = .25;
 

@@ -2,8 +2,8 @@
 
 The source prototype is `second-brain/projects/260913-motion-quest`. Its extracted
 pose and action packages can be used without the forest game's DOM or renderer.
-Motion Quest remains the squat reference host. Dino Run now has a separate
-calibrated jump-height camera host; see [its POC guide](../apps/dino-run/README.md).
+Motion Quest remains the squat reference host. Jump Game now has a separate
+calibrated jump-height camera host; see [its POC guide](../apps/camera-start/README.md).
 
 ## Current package responsibilities
 
@@ -53,9 +53,9 @@ sessions, provenance, and stale input. `progress` and `cue` are feedback; neithe
 awards a jump, attack, or score by itself. Recalibration must not make an old
 completion ID reusable. See [the contract](../contracts/README.md) for exact rules.
 
-The Dino Run POC uses the compatible `jump-height` action, with continuous
-`heightRatio` positioning the sprite and deduplicated completion IDs counting
-landings. It does not map squat completions onto fixed jumps. Its motion-mode
+Jump Game uses the compatible `jump-height` action. Coherent rising samples
+trigger a bounded animated arc; observed rise-to-return duration controls its
+height. Deduplicated completion IDs count observed movement cycles. It does not map squat completions onto fixed jumps. Its motion-mode
 obstacles run more slowly; appropriateness for physical jumping still needs human
 trials. See [the compatible action extension](../contracts/proposals/jump-height-poc.md).
 
@@ -87,6 +87,6 @@ named joints directly. They cover five synthetic repetitions,
 explicit completion-only scoring, duplicate and foreign events, recalibration
 IDs, missing joints and unknown confidence, jitter, occlusion, input time gaps,
 and aspect-corrected knee angles. This demonstrates the independent module path;
-it does not measure human recognition accuracy or prove a camera-to-Dino Run
+it does not measure human recognition accuracy or prove a camera-to-Jump Game
 play session. The integration owner's browser checks provide separate evidence
 for the reference host.

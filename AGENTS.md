@@ -35,7 +35,7 @@ Do not imply multiplayer exists because of the project name.
 - `packages/pose-mediapipe/`: baseline local model and named-joint adapter.
 - `packages/action-squat/`: baseline action recognizer and calibration.
 - `packages/action-jump-height/`: relative jump-height calibration and recognition.
-- `apps/dino-run/`: runner game, camera-height POC host and calibration UI.
+- `apps/camera-start/`: Jump Game runner, AR scene, guided camera setup and calibration UI.
 - `packages/game-forest/`: game rules and rendering.
 - `experiments/pose-models/`, `action-recognition/`, `gameplay/`, `evaluation/`:
   independent explorations. Work under `<track>/<experiment-slug>/`.

@@ -1,3 +1,4 @@
+import {startPreview,finishPreview} from './motion-preview.js';
 import {openReplay} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
@@ -17,11 +18,12 @@ const yellow=p=>p[0]>200&&p[1]>200&&p[2]<100;
 test('round completion reveals the current replay; returning to the game preserves three rounds and two unbranded videos',async({page},info)=>{
  test.setTimeout(90000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewportSize({width:390,height:844});
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+
  const ids=[];
  for(let round=0;round<3;round++){
-  await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+  await startPreview(page,game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+  await finishPreview(page,game);
   await expect(game.locator('[data-replay-share]')).toBeVisible({timeout:25000});
   await expect(page.locator('#record-status')).toContainText('Saved on this device');
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
@@ -35,7 +37,7 @@ test('round completion reveals the current replay; returning to the game preserv
   if(round===0)await page.screenshot({path:info.outputPath('automatic-replay-mobile.png')});
   await current.getByRole('button',{name:'Back to game',exact:true}).click();
   expect(await page.evaluate(()=>scrollY)).toBe(0);
-  await expect(game.locator('#start')).toBeInViewport();
+  await expect(game.locator('#again')).toBeInViewport();
  }
  const clips=await stored(page);expect(clips.map(c=>c.id).sort()).toEqual(ids.slice(1).sort());
  await expect(page.locator('#local-result .clip-card')).toHaveCount(2);
@@ -51,7 +53,7 @@ test('round completion reveals the current replay; returning to the game preserv
  await page.route('**/api/config',r=>r.fulfill({json:{sharingEnabled:true}}));
  await page.route('**/api/auth/session',r=>r.fulfill({json:{enabled:true,user:{email:'synthetic@example.test'},csrfToken:'test-only'}}));
  await page.route('**/api/account/clips',r=>r.fulfill({json:{clips:[],usedBytes:0,limitBytes:2e9}}));
- await page.route('**/api/clips/*',r=>{uploaded=r.request().postDataBuffer();return r.fulfill({json:{url:'/clips/test-only',expiresAt:null}});});
+ await page.route('**/api/clips/*',r=>{if(r.request().method()==='PUT')uploaded=r.request().postDataBuffer();return r.fulfill({json:{url:'/clips/test-only',expiresAt:null}});});
  await page.route('**/api/posters/*',r=>r.fulfill({json:{ok:true}}));
  await card.getByRole('button',{name:'Upload & share',exact:true}).click();
  await card.locator('input[name=consent]').check();
@@ -117,28 +119,28 @@ test('starting another round cancels automatic replay reveal while the previous 
   const stop=MediaRecorder.prototype.stop;
   MediaRecorder.prototype.stop=function(){const saved=this.onstop;this.onstop=async event=>{await new Promise(resolve=>setTimeout(resolve,2000));await saved?.call(this,event);};return stop.call(this);};
  });
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await startPreview(page,game);await finishPreview(page,game);
  await expect(game.locator('[data-replay-share]')).toBeVisible({timeout:15000});
  await expect(game.locator('[data-replay-share]')).toHaveText('Preparing video…');
  await expect(game.locator('[data-replay-status]')).toHaveText('Preparing your replay on this device…');
  await expect(game.locator('[data-replay-share]')).toBeDisabled();
- await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await startPreview(page,game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
  await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:4000});
  expect(await page.evaluate(()=>scrollY)).toBe(0);await expect(game.locator('[data-replay-share]')).toBeHidden();
 });
 
 
 test('recording orientation is fixed per round and changes for the next round after rotation',async({page})=>{
- await page.setViewportSize({width:390,height:844});await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.setViewportSize({width:390,height:844});await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await startPreview(page,game);
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(700);
- await page.setViewportSize({width:844,height:390});
+ await page.setViewportSize({width:844,height:390});await finishPreview(page,game);
  await expect(page.locator('#local-result video')).toHaveCount(1,{timeout:15000});
  const portrait=await pixels(page.locator('#local-result video'));expect(portrait.height).toBeGreaterThan(portrait.width);
- await game.locator('#start').click();await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
- await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:15000});
- const landscape=await pixels(page.locator('#local-result video').last());expect(landscape.width).toBeGreaterThan(landscape.height);
+ await startPreview(page,game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
+ await finishPreview(page,game);await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:15000});
+ const landscape=await pixels(page.locator('#local-result video').first());expect(landscape.width).toBeGreaterThan(landscape.height);
  await page.goto('/library');await expect(page.locator('.clip-card video')).toHaveCount(2);
  const recent=await pixels(page.locator('.clip-card video').first()),previous=await pixels(page.locator('.clip-card video').last());
  expect([recent.width,recent.height]).toEqual([landscape.width,landscape.height]);
@@ -176,8 +178,8 @@ test('a failed recording explains the missing replay at round completion',async(
   const stop=MediaRecorder.prototype.stop;
   MediaRecorder.prototype.stop=function(){this.onerror?.(new Event('error'));return stop.call(this);};
  });
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await startPreview(page,game);await finishPreview(page,game);
  await expect(game.locator('[data-replay-status]')).toBeVisible({timeout:20000});
  await expect(game.locator('[data-replay-status]')).toHaveText('This browser could not record the replay.');
  await expect(game.locator('[data-replay-share]')).toHaveText('Video unavailable');
@@ -191,8 +193,8 @@ test('storage denial still reveals a playable current replay with a download war
   if(window!==window.top)return;
   IDBFactory.prototype.open=function(){throw new DOMException('Storage is unavailable.','SecurityError');};
  });
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await startPreview(page,game);await finishPreview(page,game);
  const card=page.locator('#local-result .clip-card');
  await expect(card).toHaveAttribute('data-unsaved','true',{timeout:20000});
  await expect(card.locator('video')).toBeInViewport();
@@ -203,11 +205,11 @@ test('storage denial still reveals a playable current replay with a download war
 
 test('unsupported recording leaves the game playable and explains why no replay appears',async({page})=>{
  await page.addInitScript(()=>{if(window===window.top)window.MediaRecorder=undefined;});
- await page.goto('/play/dino-run');const game=page.frameLocator('#game-frame');
- await game.getByRole('button',{name:'Keyboard mode',exact:true}).click();await game.locator('#start').click();
+ await page.goto('/play/motion-quest');const game=page.frameLocator('#game-frame');
+ await startPreview(page,game);await finishPreview(page,game);
  await expect(game.locator('[data-replay-status]')).toBeVisible({timeout:20000});
  await expect(game.locator('[data-replay-status]')).toHaveText('Recording is unavailable in this browser.');
  await expect(game.locator('[data-replay-share]')).toHaveText('Video unavailable');
- await expect(game.locator('#start')).toBeEnabled();
+ await expect(game.locator('#again')).toBeEnabled();
  expect(await page.evaluate(()=>scrollY)).toBe(0);
 });

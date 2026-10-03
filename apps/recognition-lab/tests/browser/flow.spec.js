@@ -124,7 +124,7 @@ test('real local model captures a public image without external browser requests
     };
   }, `data:image/jpeg;base64,${bytes.toString('base64')}`);
   const external = [], errors = []; page.on('pageerror', e => errors.push(e.message));
-  page.on('request', r => { if (!r.url().startsWith('http://127.0.0.1:5277') && !r.url().startsWith('data:')) external.push(r.url()); });
+  page.on('request', r => { const url=new URL(r.url()); if (url.protocol !== 'data:' && url.origin !== 'http://127.0.0.1:5277') external.push(r.url()); });
   await page.goto('/'); await page.locator('#start').click();
   await expect(page.locator('#mode')).toHaveText('RECORDING · LOCAL', { timeout: 35000 });
   await page.locator('#stop').click();

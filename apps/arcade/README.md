@@ -7,9 +7,9 @@ dedicated Hopmodo property. Analytics is disabled on localhost and other hosts.
 Query strings are omitted, and individual `/clips/:id` URLs are grouped under one
 report path. Camera frames, recordings and local clip data are never included.
 
-Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Dino Run, Dino AR, Push-up Flight and Jump Game (guided camera Dino) under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
+Run `npm run build:arcade` at repository root, then `npm run preview:arcade` (port 5191). The build includes Motion Quest, Push-up Flight, Jump Game and six AR games under `/games/`. Each standalone game build remains available. All mounted games resolve tracking assets through the same-origin shared `/runtime/` directory. Root Sites deployment uses a Worker with static assets and optional GCP secrets.
 
-Recording starts automatically when a game is running. Motion Quest starts after standing calibration reaches gameplay readiness, or immediately on entering its synthetic preview. Permission, model loading and initial calibration are excluded. A visible notice explains that the game, enabled camera, named body-joint coordinates and available game sound are stored on this device; microphone audio is requested only after the player clicks Record conversation and is stored as a separate local track. Each finished round produces a replay without another recording choice. Every session has a UUID v4 shared by its presentation and PoseFrames; the encoded clip has a separate artifact UUID. Explicit session identifiers distinguish immediate restarts; a previous replay can finish processing while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest retains the full charge, projectile, impact and victory animation before saving. Its camera stops at the final repetition; the recorder freezes the last camera frame while the game effects finish. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Dino uses a camera inset. Saved previews and gallery uploads contain the original game view without a promotional footer or invitation.
+Recording starts automatically when a game is running. Motion Quest starts after standing calibration reaches gameplay readiness, or immediately on entering its synthetic preview. Permission, model loading and initial calibration are excluded. A visible notice explains that the game, enabled camera, named body-joint coordinates and available game sound are stored on this device; microphone audio is requested only after the player clicks Record conversation and is stored as a separate local track. Each finished round produces a replay without another recording choice. Every session has a UUID v4 shared by its presentation and PoseFrames; the encoded clip has a separate artifact UUID. Explicit session identifiers distinguish immediate restarts; a previous replay can finish processing while the next round records. Backgrounding saves the current segment, and returning resumes automatic capture. The host composites the game's canvas and the camera preview already enabled in the game; it never requests an additional camera stream. Motion Quest retains the full charge, projectile, impact and victory animation before saving. Its camera stops at the final repetition; the recorder freezes the last camera frame while the game effects finish. Motion Quest AR combines mirrored camera and landmarks behind the transparent game layer; Jump Game renders over the full camera view. Saved previews and gallery uploads contain the original game view without a promotional footer or invitation.
 
 Recording keeps up to the latest 90 seconds at normal speed. New footage replaces the oldest footage while gameplay continues. Capture ends on completion, camera loss, exit, or backgrounding, with a 100 MiB memory safety limit and a 150 MiB local library limit. An encoder or memory-limit failure is reported without interrupting gameplay. New replays and short share copies save a small JPEG alongside the video. Rolling replays use the first retained frame, so overwritten footage cannot remain in the thumbnail. Local cards load video only when the player clicks Play replay. Clips without a thumbnail show a playback placeholder without decoding while browsing. Choose Generate thumbnail to prepare and save the first frame on this device; it can be cancelled and stops if the page is hidden. Gallery, shared-clip pages and My shared clips likewise load only a still image until Play replay. Publication also uploads the chosen video’s JPEG; retry publication if the video was saved but its thumbnail upload failed.
 
@@ -29,7 +29,7 @@ Cloud sharing on `fitness.integ.life` allows anonymous public uploads within one
 
 ## Add a game
 
-The homepage lists only Motion Quest, Push-up Flight and Jump Game. Keep additional demos registered with `listed: false` until they are ready to appear in the arcade. This hides their homepage cards and links while preserving direct `/play/:id` access, mounted builds, recording and sharing.
+The homepage features Motion Quest, Push-up Flight and Jump Game. Six AR games and the Orbit Pop concept sit in the expandable Other games section. Dino Run and Dino AR were removed on 2026-10-03, including their source directories and build mounts. Existing saved videos remain available for playback, download and explicit sharing; their original game IDs are retained.
 
 Add one entry in `game-catalog.js` for the UI, build and publication allowlist, and select a presentation adapter. Prefer the native API described in [the shared gameplay host](src/gameplay/README.md); the recorder never needs a game-specific change. No generic event bus or new recognition semantics are introduced.
 
@@ -60,15 +60,15 @@ no landing-page class. These checks cover presentation, not human recognition.
 
 ## Latest game mounts
 
-Dino AR and Push-up Flight retain their camera and keyboard/pointer preview modes. Jump Game uses its guided standing/range/countdown flow. Their cards label experimental controls. All five game adapters use existing read-only game state to detect start, round identity, and completion. Dino AR's already-projected skeleton is not mirrored twice. Jump Game composites its smaller game canvas into the full camera viewport using DOM rectangles. Push-up Flight preserves its crash sequence using a frozen camera frame when the game has already stopped its camera. No recognition contract changes were needed.
+Push-up Flight retains camera and pointer preview modes. Jump Game uses guided
+standing calibration, hand confirmation and a countdown. Three legacy adapters
+read their game states; the six AR games expose the native presentation API.
+Jump Game places its game canvas over the full camera viewport. Push-up Flight
+preserves the crash sequence when its camera has stopped.
 
-All five playable `/play/` routes share `src/game-shell.js` and `src/game-shell.css`. The native game fills the browser viewport from entry, with its own stage, status and controls. The game title or home mark returns to the arcade; replay tools sit directly below the game and receive focus automatically after the current round finishes saving. Landing navigation, duplicate game introductions and fixed-height cards are excluded from this layout. Standalone `/games/` routes and the labeled Orbit Pop concept retain their own pages. Motion Quest remains the primary recording reference.
-
-Layout checks cover all five games at 1440×1000, 390×844 and 320×740, including
-viewport sizing, reachable start controls, pointer/keyboard return navigation,
-recording notices and replay placement. Synthetic browser flows also cover game
-entry and local replays for every game, plus the separate concept preview. These
-checks establish presentation and software behavior, not human movement accuracy.
+All nine playable routes share the full-window game shell and local replay tools.
+Orbit Pop remains a labeled button concept. Browser checks distinguish synthetic
+input and public model fixtures from human recognition evidence.
 
 ## Movement control preparation
 
@@ -236,3 +236,21 @@ changes use generation-pinned Cloud Storage reads and conditional replacement of
 publication metadata, so a concurrent removal cannot be overwritten by a stale
 pause/restore operation. Video and poster bytes are not rewritten. Owner checks,
 same-origin protection and account CSRF apply before mutation.
+
+## Prototype retirement validation (2026-10-03)
+
+Dino Run and Dino AR no longer have source folders, game cards or build mounts.
+Jump Game now owns the reused runner and scene; PoseCamera and fullscreen live
+in their shared packages. Regression tests use the retained games rather than
+the retired keyboard hosts. Existing clip metadata is still accepted for sharing,
+and invitations from retired clips lead to the current arcade.
+
+Validation: root unit tests (132), Jump Game unit tests (18), server tests (22),
+Recognition Lab unit tests (5), Pi upload/identity tests (6), gateway tests (21),
+and the complete nine-game build passed. Browser checks cover the arcade shell,
+recording, replay/export, feedback, tracking preload, statistics, Jump Game's
+full loop and Recognition Lab's camera lifecycle and local public-image model.
+During migration, feedback replay focus and short landscape dialog overflow
+were corrected; old fixture assertions were aligned with deliberate left-hand
+entry and local blob-backed model assets. Synthetic/public-fixture checks do not
+establish human recognition accuracy.

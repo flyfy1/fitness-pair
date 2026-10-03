@@ -26,7 +26,7 @@ export function mountGameFeedback(game, runtime, {container, stopGame}) {
    const button=document.createElement('button');button.type='button';button.dataset.rating=rating;button.setAttribute('aria-label',label);button.innerHTML=`<span aria-hidden="true">${icon}</span><b>${label}</b>`;group.append(button);
   }
   const status=overlay.querySelector('[role=status]');
-  if(naturalCompletion)overlay.querySelector('[data-view-replay]').onclick=()=>{overlay.remove();document.querySelector('#local-result h2')?.focus();};
+  if(naturalCompletion)overlay.querySelector('[data-view-replay]').onclick=()=>{overlay.remove();document.querySelector('#local-result h2')?.focus({preventScroll:true});};
   overlay.querySelector('[data-play-again]').onclick=()=>location.reload();
   for(const button of group.querySelectorAll('button'))button.onclick=async()=>{
    for(const choice of group.querySelectorAll('button'))choice.disabled=true;

@@ -45,6 +45,8 @@
 }
 .game-feedback-card {
   width: min(520px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
   padding: clamp(28px, 6vw, 48px);
   border-radius: 28px;
   background: #f3f4ed;

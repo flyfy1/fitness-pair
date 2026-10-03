@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Runner, MOTION_MAX_HEIGHT } from '../src/engine.js';
+import { Runner, MOTION_MAX_HEIGHT } from '../src/runner.js';
 import {createRunnerMotionInput} from '../src/motion-input.js';
 
 test('calibrated motion height directly follows rise/descent; progress never counts jumps', () => {

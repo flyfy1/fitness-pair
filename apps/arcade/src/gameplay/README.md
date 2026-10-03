@@ -9,7 +9,7 @@
   module's camera/audio tracks.
 - Loop: game + optional action controller → presentation adapter → shared shell
   and recorder → local replay + aligned named-joint tracking + optional conversation → selected export.
-- Proof: all five existing game mounts and input paths, synthetic recording/audio
+- Proof: all current game mounts and input paths, synthetic recording/audio
   regression, a game with no recognizer driving the same host, and source-swapping
   controller tests. No private participant recordings.
 - Boundary: retain native game views and recognizers; no plugin discovery, event
@@ -50,15 +50,15 @@ portrait-browser regressions verify a 150 ms readiness/dimension interruption,
 the decoded replay beyond six seconds, and cleanup after a real camera stop.
 These checks do not establish behavior on a physical Android device.
 
-Each entry in `apps/arcade/game-catalog.js` selects a presentation adapter. Only the four legacy adapters inspect game-specific
-DOM/API shapes. Dino Run implements the native presentation API directly. The host and recorder consume `GameplayFrame`; they never switch
+Each entry in `apps/arcade/game-catalog.js` selects a presentation adapter. Only the three legacy adapters inspect game-specific
+DOM/API shapes. The six AR games implement the native presentation API directly. The host and recorder consume `GameplayFrame`; they never switch
 on game IDs. New games expose the documented presentation API directly and use
 `createNativeAdapter`. All media stays same-origin and local until publication.
 
 Action integration is separate: `packages/gameplay/input.js` validates and maps
 `ActionFrame` into game commands. A game receives semantic controls (for example,
-height ratio), not landmarks, model indexes or a recognizer. Dino Run is the
-reference implementation; its engine can run entirely without pose contracts.
+height ratio), not landmarks, model indexes or a recognizer. Jump Game owns the runner reference implementation; its engine can run entirely
+without pose contracts.
 
 
 ## Add a game

@@ -1,6 +1,6 @@
 # Relative jump height recognizer
 
-An experimental, pure `PoseFrame → ActionFrame` recognizer for Dino Run. It uses
+An experimental, pure `PoseFrame → ActionFrame` recognizer used by Jump Game. It uses
 named hips and shoulders, plus knees and ankles when visible; model index arrays,
 camera access and rendering remain outside this package. No frames or landmarks are stored to disk.
 
@@ -111,7 +111,7 @@ occlusion, walking in depth and camera movement can affect this estimate. It is
 relative image displacement, not centimeters, physical jump height or exercise
 assessment. The confidence threshold is a MediaPipe-oriented POC heuristic.
 
-## Explicit maximum confirmation (Dino host)
+## Explicit maximum confirmation (optional)
 
 `new JumpHeightRecognizer({ manualMaximum: true, preferUpperBody: true })` keeps the
 existing default API available while opting into torso tracking and manual acceptance.
@@ -124,8 +124,8 @@ Manual candidates require at least two elevated samples over 60 ms and a rise of
 at least max(0.015 image height, 0.06 torso length). They survive the 15-second idle
 and 2.5-second maximum-flight timeouts; long joint loss, position/scale drift and
 explicit recalibration still discard them. Live motion keeps the existing timeout
-and completion rules. `confirm-maximum` is an additive cue. Dino uses this option
-because missed feet/landing and automatic timeout resets made calibration hard to finish.
+and completion rules. `confirm-maximum` is an additive cue. The retired Dino Run prototype used this option. Jump Game uses an automatic
+body-proportion range instead of maximum-jump calibration.
 
 ## Countermovement before a jump
 
@@ -183,8 +183,8 @@ not. Callers that never set a range retain maximum-jump calibration unchanged.
 
 Configured outputs add `rangeSource: slider` and `previewHeightRatio` (0–1) for a
 host's live response meter. Preview is zero on missing tracking; during calibration
-it never changes contract `progress` or emits a completion. Camera Start opts into
-this path; the standalone Dino host keeps its own start policy.
+it never changes contract `progress` or emits a completion. Jump Game retains this API for independent recognition experiments; its normal
+play flow selects an automatic body-proportion range.
 
 ### Retained game calibration
 
