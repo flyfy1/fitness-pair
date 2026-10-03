@@ -9,7 +9,7 @@ for (const interruption of ['readyState', 'videoWidth']) {
   await page.goto('/play/jump-game');
   const game = page.frameLocator('#game-frame');
   await game.locator('#primary').click();
-  await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.', {timeout:12000});
+  await expect(game.locator('#instruction')).toHaveText('Bring your hands together.', {timeout:12000});
   await confirmWithHand(game);
   await expect(page.locator('#record-panel')).toHaveAttribute('data-state', 'recording');
   // Synthetic jumps keep the real game running past its first obstacles.

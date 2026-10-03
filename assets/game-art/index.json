@@ -271,6 +271,24 @@
       "transparent": true,
       "bytes": 968363,
       "sha256": "b7540766a9634e1222d385da06cb642b4866da4ac7ce9308455e2697304d4813"
+    },
+    {
+      "path": "poses/pose-upper-together-v1.svg",
+      "role": "poses",
+      "width": 220,
+      "height": 210,
+      "transparent": true,
+      "bytes": 1168,
+      "sha256": "deee014f409af53500af42c25eaf7abd292767eaf286e3aaaef78ef8c5cc48a4"
+    },
+    {
+      "path": "poses/pose-upper-lowered-v1.svg",
+      "role": "poses",
+      "width": 220,
+      "height": 210,
+      "transparent": true,
+      "bytes": 1150,
+      "sha256": "c630a891d78fec7788d1a415091f3d6da3706c3bf8b648325550b6d8cb71b335"
     }
   ]
 }

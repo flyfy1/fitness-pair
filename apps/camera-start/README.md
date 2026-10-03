@@ -13,7 +13,7 @@ controls. The standalone jump detection test remains at `/?mode=detect`.
 - **Risk:** a short body jump must trigger a complete, smooth Dino arc; longer
   observed rise-to-return time should produce a higher arc without noise or pause
   time increasing height.
-- **Loop:** enable camera → stand still → automatic movement setup → raise the left hand for one second
+- **Loop:** enable camera → stand still → automatic movement setup → bring the hands together for one second
   → three-second countdown → rise and return to control Dino
   → clear cacti or collide → see results → play again.
 - **Proof:** production-browser synthetic setup, duration-based animation, obstacle
@@ -47,11 +47,10 @@ of that visible image cannot satisfy calibration or gestures. Both shoulders and
 hips must be visible. Both wrists must be visible for hand confirmation. The
 progress indicator has three steps: **Stand → Confirm → Jump**. Standing captures
 the baseline and sets
-the movement range automatically. Raise your **LEFT hand above your shoulder for
-one second**, keeping your right hand down, to enter the three-second countdown.
-The primary heading says **Raise your LEFT hand** and changes to **Hold your LEFT
-hand up** while progress fills. There is no confirmation button.
-There is no separate Ready step. Right-hand-only and both-hand raises do not confirm.
+the movement range automatically. In game mode, bring both hands together near the
+chest or face for one second, then separate and lower them before the countdown.
+This uses wrist proximity, not palm or finger recognition. Detection-only mode
+retains the left-hand confirmation described by its evaluation controls.
 
 The shared PoseCamera helper, torso-height recognizer, gesture recognizer and local
 model are reused directly. Only fresh, valid, steady torso tracking gates the
@@ -108,7 +107,7 @@ npm run test:browser --workspace camera-start
 
 Production Chrome checks on isolated port 5192 cover viewport camera coverage and
 large text at 1440×960, 390×844 and 844×390; automatic setup without a jump;
-left-hand confirmation, clear missing-wrist guidance and no confirmation button;
+game-mode hands-together confirmation, clear missing-wrist guidance and no confirmation button;
 live response to small movement; optional body
 overlay visibility and cleanup; noisy takeoff; interrupted countdowns; persisted
 logs; permission recovery and fullscreen. Shared tests verify selected ranges,
@@ -170,8 +169,7 @@ maximum-jump requirement. The response scale uses 15% of standing torso length;
 this is a relative screen-space scale, not centimeters or a personal maximum.
 The **Live jump response** meter previews movement after baseline capture.
 A coherent rise reaching 12% of this response scale can trigger the animation;
-its final height depends on observed movement duration. Stand upright and raise your
-left hand for one second to start the countdown.
+its final height depends on observed movement duration. Stand upright, bring both hands together for one second, then lower them to start the countdown.
 
 Each camera session captures a new baseline. The log marks `rangeSource: automatic`
 and the fixed response scale on confirmation, and records overlay toggles.
@@ -316,8 +314,9 @@ and explicit fresh-session reset. Camera tests retain bounded failure cleanup.
 Step two stays selected after baseline capture, including crouching, temporary
 loss of joints and rejected torso geometry. Confirmation progress accumulates only
 while fresh torso tracking can confirm; an invalid pose cannot consume the hand
-command. Returning upright with the left hand still raised starts a new valid
-one-second hold. The right hand must stay down, and both wrists must be visible.
+command. Returning upright requires a new valid one-second start gesture. Both wrists
+must be visible. Game mode uses hands together; detection-only mode uses a left
+hand raise with the right hand down.
 A small shoulder lift with stable hips can confirm, so raising the hand does not
 require keeping both shoulders at their original height. Camera restart and
 changed image dimensions deliberately acquire a new baseline.

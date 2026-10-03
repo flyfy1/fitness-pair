@@ -2,14 +2,14 @@ import {movementArt} from '../../arcade/src/movement-art.js';
 import './tutorial.css';
 const copy={
  intro:['LEARN THE CONTROLS','Move. Shoot. Try it.','Move sideways to steer. Left hand fires.','sway','Move your torso'],
- requesting:['CAMERA SETUP','Allow your camera.','Show your shoulders, hips and hands.','stand','Stand in view'],
+ requesting:['CAMERA SETUP','Allow your camera.','Show your shoulders and hands.','stand','Stand in view'],
  loading:['CAMERA SETUP','Getting ready to see you.','Keep your body in view.','stand','Hands down'],
  calibrating:['CAMERA SETUP','Stand still. Hands down.','Face the camera. Hold your position.','stand','Stand centered'],
  left:['TRY 1 OF 3 · STEERING','Move your body left.','Hands down. Move left and hold.','sway-left','← Move your torso'],
  right:['TRY 2 OF 3 · STEERING','Now move right.','Move right. The ship follows you.','sway-right','Move your torso →'],
  fire:['TRY 3 OF 3 · FIRING','Raise your LEFT hand.','LEFT hand above your shoulder. Right hand down.','raise','LEFT hand fires'],
  lower:['TRY 3 OF 3 · RESET','Shot! Lower your LEFT hand.','Below your shoulder. Ready for another shot.','lower','Lower to fire again'],
- ready:['CONTROLS CONFIRMED','Raise your LEFT hand.','Hold for one second. Then lower both hands.','stand','Ready to play'],
+ ready:['CONTROLS CONFIRMED','Bring your hands together.','Near your chest or face. Hold for one second, then lower them.','together','Ready to play'],
 };
 export function mountTutorial(root,{onStart,onSkip,onCancel}){
  const section=document.createElement('section');section.id='tutorial';section.hidden=true;section.setAttribute('aria-labelledby','tutorial-title');

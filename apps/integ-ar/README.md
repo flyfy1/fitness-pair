@@ -63,10 +63,18 @@ through the instruction area. Missing or stale tracking cannot finish a step.
 
 The original game stays paused with zero score and no shots during practice.
 Its presentation phase remains `setup`, so the shared recorder does not capture
-the tutorial. After confirmation, raise both hands for one second, then lower them to begin the fresh countdown.
+the tutorial. After confirmation, bring both hands together for one second, then lower them to begin the fresh countdown.
 Skip tutorial is available before permission and during practice; it still
 requires normal camera setup and the two-hand start gesture. Cancellation stops camera/model resources and a
 new camera attempt starts practice again. Completion/skip lasts for this page
 only. All six games share the same two-hand start gesture.
 
 See [the bounded prototype and evidence](../../docs/invaders-tutorial-prototype.md).
+
+## Upper-body framing
+
+All six AR games calibrate from both shoulders without hips or legs. Sit or stand,
+keep both hands visible for setup, bring them together near your chest or face
+for one second, then separate and lower them for the countdown. This start gesture
+does not fire/drop/throw; left-hand actions and both-hands-raised pause remain.
+See [camera framing and evidence](../../docs/camera-framing.md).

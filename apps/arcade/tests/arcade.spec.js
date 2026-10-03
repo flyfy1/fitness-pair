@@ -46,7 +46,7 @@ test('concept is labeled and can complete with a keyboard',async({page})=>{
 test('Jump Game keeps its local replay recording through a manual pause',async({page})=>{
  await syntheticCamera(page);await page.goto('/play/jump-game');const game=page.frameLocator('#game-frame');
  await expect(page.getByRole('button',{name:'Record my game',exact:true})).toHaveCount(0);
- await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.',{timeout:12000});
+ await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Bring your hands together.',{timeout:12000});
  await confirmWithHand(game);await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
  await game.getByRole('button',{name:'Pause',exact:true}).click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');
@@ -225,7 +225,7 @@ test('Push-up Flight demo records the crash sequence and saves automatically',as
 test('guided camera Dino calibrates and saves a replay on manual finish with synthetic camera input',async({page})=>{
  await syntheticCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');
  await expect(game.locator('#feedback')).toContainText('records on this device');
- await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.',{timeout:12000});
+ await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Bring your hands together.',{timeout:12000});
  await confirmWithHand(game);
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});
  await page.waitForTimeout(900);await game.locator('#show-settings').click();await game.locator('#end-run').click();

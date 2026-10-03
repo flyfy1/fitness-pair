@@ -1,5 +1,6 @@
 import './entry-view.css';
 import {languageControl} from './localize-dom.js';
+import {controlProfiles, upperBodyStart} from './control-profiles.js';
 import {gameCovers} from './game-covers.js';
 // Reuse the game's real buttons and their handlers; this view has no camera or
 // recognition lifecycle and cannot calibrate or infer a pose a second time.
@@ -16,6 +17,9 @@ export function mountGameEntry({root,gameId,title,description,buttons,options=[]
   card.classList.add('has-cover');card.append(image,content);
  }
  view.querySelector('[data-entry-start]').textContent=automatic?'Keep your head and one shoulder in view for the countdown.':'Raise your LEFT hand for one second, then lower it for the countdown.';
+ const profile=controlProfiles[gameId];
+ if(profile){const note=document.createElement('p');note.className='game-entry-framing';note.innerHTML='<strong></strong><span></span>';note.querySelector('strong').textContent=profile.label;note.querySelector('span').textContent=profile.framing;view.querySelector('.game-entry-description').after(note);
+ if(profile.startGesture==='hands-together')view.querySelector('[data-entry-start]').textContent=upperBodyStart;}
  const originals=[];
  for(const [items,target] of [[buttons,'.game-entry-actions'],[options,'.game-entry-options']])for(const element of items.filter(Boolean)){
   const marker=document.createComment('entry-control');element.before(marker);originals.push({element,marker});view.querySelector(target).append(element);

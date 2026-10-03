@@ -22,8 +22,8 @@ const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
 const config = arGames.find(game => selected ? game.slug === selected : location.pathname.split('/').includes(game.id)) || arGames[0];
 $('lives-hud').hidden = config.slug !== 'breakout';
-const startGate = createHandsStart($('arena'));
-const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures({oneHandSide:'left'});
+const startGate = createHandsStart($('arena'), {gesture:'hands-together'});
+const recognizer = new BodyArcadeRecognizer(config), gestures = new BodyGestures({oneHandSide:'left',handsTogether:true});
 document.title = `${config.title} · Hopmodo`;
 $('game-title').textContent = config.title;
 $('category').textContent = config.category.toUpperCase() + ' · CAMERA AR';
@@ -60,7 +60,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
       $('instruction').textContent = 'Allow your camera'; $('detail').textContent = 'Waiting for camera permission…';
     } else if (status.state === 'loading') {
       $('instruction').textContent = 'Preparing movement tracking'; $('detail').textContent = 'Loading the local pose model. You can cancel below.';
-    } else if (status.state === 'ready') { $('instruction').textContent = 'Stand still'; $('detail').textContent = 'Keep your shoulders, hips and hands visible.'; }
+    } else if (status.state === 'ready') { $('instruction').textContent = 'Stand still'; $('detail').textContent = 'Keep your shoulders and hands visible. You can sit or stand.'; }
     if (tutorialWanted) tutorialView.update(status.state === 'ready' ? 'calibrating' : status.state, {camera: true});
     $('tracking').textContent = status.state === 'ready' ? 'Finding your torso' : status.state === 'loading' ? 'Preparing tracking' : 'Waiting for camera';
   },
@@ -69,7 +69,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     trackingPublisher.emit(frame);
     if (performance.now() - frame.tMs >= 250) return;
     if (phase === 'paused') recognizer.release();
-    pose = frame; action = recognizer.update(frame); const hands = gestures.update(frame);
+    pose = frame; action = recognizer.update(frame); gestures.handsTogether = !startGate.open; const hands = gestures.update(frame);
     if (!action) return;
     const valid = ['active', 'ready', 'completed'].includes(action.phase);
     $('tracking').textContent = action.phase === 'missing' ? 'Tracking needs attention' : action.phase === 'calibrating' ? 'Calibrating torso' : 'Torso tracked · on device';
@@ -143,7 +143,7 @@ function setPhase(next) {
 }
 function friendlyCue(cue) { return cue.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase(); }
 function updatePracticeView(feedback = '') {
-  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'Raise your LEFT hand.' : ''), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
+  tutorialView.update(tutorial.step, {feedback: feedback || (tutorial.step === 'ready' ? 'Bring your hands together.' : ''), progress: tutorial.progress, horizontal: action?.controls.horizontal || 0, camera: camera.active});
 }
 function leaveTutorial() {
   tutorialWanted = false; recognizer.release(); readySince = null;
@@ -211,7 +211,7 @@ function render(now) {
   if (['playing', 'paused', 'complete'].includes(phase)) ctx.drawImage(sourceCanvas, (width - w) / 2, top + (available - h) / 2, w, h);
   // Clear old bodies when inference stops; never draw a frozen person as live tracking.
   drawBody($('skeleton'), camera.running && pose && now - pose.tMs < 250 ? pose : null);
-  if (phase === 'tutorial' && now - lastValidAt >= 250) updatePracticeView('Tracking needs attention. Keep your shoulders, hips and left hand in view.');
+  if (phase === 'tutorial' && now - lastValidAt >= 250) updatePracticeView('Tracking needs attention. Keep your shoulders and left hand in view.');
   if (phase === 'playing' && trackingGrace(lastValidAt, now).expired) pause('tracking');
   if (phase === 'paused' && pauseReason === 'tracking') showRecovery(recovery.read(now));
   const holding = phase === 'playing' && (trackingGrace(lastValidAt, now).holding || !['active', 'ready', 'completed'].includes(action?.phase));

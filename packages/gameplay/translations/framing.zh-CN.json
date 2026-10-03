@@ -1,0 +1,177 @@
+[
+  {
+    "id": "framing.0",
+    "en": "Upper body",
+    "zh": "上半身"
+  },
+  {
+    "id": "framing.1",
+    "en": "Full body",
+    "zh": "全身"
+  },
+  {
+    "id": "framing.2",
+    "en": "No camera",
+    "zh": "无需摄像头"
+  },
+  {
+    "id": "framing.3",
+    "en": "All games",
+    "zh": "全部游戏"
+  },
+  {
+    "id": "framing.4",
+    "en": "Camera framing",
+    "zh": "摄像头取景范围"
+  },
+  {
+    "id": "framing.5",
+    "en": "Keep both shoulders and hands visible. Hips and legs can stay outside the frame. You can play seated.",
+    "zh": "保持双肩和双手入镜。髋部和腿可以在画面外，也可以坐着玩。"
+  },
+  {
+    "id": "framing.6",
+    "en": "Keep your head and at least one shoulder visible. No hand gesture is needed to start.",
+    "zh": "保持头部和至少一侧肩膀入镜，无需手势即可开始。"
+  },
+  {
+    "id": "framing.7",
+    "en": "Keep both shoulders and hips visible. Feet can stay outside the frame; you still need standing room to rise and return.",
+    "zh": "保持双肩和髋部入镜。双脚可以在画面外，但仍需站立和上下移动的空间。"
+  },
+  {
+    "id": "framing.8",
+    "en": "Keep shoulders through ankles visible, with room to squat and stand.",
+    "zh": "保持肩膀到脚踝入镜，留出下蹲和站起的空间。"
+  },
+  {
+    "id": "framing.9",
+    "en": "Use touch or a pointer. This concept does not use camera tracking.",
+    "zh": "使用触屏或鼠标。此概念游戏不使用摄像头追踪。"
+  },
+  {
+    "id": "framing.10",
+    "en": "Bring your hands together for one second, then separate and lower them for the countdown.",
+    "zh": "双手靠拢保持一秒，再分开并放下，进入倒计时。"
+  },
+  {
+    "id": "framing.11",
+    "en": "Bring your hands together.",
+    "zh": "请将双手靠拢。"
+  },
+  {
+    "id": "framing.12",
+    "en": "Near your chest or face. Hold for one second.",
+    "zh": "在胸前或脸部附近靠拢，保持一秒。"
+  },
+  {
+    "id": "framing.13",
+    "en": "Separate and lower your hands. Get ready to play.",
+    "zh": "分开并放下双手，准备开始。"
+  },
+  {
+    "id": "framing.14",
+    "en": "Near your chest or face. Hold for one second, then separate and lower your hands.",
+    "zh": "在胸前或脸部附近靠拢，保持一秒，再分开并放下双手。"
+  },
+  {
+    "id": "framing.15",
+    "en": "Choose by camera framing. Each game shows the body parts it needs.",
+    "zh": "按摄像头取景范围选择。每个游戏都会说明哪些身体部位需要入镜。"
+  },
+  {
+    "id": "framing.16",
+    "en": "Upper-body tracking. Check the framing guide: some games also need hips in view.",
+    "zh": "上半身追踪。请查看取景说明：部分游戏还需要髋部入镜。"
+  },
+  {
+    "id": "framing.17",
+    "en": "Full-body tracking. Keep shoulders through ankles visible.",
+    "zh": "全身追踪。请保持肩膀到脚踝入镜。"
+  },
+  {
+    "id": "framing.18",
+    "en": "Keep both shoulders and hands in view; hips and legs can stay outside the frame. Sit or stand still with your hands lowered to calibrate. Bring your hands together near your chest or face for one second, then separate and lower them to start.",
+    "zh": "保持双肩和双手入镜，髋部和腿可以在画面外。坐着或站着保持不动，放下双手完成校准。然后在胸前或脸部附近将双手靠拢保持一秒，再分开并放下双手开始。"
+  },
+  {
+    "id": "framing.19",
+    "en": "Keep both shoulders and hips visible; your feet can stay outside the frame. Enable the camera and stand still to calibrate. Bring your hands together near your chest or face for one second, then separate and lower them for the three-second countdown.",
+    "zh": "保持双肩和髋部入镜，双脚可以在画面外。开启摄像头，站立不动完成校准。在胸前或脸部附近将双手靠拢保持一秒，再分开并放下双手，进入三秒倒计时。"
+  },
+  {
+    "id": "framing.20",
+    "en": "Stand still while your movement range is set automatically, then bring your hands together for one second and lower them. No calibration jump is required.",
+    "zh": "站立不动，等待自动设置移动范围，再将双手靠拢保持一秒并放下，无需通过跳跃来校准。"
+  },
+  {
+    "id": "framing.21",
+    "en": "Shift your shoulders left or right. The paddle follows the direction you see in the mirrored camera.",
+    "zh": "左右移动肩膀，球拍会沿着镜像画面中所见的方向移动。"
+  },
+  {
+    "id": "framing.22",
+    "en": "Sit or stand still with your hands lowered.",
+    "zh": "坐着或站着保持不动，放下双手。"
+  },
+  {
+    "id": "framing.23",
+    "en": "Keep both shoulders in view.",
+    "zh": "保持双肩入镜。"
+  },
+  {
+    "id": "framing.24",
+    "en": "Face the camera with both shoulders visible.",
+    "zh": "面向摄像头，保持双肩入镜。"
+  },
+  {
+    "id": "framing.25",
+    "en": "Keep your shoulders and hands visible. You can sit or stand.",
+    "zh": "保持肩膀和双手入镜，可以坐着或站着。"
+  },
+  {
+    "id": "framing.26",
+    "en": "Keep your shoulders and hands visible. Sit or stand still to calibrate. Your torso and visible limbs will stay outlined.",
+    "zh": "保持肩膀和双手入镜。坐着或站着保持不动完成校准，画面会描出躯干和可见手臂。"
+  },
+  {
+    "id": "framing.27",
+    "en": "Show your shoulders and hands.",
+    "zh": "让肩膀和双手入镜。"
+  },
+  {
+    "id": "framing.28",
+    "en": "Tracking needs attention. Keep your shoulders and left hand in view.",
+    "zh": "追踪需要调整，请保持肩膀和左手入镜。"
+  },
+  {
+    "id": "framing.29",
+    "en": "Near your chest or face. Hold for one second, then lower them.",
+    "zh": "在胸前或脸部附近靠拢，保持一秒再放下双手。"
+  },
+  {
+    "id": "framing.30",
+    "en": "STEP 2 OF 3 · HANDS TOGETHER",
+    "zh": "第 2 步，共 3 步 · 双手靠拢"
+  },
+  {
+    "id": "framing.31",
+    "en": "Stand upright in your starting spot.",
+    "zh": "在起始位置站直。"
+  },
+  {
+    "id": "framing.32",
+    "en": "Keep both shoulders and hands visible.",
+    "zh": "保持双肩和双手入镜。"
+  },
+  {
+    "id": "framing.33",
+    "en": "Keep your body steady.",
+    "zh": "保持身体稳定。"
+  },
+  {
+    "id": "framing.distance",
+    "en": "Return to your starting distance, or recalibrate.",
+    "zh": "回到起始位置与摄像头的距离，或重新校准。"
+  }
+]

@@ -26,7 +26,7 @@ for(const id of ['motion-quest','jump-game','plank-flight'])test(`${id}: shared 
  if(id==='jump-game')await syntheticCamera(page);
  if(id==='plank-flight')await flightCamera(page);
  await page.setViewportSize({width:390,height:844});await page.goto('/play/'+id);const game=page.frameLocator('#game-frame');
- if(id==='jump-game'){await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.',{timeout:12000});await confirmWithHand(game);}
+ if(id==='jump-game'){await game.locator('#primary').click();await expect(game.locator('#instruction')).toHaveText('Bring your hands together.',{timeout:12000});await confirmWithHand(game);}
  else if(id==='plank-flight'){await game.locator('#entry-language').selectOption('zh');await game.locator('#start').click();}
  else await game.locator('#demo').click();
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording',{timeout:12000});

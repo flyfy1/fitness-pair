@@ -6,13 +6,14 @@ import {createBodyInput} from '../apps/integ-ar/src/input.js';
 const session = {sessionId: 'body-test', source: {kind: 'synthetic', id: 'named-torso'}};
 function harness(options = {}) {
   const recognizer = new BodyArcadeRecognizer(options); recognizer.reset(session); let seq = 0;
-  const frame = ({x = 0, left = .6, right = .6, missing, gap = 50} = {}) => {
+  const frame = ({x = 0, left = .6, right = .6, missing, upperOnly = false, gap = 50} = {}) => {
     const joints = {};
     for (const [side, base] of [['left', .44], ['right', .56]]) {
       joints[side + 'Shoulder'] = {x: base + x, y: .28, confidence: .99};
       joints[side + 'Hip'] = {x: base + x, y: .52, confidence: .99};
       joints[side + 'Wrist'] = {x: base + x, y: side === 'left' ? left : right, confidence: .99};
     }
+    if(upperOnly)for(const name of ['leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'])delete joints[name];
     if (missing) delete joints[missing];
     const pose = {version: 1, ...session, seq: ++seq, tMs: (recognizer.lastTMs < 0 ? 0 : recognizer.lastTMs) + gap,
       modelId: 'synthetic-pose', coordinateSpace: 'image-normalized-unmirrored', image: {width: 640, height: 480}, joints};
@@ -65,4 +66,14 @@ test('game input deduplicates completions and rejects stale, foreign and uncalib
   assert.equal(feed({...event, inputSeq: 1000, tMs: 9999, controls: {horizontal: Infinity}}), false);
   const duplicate = h.frame({}).pose;
   assert.equal(h.recognizer.update(duplicate), null);
+});
+
+test('shoulder-only calibration, steering and primary/aim controls work with all lower-body joints absent',()=>{
+ for(const options of [{primary:false},{primary:true},{primary:true,aiming:true}]){
+  const h=harness(options);h.hold({upperOnly:true},35);
+  const move=h.hold({upperOnly:true,x:.06},8).at(-1);assert.equal(move.phase,'active');assert(move.controls.horizontal<-.3);
+  const shots=h.hold({upperOnly:true,left:.12,right:.36},12).filter(a=>a.completion);
+  assert.equal(shots.length,options.primary?1:0);if(options.aiming)assert.equal(shots[0].controls.aim.y,0);
+  assert.equal(h.frame({upperOnly:true,missing:'leftShoulder'}).action.phase,'missing');
+ }
 });

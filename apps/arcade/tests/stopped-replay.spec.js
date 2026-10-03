@@ -21,7 +21,7 @@ for(const id of ['motion-quest','jump-game','plank-flight','ar-breakout'])test(`
  if(id==='motion-quest')await game.locator('#demo').click();
  else{
   await game.locator(id==='jump-game'?'#primary':'#start').click();
-  if(id==='jump-game'){await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.',{timeout:12000});await confirmWithHand(game);}
+  if(id==='jump-game'){await expect(game.locator('#instruction')).toHaveText('Bring your hands together.',{timeout:12000});await confirmWithHand(game);}
   else if(id==='ar-breakout')await startWithHands(game);
  }
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');

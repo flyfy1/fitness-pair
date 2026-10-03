@@ -6,7 +6,7 @@ const energy=async video=>{await openReplay(video);return video.evaluate(async v
 test('Jump Game shares the countdown and now retains its game sound in replay',async({page})=>{
  await guidedCamera(page);await page.goto('/play/camera-start');const game=page.frameLocator('#game-frame');
  await game.locator('#primary').click();
- await expect(game.locator('#instruction')).toHaveText('Raise your LEFT hand.',{timeout:12000});
+ await expect(game.locator('#instruction')).toHaveText('Bring your hands together.',{timeout:12000});
  await confirmWithHand(game);
  for(const [number,cue] of [['3','three'],['2','two'],['1','one']]){
   await expect(game.locator('#instruction')).toHaveText(number);

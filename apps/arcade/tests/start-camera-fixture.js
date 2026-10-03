@@ -7,6 +7,8 @@ export async function camera(page){await page.addInitScript(()=>{
   const x=.5+side*.065;for(const [i,y] of [[0,.28],[1,.42],[2,.64],[3,.52],[4,.72],[5,.91]])p[ids[i]]={x:x+(i===1||i===2?side*.055:0),y:y-a.rise,visibility:1};
   if(a.squat){p[ids[0]].y=.38;p[ids[3]].y=.64;p[ids[4]].x=x+.14;}
   if(a.hands==='both'||a.hands==='left'&&side===-1)p[ids[2]].y=.08-a.rise;
+  if(a.hands==='together'){p[ids[2]].x=.5+side*.015;p[ids[2]].y=.32-a.rise;}
+  if(a.upperOnly)for(const id of ids.slice(3))p[id].visibility=0;
   if(a.hideHands)p[ids[2]].visibility=0;
  }p[0]={x:.5,y:.18-a.rise,visibility:1};p[7]={x:.47,y:.19-a.rise,visibility:1};p[8]={x:.53,y:.19-a.rise,visibility:1};
  if(a.hideRightShoulder)p[12].visibility=0;

@@ -6,22 +6,22 @@ import { syntheticCamera, confirmWithHand } from './synthetic-camera.js';
 async function standingSetup(page) {
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
 
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
 }
 
-test('left-hand confirmation starts the game once; right, both and short raises do not', async ({page}) => {
+test('hands-together confirmation starts the game once; raised hands and short holds do not', async ({page}) => {
   await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
-  await expect(page.locator('#detail')).toContainText('one second to continue');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
+  await expect(page.locator('#detail')).toContainText('Hold for one second');
   await expect(page.locator('#primary')).toBeHidden();
-  for (const hand of ['right', 'both']) {
+  for (const hand of ['up', 'right', 'both']) {
     await page.evaluate(hand => { window.poseTest.hand = hand; }, hand);
     await page.waitForTimeout(1300);
     expect(await page.evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(false);
     await page.evaluate(() => { window.poseTest.hand = 'down'; });
     await page.waitForTimeout(500);
   }
-  await page.evaluate(() => { window.poseTest.hand = 'up'; });
+  await page.evaluate(() => { window.poseTest.hand = 'together'; });
   await page.waitForTimeout(350);
   await page.evaluate(() => { window.poseTest.hand = 'down'; });
   await page.waitForTimeout(500);
@@ -117,7 +117,7 @@ test('permission error is actionable and recorded; native fullscreen can be exit
 test('crouch, takeoff and crouched landing preserve calibration and explain preparation in the log', async({page})=>{
   await syntheticCamera(page);await page.goto('/?mode=detect');
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   await page.evaluate(()=>{window.poseTest.crouch=true;});await page.waitForTimeout(1200);
   await expect(page.locator('#step-confirm')).toHaveAttribute('aria-current', 'step');
   await expect(page.locator('#feedback')).toContainText('Stand upright');
@@ -131,7 +131,7 @@ test('crouch, takeoff and crouched landing preserve calibration and explain prep
   expect(await page.evaluate(()=>window.cameraSetup.getState().calibration)).toBe('maximum');
   expect(await page.evaluate(()=>window.cameraSetup.getState().canConfirm)).toBe(false);
   await page.evaluate(()=>{window.poseTest.crouch=false;});
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   await confirmWithHand(page);
   await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const events=await page.evaluate(()=>window.cameraSetup.getLog());
@@ -143,7 +143,7 @@ test('crouch, takeoff and crouched landing preserve calibration and explain prep
 test('mixed takeoff noise preserves the jump step and short countdown loss pauses without restarting', async({page})=>{
   await syntheticCamera(page); await page.goto('/?mode=detect');
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   await page.evaluate(()=>{window.poseTest.crouch=true;});
   await expect(page.locator('#step-confirm')).toHaveAttribute('aria-current', 'step');
   await expect(page.locator('#feedback')).toContainText('Stand upright');
@@ -152,7 +152,7 @@ test('mixed takeoff noise preserves the jump step and short countdown loss pause
   await expect.poll(()=>page.evaluate(()=>window.poseTest.noiseFrames)).toBe(0);
   await page.waitForTimeout(300);
   await page.evaluate(()=>{window.poseTest.rise=0;});
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   const before = (await page.evaluate(()=>window.cameraSetup.getLog())).slice(jumpLogStart);
   expect(before.some(e=>e.event==='tracking-signal'&&e.to==='tracking-grace')).toBe(true);
   expect(before.some(e=>e.event==='screen-state'&&e.stage==='missing')).toBe(false);
@@ -172,7 +172,7 @@ test('mixed takeoff noise preserves the jump step and short countdown loss pause
 test('a single coherent height spike cannot start setup or inflate the live response', async({page})=>{
   await syntheticCamera(page); await page.goto('/?mode=detect');
   await page.getByRole('button',{name:'Enable camera',exact:true}).click();
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   // Apply a single frame inside the worker's next response, without wall-clock
   // sleeps that could accidentally generate several elevated samples.
   await page.evaluate(()=>{
@@ -181,7 +181,7 @@ test('a single coherent height spike cannot start setup or inflate the live resp
   });
   await page.waitForTimeout(700);
   expect(await page.evaluate(()=>window.cameraSetup.getState().heightConfirmed)).toBe(false);
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
 });
 
@@ -202,7 +202,7 @@ test('automatic setup previews small movement without a slider; skeleton clears 
   await expect.poll(hasInk).toBe(true);
   await page.getByLabel('Skeleton debug view',{exact:true}).uncheck();
   await expect(page.locator('#body-overlay')).toBeHidden();
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   await confirmWithHand(page);
   await expect(page.locator('#instruction')).toHaveText('Try a small jump.',{timeout:6000});
   const log = await page.evaluate(()=>window.cameraSetup.getLog());
@@ -270,7 +270,7 @@ test('live detection rejects one-frame noise and cancels unobserved landing afte
   await page.evaluate(()=>{window.poseTest.missing=true;}); await page.waitForTimeout(1200);
   expect(await page.evaluate(()=>window.cameraSetup.getState().testing)).toBe(false);
   await page.evaluate(()=>{window.poseTest.missing=false;window.poseTest.rise=0;});
-  await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+  await expect(page.locator('#instruction')).toHaveText(new URL(page.url()).searchParams.get('mode')==='detect'?'Raise your LEFT hand.':'Bring your hands together.');
   await expect(page.locator('#jump-count')).toHaveText('0');
   expect(await page.evaluate(()=>window.cameraSetup.getLog().some(e=>e.event==='jump-test-paused'))).toBe(true);
   await page.getByRole('button',{name:'Stop camera',exact:true}).click();
@@ -280,7 +280,7 @@ for (const interruption of ['crouch', 'missing', 'noiseFrames']) {
   test(`step two survives ${interruption} while a hand is raised and starts with one valid hold`, async ({page}) => {
     await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
     await expect.poll(() => page.evaluate(() => window.cameraSetup.getState().canConfirm)).toBe(true);
-    await page.evaluate(key => { window.poseTest[key] = key === 'noiseFrames' ? 45 : true; window.poseTest.hand = 'up'; }, interruption);
+    await page.evaluate(key => { window.poseTest[key] = key === 'noiseFrames' ? 45 : true; window.poseTest.hand = 'together'; }, interruption);
     await page.waitForTimeout(1600);
     const interrupted = await page.evaluate(() => window.cameraSetup.getState());
     expect(interrupted.calibration).toBe('maximum'); expect(interrupted.heightConfirmed).toBe(false);
@@ -331,7 +331,7 @@ test('step two keeps hand instructions and progress on screen at distant-player 
 });
 
 
-test('raising the left hand with a small shoulder lift confirms without returning to step one', async ({page}) => {
+test('bringing hands together with a small shoulder lift confirms without returning to step one', async ({page}) => {
   await syntheticCamera(page); await page.goto('/'); await standingSetup(page);
   await page.evaluate(() => { window.poseTest.shoulderLift = .04; });
   await confirmWithHand(page);

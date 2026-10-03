@@ -35,6 +35,7 @@ export async function syntheticCamera(page) {
           if (!s.wristsMissing) {
             points[15]={x:.43,y:(['up','both'].includes(s.hand)?.12:.59)-s.rise,visibility:.99};
             points[16]={x:.57,y:(['right','both'].includes(s.hand)?.12:.59)-s.rise,visibility:.99};
+            if(s.hand==='together'){points[15]={x:.485,y:.32-s.rise,visibility:.99};points[16]={x:.515,y:.32-s.rise,visibility:.99};}
           }
         }
         setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:points,time:data.time}});},s.delay);
@@ -46,8 +47,8 @@ export async function syntheticCamera(page) {
 
 
 export async function confirmWithHand(surface) {
-  await expect(surface.locator('#primary')).toBeHidden();
-  await surface.locator('body').evaluate(() => { window.poseTest.hand = 'up'; });
+  await expect(surface.locator('.hands-start')).toBeVisible();
+  await surface.locator('body').evaluate(() => { window.poseTest.hand = new URLSearchParams(location.search).get('mode')==='detect'?'up':'together'; });
   await expect(surface.locator('.hands-start-title')).toContainText('lower both');
   await surface.locator('body').evaluate(() => { window.poseTest.hand = 'down'; });
   await expect.poll(() => surface.locator('body').evaluate(() => window.cameraSetup.getState().heightConfirmed)).toBe(true);

@@ -9,7 +9,7 @@ participant recordings belong here.
 | `covers/` | Ten landscape covers and their generation prompts | Cards, entries, themed references |
 | `sprites/` | Transparent dinosaur, guardian, mage and side-view helicopter | Live canvas rendering |
 | `sprites/*-idle/charge/cast/step/hit-v1.webp` | Six Forest Guardian action poses | State-driven character animation |
-| `poses/` | Six transparent movement illustrations | Setup, confirmation and instructions |
+| `poses/` | Six generated movement illustrations and two code-native upper-body diagrams | Setup, confirmation and instructions |
 | `source/` | Original generated atlases, helicopter and generation briefs | Re-cut, regenerate or develop variants |
 
 [index.json](index.json) lists paths, dimensions, transparency and SHA-256 hashes.
@@ -32,7 +32,7 @@ tails are presentation; hosts retain their explicit collision geometry.
 The pose figures are illustrated instructions, not recognition examples or
 medical advice. Hand illustrations use the mirrored viewing convention and keep
 LEFT/RIGHT text labels. Standing/jump figures, squat, raised hand, wrist aiming
-and push-up figures can be reused separately. Every pose was inspected after
+and push-up figures can be reused separately. The two `pose-upper-*.svg` diagrams show wrist proximity and release for the upper-body start gate. They are editable vector illustrations, not generated recognition samples. Generated poses were inspected after
 extraction from its source atlas.
 
 ## Current assets

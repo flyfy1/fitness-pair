@@ -27,10 +27,13 @@ have no subscriber, so publishing a frame does not save it by itself.
 creates one instance and calls `update` once per PoseFrame. Its result feeds both
 start confirmation and existing pause/resume commands. `HandsStartGate` owns no
 recognizer, camera or Worker: it validates readiness, frame/session identity,
-freshness, left-hand hold and release from that same result.
+freshness, the selected start gesture and release from that same result.
 
-Standing games require a left-hand hold above the shoulder for one second with
-the right hand down, followed by 400 ms with both hands lowered. A gesture begun
+Upper-body AR games and Jump Game require hands together near the chest or face
+for one second, followed by separation and 400 ms with both hands lowered.
+Motion Quest retains the left-hand hold above the shoulder with the right hand down.
+The optional wrist-proximity command is enabled only during upper-body setup;
+left-hand game actions and both-hands-raised pause retain their existing meaning. A gesture begun
 before readiness cannot authorize play. Confirmation never scores. Hosts retain
 their existing game-specific calibration and countdown; Motion Quest and Jump Game
 use the gate's optional three-second countdown. There is exactly one countdown.

@@ -36,8 +36,8 @@ const recognizer = new JumpHeightRecognizer({ manualMaximum: true, preferUpperBo
 recognizer.setJumpRange(MOVEMENT_SCALE);
 let bodyFrame = null, gameTrackingSince = null;
 const GAME_TRACKING_GRACE_MS = 450;
-const gestures = new BodyGestures({ oneHandSide: 'left' });
-const startGate=createHandsStart($('setup'));
+const gestures = new BodyGestures({ oneHandSide: 'left', handsTogether: gameMode });
+const startGate=createHandsStart($('setup'), {gesture:gameMode?'hands-together':'left-hand'});
 const diagnostics = createDiagnostics();
 let countdownSerial = 0;
 let cameraState = 'off', action = null, hands = null, lastPoseAt = 0, countdownAt = null;
@@ -85,6 +85,7 @@ const camera = new PoseCamera({
     // A setup gesture must be held while the torso can actually confirm. Do not
     // consume/latch a command during a crouch, tracking rejection or baseline hold.
     if (!testing && !action.calibrated && !action.canConfirmMaximum) gestures.reset(frame);
+    gestures.handsTogether = gameMode && !startGate.open;
     hands = gestures.update(!testing && !action.calibrated && !action.canConfirmMaximum
       ? { ...frame, joints: {} } : frame);
     if (gameMode && testing) {
@@ -291,7 +292,11 @@ function presentation(now) {
   if (testing && action.calibrated) return gameMode ? gamePresentation(now) : jumpPresentation(now);
   if (action.stage === 'standing') return { stage: 'standing', status: 'STEP 1 OF 3 · FIND YOUR BASELINE', title: 'Stand tall.\nHold still.', detail: 'Stay where you are for two seconds.', feedback: action.quality === 'unstable-stance' ? 'Keep your shoulders and hips steady.' : 'We can see you. Keep holding…', progress: (action.calibrationProgress ?? 0) * 2, step: 'standing', reason: action.quality };
   if (action.stage === 'maximum') {
-    const holding = action.canConfirmMaximum && hands?.kind === 'one-hand' && !hands.latched;
+    const holding = action.canConfirmMaximum && hands?.kind === (gameMode ? 'hands-together' : 'one-hand') && !hands.latched;
+    if(gameMode) return {stage:'confirm',status:'STEP 2 OF 3 · HANDS TOGETHER',
+      title:'Bring your hands together.',detail:'Near your chest or face. Hold for one second, then separate and lower your hands.',
+      feedback:!action.canConfirmMaximum?'Stand upright in your starting spot.':!hands?.tracked?'Keep both shoulders and hands visible.':'Keep your body steady.',
+      progress:holding?hands.progress:0,step:'confirm',reason:'awaiting-confirmation'};
     return { stage: 'confirm', status: 'STEP 2 OF 3 · RAISE YOUR LEFT HAND',
       title: holding ? 'Hold your LEFT hand up.' : 'Raise your LEFT hand.',
       detail: 'Hold it above your shoulder for one second to continue.',

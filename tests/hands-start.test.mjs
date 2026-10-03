@@ -2,10 +2,27 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {HandsStartGate} from '../packages/gameplay/hands-start.js';
 import {BodyGestures} from '../packages/gameplay/body-gestures.js';
 const session={sessionId:'start',source:{kind:'synthetic',id:'hands'}};
-function harness(options){const gate=new HandsStartGate(options),gestures=new BodyGestures({oneHandSide:'left'});gate.reset(session);gestures.reset(session);let seq=0,tMs=0;return{gate,gestures,frame(kind='down',ready=true,gap=100){const joints={};for(const side of ['left','right']){joints[side+'Shoulder']={x:side==='left'?.4:.6,y:.4,confidence:1};joints[side+'Wrist']={x:side==='left'?.3:.7,y:kind==='both'||kind===side?.2:.6,confidence:1};}const frame={...session,seq:++seq,tMs:tMs+=gap,joints:kind==='missing'?{}:joints};const hands=gestures.update(frame);gate.update(frame,ready,frame.tMs,hands);return {frame,hands};}};}
+function harness(options){const gate=new HandsStartGate(options),gestures=new BodyGestures({oneHandSide:'left',handsTogether:options?.gesture==='hands-together'});gate.reset(session);gestures.reset(session);let seq=0,tMs=0;return{gate,gestures,frame(kind='down',ready=true,gap=100){const joints={};for(const side of ['left','right']){joints[side+'Shoulder']={x:side==='left'?.4:.6,y:.4,confidence:1};joints[side+'Wrist']={x:kind==='together'?(side==='left'?.48:.52):(side==='left'?.3:.7),y:kind==='together'?.45:kind==='both'||kind===side?.2:.6,confidence:1};}const frame={...session,seq:++seq,tMs:tMs+=gap,joints:kind==='missing'?{}:joints};const hands=gestures.update(frame);gate.update(frame,ready,frame.tMs,hands);return {frame,hands};}};}
 test('one shared gesture result starts only after left hold and release, never both hands',()=>{const h=harness();for(let i=0;i<15;i++)h.frame('both');assert.equal(h.gate.open,false);for(let i=0;i<6;i++)h.frame();for(let i=0;i<12;i++)h.frame('left');assert.equal(h.gate.stage,'lower');assert.equal(h.gate.open,false);for(let i=0;i<6;i++)h.frame();assert.equal(h.gate.open,true);assert.equal(h.gate.gestures,undefined);});
 test('a gesture held during calibration cannot confirm readiness without a new gesture',()=>{const h=harness();for(let i=0;i<15;i++)h.frame('left',false);for(let i=0;i<15;i++)h.frame('left');assert.equal(h.gate.open,false);assert.notEqual(h.gate.stage,'lower');for(let i=0;i<6;i++)h.frame();for(let i=0;i<12;i++)h.frame('left');for(let i=0;i<6;i++)h.frame();assert.equal(h.gate.open,true);});
 test('gaps, mismatched results and foreign sessions cannot complete the gate',()=>{const h=harness();for(let i=0;i<6;i++)h.frame('left');h.frame('left',true,1000);assert.equal(h.gate.stage,'raise');const {frame,hands}=h.frame();h.gate.update({...frame,seq:999,sessionId:'foreign'},true,frame.tMs,hands);assert.equal(h.gate.open,false);h.gate.update({...frame,seq:1000},true,frame.tMs,hands);assert.equal(h.gate.open,false);h.gate.reset(session);assert.equal(h.gate.open,false);});
 test('optional countdown waits three seconds and does not create another recognizer',()=>{const h=harness({countdownMs:3000});for(let i=0;i<12;i++)h.frame('left');for(let i=0;i<6;i++)h.frame();assert.equal(h.gate.stage,'countdown');for(let i=0;i<20;i++)h.frame();assert.equal(h.gate.open,false);for(let i=0;i<12;i++)h.frame();assert.equal(h.gate.open,true);h.gate.reset(session);assert.equal(h.gate.open,false);});
 
 test('an open gate never authorizes another camera session',()=>{const h=harness();for(let i=0;i<12;i++)h.frame('left');for(let i=0;i<6;i++)h.frame();assert.equal(h.gate.open,true);const {frame,hands}=h.frame();assert.equal(h.gate.update({...frame,sessionId:'foreign'},true,frame.tMs,hands),false);assert.equal(h.gate.update({...frame,source:{kind:'synthetic',id:'another'}},true,frame.tMs,hands),false);});
+
+test('upper-body start rejects raises and short holds, then requires separation before countdown',()=>{
+ const h=harness({gesture:'hands-together',countdownMs:3000});
+ for(let i=0;i<15;i++)h.frame('left');assert.equal(h.gate.open,false);assert.equal(h.gate.stage,'raise');
+ for(let i=0;i<6;i++)h.frame();for(let i=0;i<6;i++)h.frame('together');h.frame('missing');
+ for(let i=0;i<6;i++)h.frame('together');assert.equal(h.gate.stage,'raise');
+ for(let i=0;i<6;i++)h.frame();for(let i=0;i<12;i++)h.frame('together');assert.equal(h.gate.stage,'lower');
+ for(let i=0;i<30;i++)h.frame('together');assert.equal(h.gate.open,false);
+ for(let i=0;i<6;i++)h.frame();assert.equal(h.gate.stage,'countdown');
+ for(let i=0;i<32;i++)h.frame();assert.equal(h.gate.open,true);
+ h.gate.reset(session);assert.equal(h.gate.open,false);
+});
+test('upper-body proximity held before readiness needs a fresh release and gesture',()=>{
+ const h=harness({gesture:'hands-together'});for(let i=0;i<15;i++)h.frame('together',false);
+ for(let i=0;i<20;i++)h.frame('together');assert.equal(h.gate.open,false);
+ for(let i=0;i<6;i++)h.frame();for(let i=0;i<12;i++)h.frame('together');for(let i=0;i<6;i++)h.frame();assert.equal(h.gate.open,true);
+});

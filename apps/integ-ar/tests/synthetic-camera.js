@@ -31,10 +31,12 @@ export async function syntheticCamera(page) {
             else if (kind === 1) points[11].y -= .16;
             else points.length = 0;
           }
+          if(s.upperOnly)for(const id of [23,24])points[id].visibility=0;
           if (!s.wristsMissing) {
             points[13]={x:.43+s.x,y:.4,visibility:.99}; points[14]={x:.57+s.x,y:.4,visibility:.99};
             points[15]={x:.43+s.x,y:(['up','both'].includes(s.hand)?.12:.59)-s.rise,visibility:.99};
             points[16]={x:s.aimX+s.x,y:(s.hand==='both'?.12:s.aimY)-s.rise,visibility:.99};
+            if(s.hand==='together'){points[15]={x:.485+s.x,y:.32-s.rise,visibility:.99};points[16]={x:.515+s.x,y:.32-s.rise,visibility:.99};}
           }
         }
         setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:points,time:data.time}});},s.delay);

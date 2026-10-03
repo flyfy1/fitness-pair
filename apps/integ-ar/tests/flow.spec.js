@@ -9,7 +9,7 @@ for (const slug of ['breakout', 'invaders', 'stack', 'knife', 'bubble', 'fruit-m
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await syntheticCamera(page); await page.goto('/?game=' + slug);
     if(slug==='invaders')await page.locator('#tutorial-skip').click();
-    await page.locator('#start').click();
+    await pose(page,{upperOnly:true});await page.locator('#start').click();
     await startWithHands(page); await expect.poll(async () => (await state(page)).phase).toBe('playing');
     await page.waitForTimeout(350);
     if (['breakout', 'invaders', 'fruit-merge'].includes(slug)) {

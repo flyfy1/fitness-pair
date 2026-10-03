@@ -4,7 +4,7 @@ const state = page => page.evaluate(()=>window.cameraSetup.getState());
 async function startGame(page, button='Enable camera') {
   await page.getByRole('button',{name:button,exact:true}).click();
   if (button !== 'Resume with camera') {
-    await expect(page.locator('#instruction')).toHaveText('Raise your LEFT hand.');
+    await expect(page.locator('#instruction')).toHaveText('Bring your hands together.');
     await confirmWithHand(page);
   }
   await expect.poll(async()=>(await state(page)).game.status,{timeout:6000}).toBe('running');

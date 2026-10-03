@@ -17,9 +17,10 @@
 | Full squat then stand | Existing `action-squat`; completed, deduplicated repetitions | Motion Quest charge/attack; slow deliberate discrete actions |
 | Relative torso rise and return | Existing `action-jump-height`; full/upper-body calibration | Dino height; not centimeters or a clinical jump measurement |
 | Head vertical/lateral movement | Existing Push-up Flight head extension | Continuous flying position |
-| One hand raised for one second | Existing Dino `BodyGestures`, with lower-to-rearm | Confirm calibration / next |
+| Hands together for one second | Optional wrist-proximity gesture over named shoulders/wrists | Upper-body game start; lower to release |
+| One hand raised for one second | Existing `BodyGestures`, with lower-to-rearm | Motion Quest start / detection-only confirmation |
 | Both hands raised for one second | Existing Dino `BodyGestures`, with lower-to-rearm | Pause/resume; reserved as a system command |
-| Torso horizontal position | New adapter over existing named shoulders/hips; standing baseline and dead zone | Paddle, ship and fruit drop position |
+| Torso horizontal position | New adapter over existing named shoulders; seated or standing baseline and dead zone | Paddle, ship and fruit drop position |
 | Deliberate left-hand raise | New app-local 150 ms stable raise after observed lowering; one completion ID per raise | Shoot, drop, throw; no repeated action while held |
 | Right-wrist position | New app-local normalized aiming over existing named wrist; wrist below shoulder height, required for aim games | Bubble aim with a visible reticle |
 | Thumbs up, wave, seven static hand categories, finger ratings 1–5 | Existing Gesture Lab experiment; separate hand model, not connected to these six games | Later menu confirmation/selection; do not claim it is active in the AR body games |
@@ -58,7 +59,7 @@ mechanics are imported locally under `apps/integ-ar/`; the source repository is 
 ## AR presentation and controls
 
 The camera fills the play viewport. Transparent game objects render over it;
-shoulders, hips, torso edges and every confidently visible limb remain visible.
+shoulders, torso edges and every confidently visible limb remain visible.
 No missing hip, wrist or limb is invented. The HUD names the required missing
 joints and shows recognized sway, aim and arm state. Setup, manual pause and
 tracking loss are separate states. Pause freezes game physics immediately;

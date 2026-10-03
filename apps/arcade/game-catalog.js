@@ -1,3 +1,4 @@
+import {controlProfiles} from '../../packages/gameplay/control-profiles.js';
 // Shared registration data for the UI, build and publication allowlist.
 export const gameCatalog = [
   {"id": "ar-breakout", "section": "other", "directory": "apps/integ-ar", "title": "Brick Pulse AR", "action": "Move your torso left and right to guide the paddle.", "label": "Paddle arcade · camera AR", "kind": "playable", "color": "forest", "poster": "MOVE.<br>BOUNCE.", "path": "/games/ar-breakout/?game=breakout", "description": "Move your torso left and right to guide the paddle. Calibrate your torso, then play over your camera with live body tracking."},
@@ -10,7 +11,7 @@ export const gameCatalog = [
   {id:'plank-flight', section:'feature', directory:'experiments/gameplay/plank-flight', adapter:'plankFlightAdapter', title:'Push-up Flight', action:'Move your head to fly a tiny helicopter.', label:'Camera or pointer demo · experimental', kind:'playable', color:'orbit', path:'/games/plank-flight/', description:'Your head guides the helicopter. Lower down and push up to move through gates, or try the pointer demo. Set a pace that feels comfortable.'},
   {id:'jump-game', section:'feature', aliases:['camera-start'], directory:'apps/camera-start', adapter:'cameraStartAdapter', title:'Jump Game', action:'Stand, confirm, then jump over cacti.', label:'Camera · guided setup · experimental', kind:'playable', color:'forest', preview:'jump-game', path:'/games/jump-game/', description:'Stand still to calibrate, confirm, and follow the countdown into the run. Jump to clear the cacti.'},
   {id:'orbit-pop', section:'other', title:'Orbit Pop', action:'Tap moving targets in this concept preview.', label:'Interactive concept · no camera', kind:'concept', color:'orbit', description:'Tap ten moving targets. This is a button-controlled preview of a planned reaching game; it does not use your camera.'}
-];
+].map(game=>({...game,controlProfile:controlProfiles[game.id]}));
 
 export const playableGames=gameCatalog.filter(game=>game.kind==='playable');
 export const isPlayableGame=id=>playableGames.some(game=>game.id===id||game.aliases?.includes(id));

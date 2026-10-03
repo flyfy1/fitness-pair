@@ -5,7 +5,8 @@ const visible = p => p && p.confidence >= .6 && p.x > .015 && p.x < .985 && p.y 
 
 /** UI commands from named pose joints, independent of jump calibration and score. */
 export class BodyGestures {
-  constructor({ oneHandSide = null } = {}) {
+  constructor({ oneHandSide = null, handsTogether = false } = {}) {
+    this.handsTogether = handsTogether;
     this.oneHandSide = oneHandSide;
   }
   reset(session) {
@@ -28,9 +29,18 @@ export class BodyGestures {
     const left = raised('left'), right = raised('right');
     const oneHand = (this.oneHandSide !== 'right' && left && lowered('right'))
       || (this.oneHandSide !== 'left' && right && lowered('left'));
-    const kind = left && right ? 'both-hands' : oneHand ? 'one-hand' : null;
+    const width = Math.abs(j.leftShoulder.x - j.rightShoulder.x);
+    const center = (j.leftShoulder.x + j.rightShoulder.x) / 2;
+    const shoulderY = (j.leftShoulder.y + j.rightShoulder.y) / 2;
+    const together = this.handsTogether && width >= .055
+      && Math.abs(j.leftWrist.x - j.rightWrist.x) <= width * .5
+      && Math.abs(j.leftWrist.y - j.rightWrist.y) <= width * .45
+      && ['leftWrist', 'rightWrist'].every(name => Math.abs(j[name].x - center) <= width * .65
+        && j[name].y >= shoulderY - width * .7 && j[name].y <= shoulderY + width);
+    const neutral = !together && lowered('left') && lowered('right');
+    const kind = together ? 'hands-together' : left && right ? 'both-hands' : oneHand ? 'one-hand' : null;
     let event = null, progress = 0;
-    if (lowered('left') && lowered('right')) {
+    if (neutral) {
       this.releaseSince ??= frame.tMs;
       if (frame.tMs - this.releaseSince >= RELEASE_MS) this.latched = false;
     } else this.releaseSince = null;
@@ -43,6 +53,6 @@ export class BodyGestures {
         this.latched = true;
       }
     }
-    return { inputSeq: frame.seq, side: left && right ? 'both' : left ? 'left' : right ? 'right' : null, kind, progress, event, tracked: true, latched: this.latched, neutral: lowered('left') && lowered('right') };
+    return { inputSeq: frame.seq, side: left && right ? 'both' : left ? 'left' : right ? 'right' : null, kind, progress, event, tracked: true, latched: this.latched, neutral };
   }
 }

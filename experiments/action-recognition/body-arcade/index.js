@@ -3,7 +3,7 @@ import {assertPoseFrame, sameSource} from '../../../contracts/index.js';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export const visible = point => point && point.confidence !== null && point.confidence >= .6
   && point.x > .015 && point.x < .985 && point.y > .015 && point.y < .985;
-const torsoNames = ['leftShoulder', 'rightShoulder', 'leftHip', 'rightHip'];
+const torsoNames = ['leftShoulder', 'rightShoulder'];
 
 /** Optional app-local control observations; shared v1 semantics remain unchanged. */
 export class BodyArcadeRecognizer {
@@ -24,7 +24,7 @@ export class BodyArcadeRecognizer {
     this.lastSeq = frame.seq; this.lastTMs = frame.tMs;
     const result = {version: 1, sessionId: frame.sessionId, source: {...frame.source}, inputSeq: frame.seq, tMs: frame.tMs,
       recognizerId: 'body-arcade-v1', action: 'body-arcade', phase: 'missing', progress: 0,
-      calibrationProgress: null, completion: null, cue: 'Keep shoulders and hips in view.',
+      calibrationProgress: null, completion: null, cue: 'Keep both shoulders in view.',
       controls: {horizontal: 0, aim: null, leftRaised: false, leftLowered: false, rightRaised: false, missing: []}};
     const required = [...torsoNames, ...(this.primary ? ['leftWrist'] : []), ...(this.aiming ? ['rightWrist'] : [])];
     result.controls.missing = required.filter(name => !visible(frame.joints[name]));
@@ -32,20 +32,20 @@ export class BodyArcadeRecognizer {
     if (gap > 250) { this.release(); this.steady = null; }
     if (result.controls.missing.length) return missing('Show ' + result.controls.missing.join(', ') + '.');
     const j = frame.joints;
-    const cx = torsoNames.reduce((sum, name) => sum + j[name].x, 0) / 4;
+    const cx = torsoNames.reduce((sum, name) => sum + j[name].x, 0) / 2;
     const shoulderY = (j.leftShoulder.y + j.rightShoulder.y) / 2;
-    const hipY = (j.leftHip.y + j.rightHip.y) / 2;
-    const height = hipY - shoulderY;
     const width = Math.abs(j.leftShoulder.x - j.rightShoulder.x);
-    if (height < .08 || width < .055 || Math.abs(j.leftShoulder.y - j.rightShoulder.y) > height * .65)
-      return missing('Face the camera with your shoulders and hips visible.');
+    // Scale by shoulder span; lower-body joints are optional even at calibration.
+    const height = width * frame.image.width / frame.image.height * 1.5;
+    if (width < .055 || Math.abs(j.leftShoulder.y - j.rightShoulder.y) > height * .65)
+      return missing('Face the camera with both shoulders visible.');
     const raised = side => visible(j[side + 'Wrist']) && j[side + 'Wrist'].y < j[side + 'Shoulder'].y - .08;
     const lowered = side => visible(j[side + 'Wrist']) && j[side + 'Wrist'].y > j[side + 'Shoulder'].y + .06;
     const left = raised('left'), right = raised('right');
     result.controls.leftLowered = lowered('left');
     result.controls.leftRaised = left; result.controls.rightRaised = right;
     if (!this.baseline) {
-      result.phase = 'calibrating'; result.calibrationProgress = 0; result.cue = 'Stand still with your hands lowered.';
+      result.phase = 'calibrating'; result.calibrationProgress = 0; result.cue = 'Sit or stand still with your hands lowered.';
       if (left || right) { this.steady = null; return result; }
       if (!this.steady || Math.abs(cx - this.steady.cx) > .018 || Math.abs(shoulderY - this.steady.shoulderY) > .018
         || Math.abs(height / this.steady.height - 1) > .12) this.steady = {cx, shoulderY, height, width, since: frame.tMs};
@@ -54,8 +54,8 @@ export class BodyArcadeRecognizer {
       this.baseline = {...this.steady}; this.release();
     }
     const base = this.baseline;
-    if (height / base.height < .6 || height / base.height > 1.6) return missing('Return to your standing distance, or recalibrate.');
-    const raw = -(cx - base.cx) * frame.image.width / (base.height * frame.image.height * .85);
+    if (height / base.height < .6 || height / base.height > 1.6) return missing('Return to your starting distance, or recalibrate.');
+    const raw = -(cx - base.cx) / (base.width * 1.3);
     const target = Math.abs(raw) < .07 ? 0 : clamp(raw, -1, 1);
     this.horizontal += (target - this.horizontal) * (1 - Math.exp(-Math.min(gap, 100) / 75));
     result.phase = 'active'; result.calibrationProgress = null;

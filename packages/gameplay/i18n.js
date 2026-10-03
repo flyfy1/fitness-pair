@@ -3,7 +3,8 @@ import sharingCatalog from './translations/sharing.zh-CN.json' with {type: 'json
 import guidesCatalog from './translations/guides.zh-CN.json' with {type:'json'};
 import feedbackCatalog from './translations/feedback.zh-CN.json' with {type:'json'};
 import gameSharingCatalog from './translations/game-share.zh-CN.json' with {type:'json'};
-const catalog = [...baseCatalog, ...sharingCatalog, ...guidesCatalog, ...feedbackCatalog, ...gameSharingCatalog];
+import framingCatalog from './translations/framing.zh-CN.json' with {type:'json'};
+const catalog = [...baseCatalog, ...sharingCatalog, ...guidesCatalog, ...feedbackCatalog, ...gameSharingCatalog, ...framingCatalog];
 import flight from '../../experiments/gameplay/plank-flight/resources/ui.zh.json' with {type: 'json'};
 import {readLanguage} from './locale.js';
 
