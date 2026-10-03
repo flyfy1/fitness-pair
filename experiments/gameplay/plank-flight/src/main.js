@@ -240,4 +240,4 @@ window.plankFlight={localizeHost:()=>localizeDOM(),getAudioStream:()=>sound.getA
   return {...snapshot,mode,cameraActive:camera.active,starting,trackingPausedFrom,audio:sound.snapshot(),headVisible:!!pilot,phase:lastAction?.phase??null};
 }};
 
-mountGameEntry({root:stage,title:'Push-up Flight',description:'Move your head to fly a tiny helicopter. Keep your head and either shoulder in view.',buttons:[$('start'),$('demo')],options:[document.querySelector('.difficulty')],automatic:true,collapsibleOptions:true});
+mountGameEntry({root:stage,gameId:'plank-flight',title:'Push-up Flight',description:'Move your head to fly a tiny helicopter. Keep your head and either shoulder in view.',buttons:[$('start'),$('demo')],options:[document.querySelector('.difficulty')],automatic:true,collapsibleOptions:true});

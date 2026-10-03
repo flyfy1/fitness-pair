@@ -42,6 +42,10 @@ controller and countdown, with no hand gesture or extra detector.
 provides the shared introduction, steps and controls on all nine playable routes,
 including standalone pages. Hosts pass their native buttons/options; the view
 moves them temporarily and restores them before their existing handlers run.
+Hosts also pass their catalog `gameId` to display the corresponding local cover
+from `game-covers.js`. Arcade cards use the same metadata. Vite bundles these
+images for standalone previews, so entry artwork requires no production request.
+See [cover artwork and prompts](../../docs/game-cover-art.md).
 It never requests a camera or starts inference. Keyboard/pointer alternatives
 retain their original controls. The arcade shell still owns recording, optional
 microphone/debug controls, feedback and statistics.

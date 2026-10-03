@@ -325,4 +325,4 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => { releaseCamera(); game.sound.close(); });
 raf = requestAnimationFrame(render);
 
-mountGameEntry({root:$('app'),title:'Motion Quest',description:'Squat to charge a spell. Stand to cast it.',buttons:[$('start'),$('demo')]});
+mountGameEntry({root:$('app'),gameId:'motion-quest',title:'Motion Quest',description:'Squat to charge a spell. Stand to cast it.',buttons:[$('start'),$('demo')]});

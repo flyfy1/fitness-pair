@@ -247,4 +247,4 @@ raf = requestAnimationFrame(render);
 
 if (tutorialWanted) { tutorialView.show(true); tutorialView.update('intro'); }
 
-mountGameEntry({root:$('arena'),title:config.title,description:config.action,buttons:tutorialWanted?[$('tutorial-start'),$('tutorial-skip')]:[$('start')]});
+mountGameEntry({root:$('arena'),gameId:config.id,title:config.title,description:config.action,buttons:tutorialWanted?[$('tutorial-start'),$('tutorial-skip')]:[$('start')]});

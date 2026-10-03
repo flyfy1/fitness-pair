@@ -1,12 +1,20 @@
 import './entry-view.css';
 import {languageControl} from './localize-dom.js';
+import {gameCovers} from './game-covers.js';
 // Reuse the game's real buttons and their handlers; this view has no camera or
 // recognition lifecycle and cannot calibrate or infer a pose a second time.
-export function mountGameEntry({root,title,description,buttons,options=[],automatic=false,collapsibleOptions=false}){
+export function mountGameEntry({root,gameId,title,description,buttons,options=[],automatic=false,collapsibleOptions=false}){
  const view=document.createElement('section');view.className='game-entry';view.setAttribute('aria-label','Game setup');
  view.innerHTML='<a class="game-entry-back" href="/#arcade" target="_top">← All games</a><div class="game-entry-card"><p class="game-entry-eyebrow">READY TO PLAY</p><h1 translate="no"></h1><p class="game-entry-description"></p><ol class="game-entry-steps"><li><strong>1 · Camera</strong><span>Enable your camera when you are ready.</span></li><li><strong>2 · Set up</strong><span>Follow the game’s positioning guide once.</span></li><li><strong>3 · Start</strong><span data-entry-start></span></li></ol><div class="game-entry-options"></div><div class="game-entry-actions"></div><p class="game-entry-note">Camera processing stays on this device. Anonymous play counts and active time are sent to this site.</p></div>';
  view.querySelector('.game-entry-back').after(languageControl(root.ownerDocument,'entry-language'));
  view.querySelector('h1').textContent=title;view.querySelector('.game-entry-description').textContent=description;
+ const cover=gameCovers[gameId];
+ if(cover){
+  const card=view.querySelector('.game-entry-card'),content=document.createElement('div'),image=document.createElement('img');
+  content.className='game-entry-content';content.append(...card.childNodes);
+  image.className='game-entry-cover';image.src=cover.src;image.alt=cover.alt;image.width=1536;image.height=1024;image.decoding='async';image.fetchPriority='high';
+  card.classList.add('has-cover');card.append(image,content);
+ }
  view.querySelector('[data-entry-start]').textContent=automatic?'Keep your head and one shoulder in view for the countdown.':'Raise your LEFT hand for one second, then lower it for the countdown.';
  const originals=[];
  for(const [items,target] of [[buttons,'.game-entry-actions'],[options,'.game-entry-options']])for(const element of items.filter(Boolean)){

@@ -431,4 +431,4 @@ function tick() {
 }
 paint(); requestAnimationFrame(tick);
 
-if(gameMode) mountGameEntry({root:$('setup'),title:'Jump Game',description:'Stand, confirm, then jump over cacti. No calibration jump is needed.',buttons:[$('primary')]});
+if(gameMode) mountGameEntry({root:$('setup'),gameId:'jump-game',title:'Jump Game',description:'Stand, confirm, then jump over cacti. No calibration jump is needed.',buttons:[$('primary')]});

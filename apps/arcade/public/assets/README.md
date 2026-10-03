@@ -1,5 +1,10 @@
 # Arcade artwork and typography
 
+Each current game has a dedicated illustrated cover in
+`packages/gameplay/assets/covers/`. Cards and introductions reuse these
+production JPEGs through shared metadata; Vite bundles their local URLs.
+See [cover artwork, prompts and evidence](../../../../docs/game-cover-art.md).
+
 `playground.png` was created with the native image-generation tool for this project, based on the user-approved composition A. It is illustrative concept artwork, not a screenshot of a shipped game or a depiction of a real participant.
 
 Prompt: Wide 2:1 panorama; acid-yellow empty top space; polished sculptural game playground below; cobalt faceless avatar left-center; orange dinosaur right; floating forest islands; cream and cobalt platforms; coral smiling sphere and hoops; bright lighting; no text, logos, watermark, branded characters or real people.
