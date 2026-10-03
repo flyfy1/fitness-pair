@@ -1,5 +1,8 @@
 import {test,expect} from '@playwright/test';
 import {build} from 'vite';
+import {writeFile} from 'node:fs/promises';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 
 let helper;
 test.beforeAll(async()=>{
@@ -9,7 +12,8 @@ test.beforeAll(async()=>{
 });
 
 for(const [format,portrait,sound] of [['mp4',true,true],['webm',false,true],['mp4',false,false]]){
- test(`${format} ${portrait?'portrait':'landscape'} ${sound?'audio':'silent'} download copies 60 seconds unchanged and appends only the ending`,async({page},info)=>{
+ test(`${format} ${portrait?'portrait':'landscape'} ${sound?'audio':'silent'} download exports 60 seconds and appends only the ending`,async({page},info)=>{
+  test.setTimeout(120000);
   await page.route('**/__download.js',route=>route.fulfill({contentType:'text/javascript',body:helper}));await page.goto('/library');
   const result=await page.evaluate(async({format,portrait,sound})=>{
    const m=await import('/__download.js');
@@ -37,21 +41,24 @@ for(const [format,portrait,sound] of [['mp4',true,true],['webm',false,true],['mp
    const before=await packets(blob),originalBytes=await blob.arrayBuffer(),progress=[];
    const clip={id:'synthetic',title:'Motion Quest · test',gameTitle:'Motion Quest',game:'motion-quest',includesAudio:sound,branded:false,blob,duration:span*repeats};
    const cancellations=[];
-   for(const stage of ['before','Preparing','Appending']){
+   for(const stage of ['before','Preparing',...(format==='mp4'?['Encoding a compatible MP4 ·']:[]),'Appending']){
     const controller=new AbortController();if(stage==='before')controller.abort();
     try{await m.createDownloadCopy(clip,{signal:controller.signal,onProgress:text=>{if(text.startsWith(stage))controller.abort();}});cancellations.push('not cancelled');}
     catch(error){cancellations.push(error.name);}
    }
-   // No gameplay frame may be decoded or played during the fast export.
+   // Export never waits for media-element playback; WebM also avoids decoding.
    const originalPlay=HTMLMediaElement.prototype.play,originalDecoder=window.VideoDecoder;
-   HTMLMediaElement.prototype.play=()=>{throw new Error('Export tried to play the original video.');};window.VideoDecoder=class{constructor(){throw new Error('Export tried to decode the original video.');}};
+   HTMLMediaElement.prototype.play=()=>{throw new Error('Export tried to play the original video.');};if(format==='webm')window.VideoDecoder=class{constructor(){throw new Error('Export tried to decode the original video.');}};
    let exported;const started=performance.now();
    try{exported=await m.createDownloadCopy(clip,{onProgress:text=>progress.push(text)});}
    finally{HTMLMediaElement.prototype.play=originalPlay;window.VideoDecoder=originalDecoder;}
    const elapsed=performance.now()-started,after=await packets(exported.blob);
+   // Retain only this synthetic fixture for independent native-player checks.
+   window.syntheticDownload=exported.blob;
    const equal=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
    const compressedUnchanged=before.every((track,i)=>track.packets.every((p,j)=>{
-    const q=after[i].packets[j];return Math.abs(p.timestamp-q.timestamp)<.002&&Math.abs(p.duration-q.duration)<.002&&equal(p.data,q.data.subarray(q.data.length-p.data.length));
+    if(format==='mp4'&&i===0)return true;
+    const q=after[i].packets[j];return Math.abs(p.timestamp-q.timestamp)<.002&&Math.abs(p.duration-q.duration)<.002&&equal(p.data,q.data);
    }));
    const video=document.createElement('video');video.muted=true;video.src=URL.createObjectURL(exported.blob);document.body.append(video);await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=()=>reject(new Error('Export is unreadable.'));});
    const sample=async time=>{const done=new Promise(resolve=>video.onseeked=resolve);video.currentTime=time;await done;ctx.drawImage(video,0,0,canvas.width,canvas.height);return [...ctx.getImageData(10,canvas.height-15,1,1).data];};
@@ -69,13 +76,25 @@ for(const [format,portrait,sound] of [['mp4',true,true],['webm',false,true],['mp
     fallbackVerified=notes.some(text=>text.startsWith('Compatibility export'))&&head[1]<100&&tail[0]>200&&tail[1]>200&&tail[2]<100;
    }
    URL.revokeObjectURL(video.src);video.remove();
-   return {fallbackVerified,decodedDuration,tailPlaybackMs,cancellations,elapsed,compressedUnchanged,sourceUnchanged:equal(new Uint8Array(originalBytes),new Uint8Array(await blob.arrayBuffer())),extraFrames:after[0].packets.length-before[0].packets.length,audioPackets:after[1]?.packets.length===before[1]?.packets.length,first,last,back,boundary,energy,duration:exported.duration,originalDuration:span*repeats,width:canvas.width,height:canvas.height,progress};
+   return {fallbackVerified,codec:after[0].config.codec,decodedDuration,tailPlaybackMs,cancellations,elapsed,compressedUnchanged,sourceUnchanged:equal(new Uint8Array(originalBytes),new Uint8Array(await blob.arrayBuffer())),extraFrames:after[0].packets.length-before[0].packets.length,audioPackets:after[1]?.packets.length===before[1]?.packets.length,first,last,back,boundary,energy,duration:exported.duration,originalDuration:span*repeats,width:canvas.width,height:canvas.height,progress};
   },{format,portrait,sound});
   console.log(JSON.stringify({format,portrait,sound,elapsedMs:result.elapsed,duration:result.duration}));
-  expect(result.cancellations).toEqual(['AbortError','AbortError','AbortError']);expect(result.elapsed).toBeLessThan(8000);expect(result.compressedUnchanged).toBe(true);expect(result.sourceUnchanged).toBe(true);expect(result.extraFrames).toBe(format==='mp4'?1:72);expect(result.decodedDuration).toBeCloseTo(result.duration,1);expect(result.tailPlaybackMs).toBeGreaterThan(2800);expect(result.audioPackets).toBe(true);
+  expect(result.cancellations).toEqual(Array(format==='mp4'?4:3).fill('AbortError'));expect(result.elapsed).toBeLessThan(30000);expect(result.compressedUnchanged).toBe(true);expect(result.sourceUnchanged).toBe(true);expect(result.extraFrames).toBe(format==='mp4'?1:72);expect(result.decodedDuration).toBeCloseTo(result.duration,1);expect(result.tailPlaybackMs).toBeGreaterThan(2800);expect(result.audioPackets).toBe(true);
+  if(format==='mp4')expect(result.codec).toMatch(/^avc1\./);
   expect(result.duration-result.originalDuration).toBeGreaterThan(2.85);expect(result.duration-result.originalDuration).toBeLessThan(3.05);expect(result.first[1]).toBeLessThan(100);expect(result.back[1]).toBeLessThan(100);
   for(const pixel of [result.last,result.boundary]){expect(pixel[0]).toBeGreaterThan(200);expect(pixel[1]).toBeGreaterThan(200);expect(pixel[2]).toBeLessThan(100);}
   if(sound)expect(result.energy).toBeGreaterThan(.01);if(format==='mp4'&&!sound)expect(result.fallbackVerified).toBe(true);
+  if(format==='mp4'&&process.platform==='darwin'){
+   const file=info.outputPath('synthetic-download.mp4');
+   await writeFile(file,Buffer.from(await page.evaluate(async()=>Array.from(new Uint8Array(await window.syntheticDownload.arrayBuffer())))));
+   const checker=new URL('../../../scripts/check-mp4-native.swift',import.meta.url).pathname;
+   const {stdout}=await promisify(execFile)('swift',[checker,file],{timeout:30000});
+   const native=JSON.parse(stdout);expect(native.playable).toBe(true);expect(native.completed).toBe(true);expect(native.frames).toBeGreaterThan(1);expect(native.duration).toBeCloseTo(result.duration,1);
+   for(const pixel of [native.last,native.boundary]){expect(pixel[0]).toBeGreaterThan(200);expect(pixel[1]).toBeGreaterThan(200);expect(pixel[2]).toBeLessThan(100);}
+   expect(native.back[1]).toBeLessThan(100);
+   if(sound)expect(native.audioCompleted).toBe(true);
+   await info.attach('macos-native-decode',{body:stdout,contentType:'application/json'});
+  }
   await info.attach('synthetic-download-evidence',{body:JSON.stringify(result),contentType:'application/json'});
  });
 }
