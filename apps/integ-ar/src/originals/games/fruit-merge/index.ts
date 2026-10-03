@@ -1,9 +1,9 @@
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
 import type { GameController, GameModule, GameServices } from '../../core/game-types';
-import { clamp, makeKit, text } from '../arcade-kit';
+import { clamp, makeKit, text, clayBall } from '../arcade-kit';
 
 type Fruit = { x: number; y: number; vy: number; level: number };
-const colors = ['#70f0c2', '#8b7cff', '#ffcb6b', '#ff8f70', '#ff6b7a', '#b7f57b', '#f1a7ff'];
+const colors = ['#e88e72','#e8b064','#85b887','#a493c4','#d78d9e','#4e9b82','#e5bd68'];
 export const canMergeFruitTier = (tier: number) => tier >= 0 && tier < colors.length - 1;
 
 export const fruitMerge: GameModule = {
@@ -18,9 +18,17 @@ export const fruitMerge: GameModule = {
     k.on('pointermove', event => { held = clamp(k.point(event as PointerEvent).x, 18, 342); });
     k.on('pointerup', drop); k.on('pointerdown', () => { if (lost) reset(); });
     k.on('keydown', event => { const key = (event as KeyboardEvent).key; if (key === ' ' || key === 'Enter') drop(); if (lost && (key === 'r' || key === 'R')) reset(); });
+    const drawFruit=(x:number,y:number,tier:number)=>{
+      const c=k.ctx,r=radius(tier);clayBall(c,x,y,r,colors[tier]);c.save();
+      c.fillStyle='#3f7d5e';c.beginPath();c.ellipse(x+r*.15,y-r*.85,r*.27,r*.12,-.45,0,7);c.fill();
+      if(tier===0){c.fillStyle='#fff0c9';for(const [dx,dy] of [[-.45,-.2],[.45,-.2],[-.4,.4],[.4,.4]]){c.beginPath();c.ellipse(x+dx*r,y+dy*r,r*.055,r*.09,0,0,7);c.fill();}}
+      if(tier===5){c.save();c.beginPath();c.arc(x,y,r,0,7);c.clip();c.strokeStyle='#b9d59980';c.lineWidth=r*.12;for(const dx of [-.55,.1,.7]){c.beginPath();c.ellipse(x+dx*r,y,r*.24,r*1.1,0,0,7);c.stroke();}c.restore();}
+      c.fillStyle='#203d39';for(const dx of [-.2,.2]){c.beginPath();c.arc(x+dx*r,y+r*.06,Math.max(1,r*.06),0,7);c.fill();}
+      c.strokeStyle='#203d39';c.lineWidth=Math.max(1,r*.045);c.lineCap='round';c.beginPath();c.arc(x,y+r*.21,r*.12,.15,Math.PI-.15);c.stroke();c.restore();
+    };
     const draw = () => { const c = k.ctx; k.clear();  c.strokeStyle = '#ff8f70'; c.lineWidth = 3; c.strokeRect(15, 42, 330, 500); text(c, `ORBIT MASS ${score}  ·  TIER ${level}`, 180, 27, 14, '#a8b1c5');
-      c.strokeStyle = '#273149'; c.beginPath(); c.moveTo(held, 42); c.lineTo(held, 72); c.stroke(); c.fillStyle = colors[next]; c.beginPath(); c.arc(held, 64, radius(next), 0, 7); c.fill();
-      fruits.forEach(f => { c.fillStyle = colors[f.level]; c.beginPath(); c.arc(f.x, f.y, radius(f.level), 0, 7); c.fill(); c.fillStyle = '#ffffff66'; c.beginPath(); c.arc(f.x - radius(f.level) / 3, f.y - radius(f.level) / 3, 3, 0, 7); c.fill(); });
+      c.strokeStyle = '#273149'; c.beginPath(); c.moveTo(held, 42); c.lineTo(held, 72); c.stroke(); drawFruit(held,64,next);
+      fruits.forEach(f => drawFruit(f.x,f.y,f.level));
       k.fx.draw(); if (paused) text(c, 'PAUSED', 180, 280, 27); if (lost) { text(c, 'ORBIT OVERFLOW', 180, 260, 23, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 290, 15); }
     };
     let lastStep = performance.now(); const loop = (now = lastStep) => { if (now - lastStep < 1000 / 60 - .1) { raf = requestAnimationFrame(loop); return; } lastStep = now - (now - lastStep) % (1000 / 60); if (!paused && !lost) { moveCooldown--; if (moveCooldown <= 0) { if (k.keys.has('ArrowLeft') || k.keys.has('a')) { held = clamp(held - 14, 18, 342); moveCooldown = 3; } if (k.keys.has('ArrowRight') || k.keys.has('d')) { held = clamp(held + 14, 18, 342); moveCooldown = 3; } }

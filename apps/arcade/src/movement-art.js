@@ -1,4 +1,5 @@
 // Code-native movement diagrams: each pose is deliberate, labeled and static.
+let diagramSerial=0;
 const arrow=(x,y,dx,dy)=>`<path d="M${x} ${y}l${dx} ${dy}m${dx? -Math.sign(dx)*10:-7} ${dy?-Math.sign(dy)*10:-7}l${dx?Math.sign(dx)*10:7} ${dy?Math.sign(dy)*10:7}l${dx?-Math.sign(dx)*10:7} ${dy?-Math.sign(dy)*10:7}" fill="none" stroke="#d24d2c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
 function person(type){
  const squat=type==='squat',jump=type==='jump',raise=type==='raise',aim=type==='aim';
@@ -21,5 +22,11 @@ function scene(type){
 }
 export function movementArt(guide,compact=false){
  const tiles=compact?guide.tiles.slice(0,2):guide.tiles;
- return `<div class="movement-art${compact?' movement-art--card':''}">${tiles.map(([type,label],i)=>`<figure><svg viewBox="0 0 220 210" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg"><rect width="220" height="210" rx="20" fill="${i%2?'#e9ece3':'#f4f0e5'}"/>${scene(type)}</svg><figcaption><span>${i+1}</span> ${label}</figcaption></figure>`).join('')}</div>`;
+ const id=`movement-clay-${++diagramSerial}`;
+ return `<div class="movement-art${compact?' movement-art--card':''}">${tiles.map(([type,label],i)=>{
+  const prefix=`${id}-${i}`;
+  const defs=`<defs><linearGradient id="${prefix}-teal" x2=".35" y2="1"><stop stop-color="#70b6a5"/><stop offset=".45" stop-color="#328d85"/><stop offset="1" stop-color="#24695f"/></linearGradient><linearGradient id="${prefix}-coral" x2=".35" y2="1"><stop stop-color="#edb299"/><stop offset="1" stop-color="#c56e57"/></linearGradient><radialGradient id="${prefix}-peach" cx=".3" cy=".25" r=".8"><stop stop-color="#ffe2bf"/><stop offset="1" stop-color="#dba787"/></radialGradient></defs>`;
+  const picture=scene(type).replaceAll('#2347ee',`url(#${prefix}-teal)`).replaceAll('#d24d2c',`url(#${prefix}-coral)`).replaceAll('#f2b993',`url(#${prefix}-peach)`).replaceAll('#eeff41','#f1d7ab').replaceAll('#182346','#203d39');
+  return `<figure><svg viewBox="0 0 220 210" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">${defs}<rect width="220" height="210" rx="20" fill="${i%2?'#e7efe0':'#fff5e3'}"/><g style="filter:drop-shadow(0 3px 0 #203d3920)">${picture}</g></svg><figcaption><span>${i+1}</span> ${label}</figcaption></figure>`;
+ }).join('')}</div>`;
 }

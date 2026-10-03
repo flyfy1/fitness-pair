@@ -2,6 +2,7 @@ import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import {message,translateText} from '../../../packages/gameplay/i18n.js';
 import './style.css';
+import '../../../packages/gameplay/play-style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import {InvadersTutorial} from './invaders-tutorial.js';
 import {mountTutorial} from './tutorial-view.js';
@@ -16,6 +17,7 @@ import {createBodyInput} from './input.js';
 import {TrackingRecovery,trackingGrace} from './tracking-recovery.js';
 import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
+document.documentElement.classList.add('clay-play');
 const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
 const config = arGames.find(game => selected ? game.slug === selected : location.pathname.split('/').includes(game.id)) || arGames[0];

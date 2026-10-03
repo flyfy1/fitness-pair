@@ -1,6 +1,7 @@
 import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import './style.css';
+import '../../../packages/gameplay/play-style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { DinoAudio } from './audio.js';
 import { AnimatedRunner } from './animated-runner.js';
@@ -13,6 +14,7 @@ import { JumpHeightRecognizer } from '@fitness-pair/action-jump-height';
 import { createDiagnostics } from './diagnostics.js';
 import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
+document.documentElement.classList.add('clay-play');
 const $ = id => document.getElementById(id);
 const gameMode = new URLSearchParams(location.search).get('mode') !== 'detect';
 const sound = new DinoAudio(cue => log('audio-cue', { cue }));

@@ -1,6 +1,6 @@
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
 import type { GameModule } from '../../core/game-types';
-import { makeKit, text } from '../arcade-kit';
+import { makeKit, text, clayRect, clayBall } from '../arcade-kit';
 import { BrickPulseEngine } from './engine.js';
 
 export const breakout: GameModule = {
@@ -17,9 +17,9 @@ export const breakout: GameModule = {
       k.clear(); c.fillStyle = '#273149'; c.fillRect(0, 40, 360, 2);
       text(c, `SCORE ${score}   LEVEL ${level}`, 180, 27, 15, '#a8b1c5');
       text(c, `LIVES ${lives} / 3`, 180, 58, 13, '#70f0c2');
-      for (const brick of engine.bricks) { c.fillStyle = brick.hp === 2 ? '#8b7cff' : '#70f0c2'; c.fillRect(brick.x, brick.y, 36, 18); }
-      c.fillStyle = '#f7f9ff'; c.fillRect(paddle, 500, 80, 11);
-      c.beginPath(); c.arc(ball.x, ball.y, 6, 0, Math.PI * 2); c.fill(); k.fx.draw();
+      for (const brick of engine.bricks) { clayRect(c,brick.x,brick.y,36,18,brick.hp===2?'#e8bd60':'#4ea79b'); }
+      clayRect(c,paddle,500,80,11,'#e88e72',5);
+      clayBall(c,ball.x,ball.y,6,'#fff0c9'); k.fx.draw();
       if (over) { text(c, 'PULSE LOST', 180, 250, 26, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 282, 15); }
       else if (paused) text(c, 'PAUSED', 180, 280, 28);
       else if (serveRemainingMs > 0) { text(c, `Ball in ${Math.ceil(serveRemainingMs / 1000)}`, 180, 300, 26, '#70f0c2'); text(c, 'Move into position', 180, 329, 15); }

@@ -46,9 +46,14 @@ Hosts also pass their catalog `gameId` to display the corresponding local cover
 from `game-covers.js`. Arcade cards use the same metadata. Vite bundles these
 images for standalone previews, so entry artwork requires no production request.
 See [cover artwork and prompts](../../docs/game-cover-art.md).
-It never requests a camera or starts inference. Keyboard/pointer alternatives
-retain their original controls. The arcade shell still owns recording, optional
-microphone/debug controls, feedback and statistics.
+The entry view never requests a camera or starts inference. Keyboard/pointer
+alternatives retain their original controls. The arcade shell still owns
+recording, optional microphone/debug controls, feedback and statistics.
+
+`play-style.css` supplies the shared warm material treatment under `clay-play`;
+hosts retain their own layouts and control handlers. `clay-draw.js` shades native
+canvas pieces using bounded gradients and shadows without owning physics or
+camera input. See [the visual loop and evidence](../../docs/clay-play-style.md).
 
 ## Language preference
 

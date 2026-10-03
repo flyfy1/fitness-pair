@@ -1,3 +1,4 @@
+export {clayRect} from '../../../../../../packages/gameplay/clay-draw.js';
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
 import type { GameServices } from '../../core/game-types';
 type MobileControls = {clear(): void; destroy(): void};

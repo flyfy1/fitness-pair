@@ -3,6 +3,7 @@ import {subscribeLanguage} from '../../../../packages/gameplay/locale.js';
 import '../../../../packages/gameplay/page-language.js';
 import {t,getLanguage,setLanguage,localizeDOM} from './i18n.js';
 import './style.css';
+import '../../../../packages/gameplay/play-style.css';
 import {drawBody} from '../../../../apps/camera-start/src/body-overlay.js';
 import { FlightAudio } from './audio.js';
 import { PoseCamera } from './camera.js';
@@ -30,6 +31,7 @@ document.querySelector('#app').innerHTML = `
 
 <span class="privacy" data-game-note>Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
 
+document.documentElement.classList.add('clay-play');
 const $ = id => document.getElementById(id);
 const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d'),stage=document.querySelector('.stage');
 const controller=new HeadFlightController();

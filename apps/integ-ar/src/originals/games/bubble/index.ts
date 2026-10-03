@@ -1,8 +1,8 @@
 // Adapted from flyfy1/integ-games c2a3374; see apps/integ-ar/README.md.
 import type { GameController, GameModule, GameServices } from '../../core/game-types';
-import { clamp, makeKit, text } from '../arcade-kit';
+import { clamp, makeKit, text, clayBall } from '../arcade-kit';
 
-const palette = ['#70f0c2', '#8b7cff', '#ffcb6b', '#ff6b7a'];
+const palette = ['#79bbaa', '#a493c4', '#e8bd60', '#e88e72'];
 export const NEIGHBOR_DISTANCE = 44;
 export const TOP_ANCHOR_Y = 74;
 export type Bubble = { x: number; y: number; color: number };
@@ -50,7 +50,7 @@ export const bubble: GameModule = {
       const placed: Bubble = { x: clamp(shot.x, 20, 340), y: Math.max(52, shot.y), color: shot.color }; field.push(placed); k.fx.burst(placed.x, placed.y, palette[placed.color]); services.sound.play('hit'); const group = connectedSameColor(field, placed);
       if (group.length >= 3) { field = field.filter(item => !group.includes(item)); const unsupported = findUnsupported(field); field = field.filter(item => !unsupported.includes(item)); detach(unsupported); score += group.length * 10 + unsupported.length * 5; k.score(score); k.fx.burst(placed.x, placed.y, palette[placed.color], Math.min(12, group.length + 3)); services.sound.play('clear'); if (!field.length) { level++; services.reportComplete(level); k.fx.flash('#70f0c2'); services.sound.play('upgrade'); fillBoard(); } }
     };
-    const drawBubble = (item: Bubble, alpha = 1) => { const c = k.ctx; c.globalAlpha = alpha; c.fillStyle = palette[item.color]; c.beginPath(); c.arc(item.x, item.y, 18, 0, 7); c.fill(); c.globalAlpha = 1; };
+    const drawBubble = (item: Bubble, alpha = 1) => { const c = k.ctx; c.globalAlpha = alpha; clayBall(c,item.x,item.y,18,palette[item.color]); c.globalAlpha = 1; };
     const draw = () => { const c = k.ctx; k.clear();  text(c, `POP ${score}  ·  LEVEL ${level}`, 180, 27, 14, '#a8b1c5'); c.strokeStyle = '#f7f9ff'; c.lineWidth = 2; c.setLineDash([6, 6]); c.beginPath(); c.moveTo(180, 510); c.lineTo(aim.x, aim.y); c.stroke(); c.setLineDash([]); field.forEach(item => drawBubble(item)); falling.forEach(item => drawBubble(item, .82)); if (flying) drawBubble(flying); drawBubble({ x: 180, y: 510, color: next }); k.fx.draw(); if (paused) text(c, 'PAUSED', 180, 280, 27); if (over) { text(c, 'BUBBLES DESCENDED', 180, 270, 22, '#ff6b7a'); text(c, 'Finish or start a new round', 180, 300, 15); } };
     let lastStep = performance.now(); const loop = (now = lastStep) => { if (now - lastStep < 1000 / 60 - .1) { raf = requestAnimationFrame(loop); return; } lastStep = now - (now - lastStep) % (1000 / 60); if (!paused && !over) { if (flying) { flying.x += flying.dx; flying.y += flying.dy; if (flying.x < 18 || flying.x > 342) flying.dx *= -1; if (flying.y < 52 || field.some(item => Math.hypot(item.x - flying!.x, item.y - flying!.y) < 35)) attach(flying); } falling.forEach(item => { item.x += item.vx; item.y += item.vy; item.vy += .24; }); falling = falling.filter(item => item.y < 590); if (field.some(item => item.y > 485)) { over = true; k.fx.flash('#ff6b7a'); services.sound.play('fail'); } k.fx.step(); } draw(); raf = requestAnimationFrame(loop); };
     reset(); loop(); return { input: command => { if (!paused && !over) { if (command.aim) aim = {x: 15 + command.aim.x * 330, y: 45 + command.aim.y * 395}; if (command.primary) shoot(); } }, getState: () => ({phase: over ? 'lost' : paused ? 'paused' : 'playing', score, level, aim: {...aim}, shotActive: !!flying, shotsFired, fieldCount: field.length}), pause: () => { paused = true; }, resume: () => { paused = false; }, restart: reset, destroy: () => { cancelAnimationFrame(raf); k.dispose(); } };

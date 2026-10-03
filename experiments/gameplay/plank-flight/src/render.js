@@ -1,3 +1,4 @@
+import {clayPaint,clayRect} from '../../../../packages/gameplay/clay-draw.js';
 import {t} from './i18n.js';
 import { gateOpening } from './difficulty.js';
 import { FRAME_FRESH_MS } from './tracking-gate.js';
@@ -24,7 +25,7 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
     const x=o.x*w, gapTop=gap.top*h, gapBottom=gap.bottom*h;
     ctx.fillStyle='#d8f4da40';ctx.strokeStyle='#d7ffe3';ctx.lineWidth=2;
     for (const [y,height] of [[0,gapTop],[gapBottom,h-gapBottom]]) {
-      ctx.fillRect(x-17,y,34,height);ctx.strokeRect(x-17,y,34,height);
+      clayRect(ctx,x-17,y,34,height,'#f1d7ab',12);
     }
     ctx.fillStyle='#e4ffea';ctx.font='12px system-ui';ctx.fillText(t('FLY THROUGH'),x-48,gapTop+22);
   }
@@ -35,13 +36,13 @@ export function render(ctx, state, { width: w, height: h, pose, pilot, time, mod
   // Anchor the cockpit center exactly on the projected head position.
   ctx.translate(-15,1);
   ctx.shadowColor='#071f3355';ctx.shadowBlur=20;
-  ctx.fillStyle='#f6c77b';ctx.beginPath();ctx.ellipse(0,0,49,29,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=clayPaint(ctx,-49,-29,98,58,'#328d85');ctx.beginPath();ctx.ellipse(0,0,49,29,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.moveTo(-38,-9);ctx.lineTo(-92,-23);ctx.lineTo(-89,1);ctx.lineTo(-38,11);ctx.fill();
   ctx.shadowBlur=0;ctx.strokeStyle='#253f47';ctx.lineWidth=5;
   ctx.beginPath();ctx.moveTo(-15,27);ctx.lineTo(-21,40);ctx.moveTo(22,25);ctx.lineTo(28,40);ctx.moveTo(-37,40);ctx.lineTo(44,40);ctx.stroke();
   ctx.beginPath();ctx.moveTo(-3,-28);ctx.lineTo(-3,-43);ctx.stroke();
   const rotor=state.status==='finished'?45:55+Math.sin(time*.06)*15;
-  ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-3-rotor,-43);ctx.lineTo(-3+rotor,-43);ctx.stroke();
+  ctx.strokeStyle='#e88e72';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-3-rotor,-43);ctx.lineTo(-3+rotor,-43);ctx.stroke();
   ctx.save();ctx.beginPath();ctx.arc(15,-1,23,0,Math.PI*2);ctx.clip();
   ctx.fillStyle='#476c76';ctx.fillRect(-8,-24,46,46);
   if (pilot) ctx.drawImage(pilot,-8,-24,46,46);

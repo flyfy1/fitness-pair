@@ -1,4 +1,5 @@
 import { MOTION_MAX_HEIGHT } from './runner.js';
+import {clayPaint,clayRect} from '../../../packages/gameplay/clay-draw.js';
 
 /** Same center-cropped, mirrored transform as the video; input stays unmirrored. */
 export function videoProjection(image, width, height) {
@@ -53,20 +54,20 @@ export function drawSkeleton(canvas, frame) {
 function drawDino(c, player, runner, debug) {
   const scale = player.h / 44;
   c.save(); c.translate(player.x, player.y); c.scale(scale, scale);
-  c.fillStyle = runner.status === 'over' ? '#ffb788' : '#d8ff81';
+  c.fillStyle = clayPaint(c,0,0,32,44,runner.status === 'over' ? '#e88e72' : '#7eb98b');
   c.strokeStyle = '#173827'; c.lineWidth = 1.6; c.lineJoin = 'round';
   // Tail and cactus arms are decorative; debug exposes the rectangular hitboxes.
-  c.beginPath(); c.moveTo(14,0); c.lineTo(32,0); c.lineTo(32,16);
-  c.lineTo(22,16); c.lineTo(22,20); c.lineTo(27,20); c.lineTo(27,24);
-  c.lineTo(19,24); c.lineTo(16,34); c.lineTo(4,34); c.lineTo(3,30);
-  c.lineTo(-10,21); c.lineTo(-10,10); c.lineTo(3,21); c.lineTo(9,21);
-  c.lineTo(9,15); c.lineTo(14,15); c.closePath(); c.fill(); c.stroke();
+  c.beginPath();c.moveTo(14,7);c.quadraticCurveTo(14,0,21,0);c.lineTo(25,0);c.quadraticCurveTo(32,0,32,7);
+  c.lineTo(32,12);c.quadraticCurveTo(32,17,24,17);c.lineTo(22,20);c.lineTo(27,20);c.lineTo(27,24);
+  c.lineTo(19,24);c.quadraticCurveTo(18,34,10,34);c.quadraticCurveTo(4,34,3,30);
+  c.quadraticCurveTo(-7,28,-10,10);c.quadraticCurveTo(0,22,9,21);c.lineTo(9,15);c.lineTo(14,15);c.closePath();c.fill();c.stroke();
   const stride = runner.status === 'running' && runner.y === 0 ? Math.floor(runner.elapsed * 9) % 2 : 0;
   for (const [x, lift] of [[4,stride * 4],[13,(1-stride) * 4]]) {
     c.fillRect(x,31,5,11-lift); c.fillRect(x,39-lift,9,5); c.strokeRect(x,39-lift,9,5);
   }
-  c.fillStyle = '#173827'; c.fillRect(25,4,3,4); c.fillRect(25,12,7,2);
-  c.fillStyle = '#f6ffdf'; c.fillRect(16,3,5,2); c.fillRect(7,25,6,2);
+  c.fillStyle='#fff8e9';c.beginPath();c.ellipse(25,6,3.7,4.4,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#173827';c.beginPath();c.ellipse(26,6,1.8,2.4,0,0,Math.PI*2);c.fill();c.fillRect(26,13,6,1);
+  c.fillStyle='#f1d7ab';c.beginPath();c.ellipse(12,27,5,6,0,0,Math.PI*2);c.fill();
   c.restore();
   if (debug) {
     c.strokeStyle = '#fff'; c.lineWidth = 2; c.setLineDash([5,4]);
@@ -79,18 +80,17 @@ export function drawWorld(canvas, runner, debug = false) {
   const g = sceneGeometry(width, height);
   runner.width = g.worldWidth;
   const ground = c.createLinearGradient(0,g.origin.y,0,height);
-  ground.addColorStop(0,'#10241ed9'); ground.addColorStop(1,'#10241ef5');
+  ground.addColorStop(0,'#d8b992e0'); ground.addColorStop(1,'#b69068f5');
   c.fillStyle = ground; c.fillRect(0,g.origin.y,width,height-g.origin.y);
-  c.strokeStyle = '#d8ff81'; c.lineWidth = Math.max(3,g.sx * 2);
+  c.strokeStyle = '#f1d7ab'; c.lineWidth = Math.max(3,g.sx * 2);
   c.beginPath(); c.moveTo(0,g.origin.y); c.lineTo(width,g.origin.y); c.stroke();
   c.fillStyle = '#96b46c';
   const spacing = 60 * g.sx, offset = (runner.distance * 20 * g.sx) % spacing;
   for (let x = -offset; x < width; x += spacing) c.fillRect(x,g.origin.y+10*g.sy,18*g.sx,2*g.sy);
   for (const o of runner.obstacles) {
     const box = g.obstacle(o);
-    c.fillStyle = '#ffb788'; c.strokeStyle = '#573322'; c.lineWidth = Math.max(2,g.sx);
-    c.fillRect(box.x,box.y,box.w,box.h); c.strokeRect(box.x,box.y,box.w,box.h);
-    c.strokeStyle = '#ffb788'; c.lineWidth = 4 * g.sx; c.lineJoin = 'round';
+    clayRect(c,box.x,box.y,box.w,box.h,'#579786',5*g.sx);
+    c.strokeStyle = '#579786'; c.lineWidth = 4 * g.sx; c.lineJoin = 'round';c.lineCap='round';
     c.beginPath(); c.moveTo(box.x,box.y+box.h*.65); c.lineTo(box.x-7*g.sx,box.y+box.h*.65); c.lineTo(box.x-7*g.sx,box.y+box.h*.25);
     c.moveTo(box.x+box.w,box.y+box.h*.45); c.lineTo(box.x+box.w+7*g.sx,box.y+box.h*.45); c.lineTo(box.x+box.w+7*g.sx,box.y+box.h*.1); c.stroke();
     c.fillStyle = '#ffe6b9'; c.fillRect(box.x+box.w*.25,box.y+3*g.sy,Math.max(2,g.sx),box.h*.65);

@@ -6,7 +6,7 @@ for(const game of listed)test(`${game.id}: illustrated instructions before enter
  await page.addInitScript(()=>{window.cameraRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;throw new Error('No camera in instruction tests');};});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/#arcade');if(game.section==='other')await page.locator('#other-games summary').click();
  const card=page.locator('.game-card').filter({has:page.getByRole('heading',{name:game.title,exact:true})});
- await expect(card.locator('canvas[role=img], .game-poster')).toHaveCount(1);
+ await expect(card.locator('.game-art > img')).toBeVisible();
  await expect(card.locator('.movement-art')).toHaveCount(0);
  if(game.id==='ar-breakout')await page.screenshot({path:info.outputPath('arcade-art.png')});
  const entry=card.getByRole('link',{name:'Play '+game.title,exact:true});await entry.click();

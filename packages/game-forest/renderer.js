@@ -1,5 +1,6 @@
+import {clayPaint} from '../gameplay/clay-draw.js';
 const TAU = Math.PI * 2;
-const rounded = (ctx, x, y, w, h, r, color) => { ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
+const rounded = (ctx, x, y, w, h, r, color) => { ctx.fillStyle = clayPaint(ctx,x,y,w,h,color); ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
 
 export class ForestGame {
   constructor(canvas) {
@@ -64,8 +65,8 @@ export class ForestGame {
     if (attackAge >= 0 && attackAge < 500) {
       const progress = Math.min(1, attackAge / 350); const x = heroX + 28 * scale + (bossX - heroX - 45 * scale) * progress;
       const y = ground - 65 * scale - Math.sin(progress * Math.PI) * 30;
-      c.shadowBlur = 25; c.shadowColor = '#d2fb82'; c.fillStyle = '#e8ffa6'; c.beginPath(); c.arc(x, y, 10 * scale, 0, TAU); c.fill();
-      c.globalAlpha = .35; c.fillStyle = '#cded81'; c.beginPath(); c.ellipse(x - 23 * scale, y, 34 * scale, 7 * scale, 0, 0, TAU); c.fill(); c.globalAlpha = 1; c.shadowBlur = 0;
+      c.shadowBlur = 25; c.shadowColor = '#6ecfdf'; c.fillStyle = '#c8f5fb'; c.beginPath(); c.arc(x, y, 10 * scale, 0, TAU); c.fill();
+      c.globalAlpha = .35; c.fillStyle = '#6ecfdf'; c.beginPath(); c.ellipse(x - 23 * scale, y, 34 * scale, 7 * scale, 0, 0, TAU); c.fill(); c.globalAlpha = 1; c.shadowBlur = 0;
     }
     if (hitAge >= 0 && hitAge < 850) {
       c.globalAlpha = 1 - hitAge / 850; c.fillStyle = '#ebffa6'; c.font = `bold ${26 * scale}px sans-serif`; c.textAlign = 'center'; c.fillText('−20', bossX, ground - 122 * scale - hitAge / 22); c.globalAlpha = 1;
@@ -93,7 +94,7 @@ export class ForestGame {
     c.fillStyle = '#34492b'; c.beginPath(); c.ellipse(9, -84, 2.7, 3.5, 0, 0, TAU); c.ellipse(21, -84, 2.7, 3.5, 0, 0, TAU); c.fill();
     c.strokeStyle = '#bb9562'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(35, -13); c.lineTo(40, -97); c.stroke();
     rounded(c, 20, -58, 17, 12, 6, '#e4d3a0');
-    c.shadowColor = '#d6fb9c'; c.shadowBlur = 10 + this.charge * 22; c.fillStyle = '#dcf89e'; c.beginPath(); c.moveTo(40, -115); c.lineTo(48, -101); c.lineTo(40, -88); c.lineTo(32, -101); c.closePath(); c.fill(); c.restore();
+    c.shadowColor = '#6ecfdf'; c.shadowBlur = 10 + this.charge * 22; c.fillStyle = '#c8f5fb'; c.beginPath(); c.moveTo(40, -115); c.lineTo(48, -101); c.lineTo(40, -88); c.lineTo(32, -101); c.closePath(); c.fill(); c.restore();
   }
   boss(x, y, scale, t, hitAge) {
     const c = this.ctx; c.save(); c.translate(x, y); c.scale(scale, scale);

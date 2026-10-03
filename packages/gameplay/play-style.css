@@ -1,0 +1,60 @@
+/* Shared materials leave each host's layout, camera and control handlers intact. */
+html.clay-play{--play-ink:#203d39;--play-teal:#277e78;--play-cream:#fff8e9;--play-coral:#e88e72;--play-edge:#d6ddd0;color-scheme:light;font-family:ui-rounded,'Avenir Next',system-ui,sans-serif}
+.clay-play button,.clay-play select{font-family:inherit}
+.clay-play select{background:var(--play-cream);color:var(--play-ink);border-color:var(--play-edge)}
+.clay-play button{background:linear-gradient(#fffdf5,#f3ebda);color:var(--play-ink);border-color:#d9d8c8;border-radius:18px;box-shadow:inset 0 2px 0 #ffffffb3,0 3px 0 #c8cdbd,0 7px 16px #173c361c;text-shadow:none;transition:box-shadow .15s,filter .15s}
+.clay-play button:hover{filter:brightness(1.04)}
+.clay-play button:active{box-shadow:inset 0 2px 4px #173c3620,0 1px 0 #c8cdbd}
+.clay-play button:focus-visible,.clay-play a:focus-visible,.clay-play summary:focus-visible{outline:3px solid var(--play-coral);outline-offset:4px}
+.clay-play button:disabled{opacity:.6;filter:saturate(.4)}
+.clay-play .primary,.clay-play .demo-action,.clay-play .game-entry-actions button:first-child{background:linear-gradient(#38988d,#277e78);color:#fffdf5;border-color:#226c65;box-shadow:inset 0 2px 0 #ffffff40,0 3px 0 #205d57,0 7px 16px #173c3626}
+.clay-play .secondary,.clay-play .game-entry-actions button+button{background:linear-gradient(#fffdf5,#f3ebda);color:var(--play-ink);border-color:#d9d8c8}
+.clay-play :is(.hud,.boss-hud,.stats,.controls,.panel,.diagnostics,.hands-start),.clay-play :is(#panel,#movement-settings){color:var(--play-ink);background:linear-gradient(135deg,#fffdf2f5,#f5ecdbea);border-color:#d6ddd0;border-radius:22px;box-shadow:inset 0 2px 0 #fff,0 8px 28px #173c3626;text-shadow:none}
+.clay-play :is(.hud,.boss-hud,.stats,.controls,.panel,.diagnostics,.hands-start) :is(p,small,label,summary,span,pre),.clay-play :is(#panel,#movement-settings) :is(p,small,label,summary,span,pre){color:var(--play-ink);text-shadow:none}
+.clay-play :is(.brand,.brand span,.brand small,.score,.score span,.score strong){color:var(--play-ink);text-shadow:0 1px 8px #fff8e9}
+.clay-play .brand{background:#fff8e9eb;border-radius:12px;text-shadow:none}
+.clay-play :is(.topbar,.stage>header){background:linear-gradient(#fff8e9db,#fff8e900)}
+.clay-play :is(.movement-hud>span,.steps,.cue,.metrics>div){background:linear-gradient(#fffdf3f2,#f3ebdae8);color:var(--play-ink);border-color:#d6ddd0;border-radius:18px;box-shadow:inset 0 1px 0 #fff,0 5px 16px #173c3626;text-shadow:none}
+.clay-play .cue span{color:var(--play-ink);background:transparent;text-shadow:none}
+.clay-play .metrics :is(strong,small){color:var(--play-ink)}
+.clay-play .stats :is(strong,.current-speed){color:var(--play-ink)}
+.clay-play .hud .badge{background:#d7e7da;color:var(--play-ink);border-color:#a9c3af}
+.clay-play .hud .badge:before{background:var(--play-teal)}
+.clay-play .stage>.hud{background:transparent;box-shadow:none}
+.clay-play .stage>.hud :is(.brand,.mode-note){background:#fff8e9eb;border-radius:12px}
+.clay-play :is(.panel,#panel) .eyebrow{color:var(--play-teal)}
+.clay-play .controls details>div{background:var(--play-cream);color:var(--play-ink);border-color:var(--play-edge)}
+.clay-play .controls a{color:var(--play-teal)}
+.clay-play .difficulty{background:linear-gradient(135deg,#fffdf2f5,#f5ecdbea);border-color:#d6ddd0;color:var(--play-ink);border-radius:22px;box-shadow:inset 0 2px 0 #fff,0 8px 28px #173c3626}
+.clay-play .difficulty :is(span,output,label){color:var(--play-ink)}
+.clay-play :is(#tracking,#head-status,#control-status,.status){color:#b6f4d5}
+.clay-play :is(.movement-hud,.metrics) :is(#tracking,#head-status,#control-status){color:#266e62}
+.clay-play .steps span{color:var(--play-ink)}
+.clay-play .steps [aria-current=step]{background:linear-gradient(#38988d,#277e78);color:#fffdf5}
+.clay-play .steps .done{color:#266e62}
+.clay-play :is(#hp-bar,#charge-bar,.progress span){background:linear-gradient(90deg,#71b6a2,#2f8a7d)}
+.clay-play :is(.health-track,.charge-track,.progress){background:#7b978329;box-shadow:inset 0 2px 3px #173c361a}
+.clay-play input,.clay-play progress{accent-color:var(--play-teal)}
+.clay-play :is(.guidance,.arena-message){text-shadow:0 2px 14px #173c36;color:#fffdf5}
+.clay-play :is(.guidance .status,.arena-message>span){color:#b6f4d5}
+.clay-play :is(.privacy,.privacy-note,#privacy-note){color:#fff8e9;text-shadow:0 1px 5px #173c36}
+.clay-play .controls #privacy-note,.clay-play .controls .privacy-note{color:#365d53;text-shadow:none}
+.clay-play :is(.setup-note,.movement-readout,.feedback,#mode-link,#jump-count,#game-stats strong){color:#c1f1d9}
+.clay-play .controls :is(.setup-note,.movement-readout,.feedback,#mode-link,#jump-count,#game-stats strong){color:#266e62}
+.clay-play .hopmodo-conversation button{background:linear-gradient(#fffdf5,#f3ebda);color:var(--play-ink);border-color:#d9d8c8;box-shadow:inset 0 2px 0 #fff,0 3px 0 #c8cdbd,0 7px 16px #173c3626}
+.clay-play .hopmodo-conversation[data-state=recording] [data-conversation]{background:#a92020;color:white;box-shadow:inset 0 2px 0 #ffffff40,0 3px 0 #761616}
+.clay-play .hopmodo-conversation [data-replay-share]{background:linear-gradient(#38988d,#277e78);color:#fffdf5;border-color:#226c65}
+.clay-play .hopmodo-conversation [data-replay-status]{background:var(--play-cream);color:var(--play-ink)}
+.clay-play .game-entry-eyebrow,.clay-play .game-entry-back,.clay-play .game-entry-settings summary{color:var(--play-teal)}
+.clay-play .game-entry-steps li{border-color:#73aa96}
+.clay-play #tutorial{background:linear-gradient(135deg,#fff8e9f0,#edf3e5eb);color:var(--play-ink)}
+.clay-play #tutorial :is(p,h1,span){color:var(--play-ink);text-shadow:none}
+.clay-play #tutorial .tutorial-progress span[data-done=true]{background:#277e78;color:white}
+.clay-play #practice-lane{background:#cde4de;border-color:#a3c5b7}
+.clay-play .victory{background:radial-gradient(ellipse at top,#d3e8d5,#f6ecda);color:var(--play-ink)}
+.clay-play .victory :is(p,span){color:#365d53}
+.clay-play :is(.record-bar,.clip-card,.game-replay-tools,.game-feedback-card,.debug-report-card){background:linear-gradient(135deg,#fffdf2,#f5ecdbe8);color:var(--play-ink);border-color:#d6ddd0;border-radius:22px;box-shadow:inset 0 2px 0 #fff,0 8px 28px #173c3620}
+.clay-play :is(.game-feedback,.debug-report){background:#173c3680}
+.clay-play :is(.game-feedback-card,.debug-report-card) :is(h1,p,label){color:var(--play-ink)}
+.clay-play .game-feedback-rating button[aria-pressed=true]{background:var(--play-teal);color:white}
+@media(prefers-reduced-motion:reduce){.clay-play button{transition:none}}

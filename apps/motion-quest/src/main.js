@@ -1,6 +1,7 @@
 import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import './style.css';
+import '../../../packages/gameplay/play-style.css';
 import {BodyGestures} from '../../../packages/gameplay/body-gestures.js';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import { SquatRecognizer } from '@fitness-pair/action-squat';
@@ -10,6 +11,7 @@ import { ARGame } from './ar-game.js';
 import { cameraPoint } from './camera-projection.js';
 import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
 
+document.documentElement.classList.add('clay-play');
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
 const video = $('camera'), overlay = $('skeleton'), ctx = overlay.getContext('2d');

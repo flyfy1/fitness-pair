@@ -3,10 +3,12 @@ import {mountRecording} from './recording.js';
 import {mountGameFeedback} from './feedback.js';
 import {mountDebugReport} from './debug-report.js';
 import './shell.css';
+import '../../../../packages/gameplay/play-style.css';
 import {mountPlayStats} from './play-stats.js';
 
 export function mountGame(container,game){
  document.body.classList.add('game-mode');
+ document.documentElement.classList.add('clay-play');
  container.innerHTML=`<main id="main" class="game-play" aria-label="${game.title}">
   <iframe id="game-frame" src="${game.path}" title="${game.title} game" allow="camera; microphone; fullscreen" referrerpolicy="same-origin"></iframe>
   <div class="game-replay-tools"><a class="back" href="/#arcade">← Back to the arcade</a><div class="record-bar" id="record-panel"></div></div>
@@ -27,6 +29,6 @@ export function mountGame(container,game){
  }
  frame.addEventListener('load',controls);if(frame.contentDocument?.readyState==='complete')controls();
  let disposed=false;
- function dispose(){if(disposed)return;disposed=true;stats.dispose();frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();debug.dispose();feedback.dispose();recorder.dispose();runtime.dispose();window.removeEventListener('pagehide',dispose);frame.src='about:blank';document.body.classList.remove('game-mode');}
+ function dispose(){if(disposed)return;disposed=true;stats.dispose();frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();debug.dispose();feedback.dispose();recorder.dispose();runtime.dispose();window.removeEventListener('pagehide',dispose);frame.src='about:blank';document.body.classList.remove('game-mode');document.documentElement.classList.remove('clay-play');}
  window.addEventListener('pagehide',dispose);return {runtime,dispose};
 }
