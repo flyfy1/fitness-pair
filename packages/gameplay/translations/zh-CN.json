@@ -908,5 +908,6 @@
   {"id":"landing.cameraGuide","en":"Camera + space to move. A guide shows you how.","zh":"准备好摄像头和活动空间，跟随图解开始。"},
   {"id":"landing.about","en":"About Hopmodo","zh":"关于 Hopmodo"},
   {"id":"landing.replayInvitation","en":"Play a game. Watch your replay, play again, or send it to a friend. Replays stay on this device until you choose to upload. Download videos you want to keep.","zh":"玩一局，看看回放、再玩一次，或发给朋友。回放保存在此设备，只有主动上传才会分享。请下载想保留的视频。"},
-  {"id":"landing.playgroundAbove","en":"Playground illustration · games are above","zh":"游乐场插画 · 游戏在上方"}
+  {"id":"landing.playgroundAbove","en":"Playground illustration · games are above","zh":"游乐场插画 · 游戏在上方"},
+  {"id":"replay.moreOptions","en":"More replay options","zh":"更多回放选项"}
 ]

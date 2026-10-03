@@ -1,4 +1,4 @@
-import {openReplay} from './open-replay.js';
+import {openReplay,openReplayOptions} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
 import {movingCamera} from './moving-camera.js';
@@ -94,6 +94,7 @@ test('calibrated synthetic camera round retains charge, final projectile, impact
  for(const label of ['charge','projectile','impact','victory'])expect(decoded.levels.find(s=>s.label===label).rms).toBeGreaterThan(.0001);
  const pending=page.waitForEvent('download');await page.locator('#local-result a[download]').click();await(await pending).saveAs(info.outputPath('synthetic-full.mp4'));
  // The short local copy must retain the synthesized audio too.
+ await openReplayOptions(page.locator('#local-result .clip-card').first());
  await page.getByRole('button',{name:'Make short share copy'}).click();
  await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:30000});
  const copy=page.locator('#local-result .clip-card').nth(1);

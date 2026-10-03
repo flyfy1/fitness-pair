@@ -1,4 +1,4 @@
-import {openReplay} from './open-replay.js';
+import {openReplay,openReplayOptions} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 
@@ -7,6 +7,7 @@ async function previewRound(page){
  await expect(page.locator('#record-panel')).toHaveAttribute('data-state','recording');await page.waitForTimeout(1200);
  await page.evaluate(()=>{const w=document.querySelector('#game-frame').contentWindow;w.motionQuest.getReplayState=()=>({roundId:w.document.documentElement.dataset.roundId,phase:'complete'});});
  await expect(page.locator('#local-result video')).toBeVisible({timeout:7000});
+ await page.locator('[data-view-replay]').click();
 }
 
 test('share copy is local, previewed, and uploaded only after explicit publication; clip page plays returned bytes',async({page})=>{
@@ -29,6 +30,14 @@ test('share copy is local, previewed, and uploaded only after explicit publicati
   else await route.fulfill({body:uploaded,headers});
  });
  await previewRound(page);const original=page.locator('#local-result .clip-card').first();
+ await expect(original.locator('.replay-options')).not.toHaveAttribute('open');
+ await expect(original.locator('[data-copy]')).toBeHidden();
+ await expect(original.locator('[data-delete]')).toBeHidden();
+ await expect(original.getByRole('button',{name:'Back to game'})).toBeVisible();
+ await expect(original.getByRole('button',{name:'Share with a friend'})).toBeVisible();
+ await expect(original.getByRole('link',{name:'Download',exact:true})).toBeVisible();
+ await openReplayOptions(original);
+ expect(uploadCount).toBe(0);
  await original.getByRole('button',{name:'Make short share copy',exact:true}).click();
  await expect(page.locator('#local-result .clip-card')).toHaveCount(2,{timeout:12000});
  const copy=page.locator('#local-result .clip-card').first();await expect(copy.getByRole('heading',{name:'Motion Quest · share copy',exact:true})).toBeVisible();await expect(copy).toContainText('MP4');
@@ -45,9 +54,11 @@ test('share copy is local, previewed, and uploaded only after explicit publicati
 test('cancelling or backgrounding a share copy releases capture tracks and retains original',async({page})=>{
  await page.addInitScript(()=>{if(window!==window.top)return;window.captures=[];const capture=HTMLCanvasElement.prototype.captureStream;HTMLCanvasElement.prototype.captureStream=function(...args){const stream=capture.apply(this,args);window.captures.push(stream);return stream;};});
  await previewRound(page);const card=page.locator('#local-result .clip-card');
+ await openReplayOptions(card);
  await card.getByRole('button',{name:'Make short share copy'}).click();await expect(card.getByRole('button',{name:'Cancel copy'})).toBeVisible();await card.getByRole('button',{name:'Cancel copy'}).click();
  await expect(card).toContainText('Share copy cancelled');await expect(page.locator('#local-result .clip-card')).toHaveCount(1);
  await expect.poll(()=>page.evaluate(()=>window.captures.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
+ await openReplayOptions(card);
  await card.getByRole('button',{name:'Make short share copy'}).click();await page.waitForTimeout(500);
  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
  await expect(card).toContainText('Keep this tab visible');await expect.poll(()=>page.evaluate(()=>window.captures.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBe(true);

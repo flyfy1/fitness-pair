@@ -26,7 +26,12 @@
 }
 .game-play .local-result > .clip-grid { max-width: 1000px; }
 
-.game-play .replay-return { margin-bottom: 12px; min-height: 44px; }
+.game-play .replay-actions { margin-top: 16px; }
+.game-play .replay-actions > button, .game-play .replay-actions > a { min-height: 44px; }
+.game-play .replay-return { min-height: 44px; font-weight: 700; }
+.game-play .replay-options { margin-top: 12px; border-top: 1px solid #18234633; }
+.game-play .replay-options > summary { min-height: 44px; padding: 12px 0; }
+.game-play .replay-options > .clip-actions { margin-top: 8px; }
 
 .game-feedback {
   position: fixed;

@@ -1,4 +1,4 @@
-import {openReplay} from './open-replay.js';
+import {openReplay,openReplayOptions} from './open-replay.js';
 import {test,expect} from '@playwright/test';
 
 async function setup(page){
@@ -39,6 +39,7 @@ test('Flight replay and short copy retain game music and final speech without mi
  expect(levels.windows[1]).toBeGreaterThan(.001);
  expect(await game.locator('#scene').evaluate(()=>window.plankFlight.getAudioStream().getAudioTracks()[0].readyState)).toBe('live');
  expect(await page.evaluate(()=>window.microphoneRequests)).toBe(0);
+ await openReplayOptions(page.locator('#local-result .clip-card').first());
  await page.getByRole('button',{name:'Make short share copy'}).click();
  await expect(page.locator('#local-result video')).toHaveCount(2,{timeout:25000});
  expect((await audioLevels(page.locator('#local-result video').nth(1))).whole).toBeGreaterThan(.001);

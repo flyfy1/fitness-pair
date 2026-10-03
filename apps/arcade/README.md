@@ -206,3 +206,10 @@ Acceptance covers 320px and 390px first-screen entry in both languages, tutorial
 focus restoration without camera access, loader recovery at 320/390/768/1440px,
 and camera denial/retry/cleanup. These checks establish software flow and layout;
 real-person recognition and physical phone performance still require trials.
+
+Completed-round replay cards keep **Back to game**, native file sharing, Download
+and explicit Upload & share visible. **More replay options** contains the game
+link, short-copy preparation, deletion, thumbnail repair and the attachment
+message. My clips retains the full tool set. The controls reuse existing handlers;
+opening options never starts an upload, and cancellation remains visible while
+a local copy is being prepared.

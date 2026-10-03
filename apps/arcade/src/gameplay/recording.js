@@ -62,7 +62,12 @@ export function mountRecording(game,runtime,{panel,result,onReturnToGame}){
    const card=mountClipCard(result.querySelector('.clip-grid'),clip);
    const back=document.createElement('button');back.type='button';back.className='replay-return';back.textContent='Back to game';
    back.onclick=()=>{result.querySelectorAll('video').forEach(video=>video.pause());onReturnToGame();};
-   card.prepend(back);
+   const actions=card.querySelector('.clip-actions');actions.classList.add('replay-actions');actions.prepend(back);
+   const options=document.createElement('details');options.className='replay-options';
+   const summary=document.createElement('summary');summary.textContent='More replay options';
+   const tools=document.createElement('div');tools.className='clip-actions';
+   for(const control of actions.querySelectorAll('[data-link],[data-copy],[data-delete],[data-thumbnail]'))tools.append(control);
+   options.append(summary,tools,card.querySelector('[data-local-message]'));card.querySelector('[data-share-status]').after(options);
   }
   revealResult();
  }

@@ -20,7 +20,7 @@ test('mobile layout fits and reduced motion starts paused',async({page})=>{
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await expect(page.getByRole('link',{name:'Take me to the arcade',exact:true}).first()).toBeInViewport();
 });
-test('first game stays reachable on small screens and opens a guide without camera access',async({page})=>{
+test('first game stays reachable on small screens and opens a guide without camera access',async({page},info)=>{
  await page.route('**/api/auth/session',route=>route.fulfill({json:{enabled:true,user:null}}));
  await page.addInitScript(()=>{window.cameraRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.cameraRequests++;throw new Error('Unexpected camera request');};});
  for(const width of [320,390]){
@@ -30,6 +30,7 @@ test('first game stays reachable on small screens and opens a guide without came
    const start=page.locator('.first-game .hero-cta');await expect(start).toBeInViewport({ratio:1});
    expect((await page.locator('header.nav').boundingBox()).height).toBeLessThanOrEqual(110);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   if(width===390&&language==='en')await page.screenshot({path:info.outputPath('first-play-mobile.png')});
    await start.click();await expect(page.getByRole('dialog')).toBeVisible();
    expect(await page.evaluate(()=>window.cameraRequests)).toBe(0);
    await page.keyboard.press('Escape');await expect(start).toBeFocused();
