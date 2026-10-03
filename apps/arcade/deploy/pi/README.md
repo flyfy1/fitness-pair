@@ -15,6 +15,20 @@ The shared Pi Caddy configuration and other products are not modified.
 
 ## Storage identity
 
+Private debug reports use `/var/lib/fitness-arcade/debug-reports/`, separate from
+gallery media. Five-second captures opt into video+diagnostic uploads from the
+common Debug panel; they are not public clips. JSON/video files are mode 0600
+under mode-0700 directories and expire after 30 days. The collector reserves
+pending video bytes within 256 MiB / 1,000 reports, serializes diagnostic writes,
+and rejects mismatched/expired uploads. Video is capped at 20 MiB, matching this
+origin proxy; the browser's shorter captures are bounded to 8 MiB. Full storage
+returns a visible error while the browser retains local downloads.
+
+Reports have no public read endpoint. An authorized local operator can inspect
+the event JSON and video using the report UUID over the existing SSH connection;
+never copy participant data into Git or release archives. Localhost previews
+without a gateway retain local copies and report upload unavailability.
+
 Media remains in the existing private GCS bucket. Pi has an independent
 `fitness-arcade-pi` service account, limited to `roles/storage.objectUser` on
 `project-e8ef2daf-0520-4018-b9f-fitness-sharing`. Its X.509 workload identity pool

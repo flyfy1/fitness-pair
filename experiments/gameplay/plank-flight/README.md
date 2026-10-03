@@ -4,6 +4,11 @@ This isolated experiment now follows the player's head directly during push-up
 play. The existing folder and port are retained so the local link keeps working.
 The earlier plank-hold/full-body geometry gate has been removed.
 
+When embedded in the arcade, focusing a same-tab host dialog (such as Debug
+capture) keeps the existing camera alive. Actual window/tab focus loss still
+interrupts the flight and releases its camera. The arcade owns the optional
+five-second debug recorder; this standalone experiment adds no recorder.
+
 ## MVP card
 
 - **Player / job:** one person doing push-ups with only their head and shoulder(s)

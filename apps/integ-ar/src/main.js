@@ -33,7 +33,7 @@ const tutorial = config.slug === 'invaders' ? new InvadersTutorial() : null;
 let tutorialWanted = !!tutorial;
 const tutorialView = tutorial ? mountTutorial($('arena'), {onStart: () => camera.start(), onSkip: leaveTutorial, onCancel: () => camera.stop('stopped')}) : null;
 let hosted = false;
-let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null;
+let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null, lastHands = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
 const listeners = new Set(), changed = () => listeners.forEach(callback => callback());
 const trackingPublisher = createTrackingPublisher(), recovery = new TrackingRecovery();
@@ -69,7 +69,7 @@ const camera = new PoseCamera({video: $('camera'), inferenceTimeoutMs: 3000,
     trackingPublisher.emit(frame);
     if (performance.now() - frame.tMs >= 250) return;
     if (phase === 'paused') recognizer.release();
-    pose = frame; action = recognizer.update(frame); gestures.handsTogether = !startGate.open; const hands = gestures.update(frame);
+    pose = frame; action = recognizer.update(frame); gestures.handsTogether = !startGate.open; const hands = gestures.update(frame); lastHands = hands;
     if (!action) return;
     const valid = ['active', 'ready', 'completed'].includes(action.phase);
     $('tracking').textContent = action.phase === 'missing' ? 'Tracking needs attention' : action.phase === 'calibrating' ? 'Calibrating torso' : 'Torso tracked · on device';
@@ -238,7 +238,8 @@ function dispose() {
 window.addEventListener('pagehide', dispose, {once: true});
 window.gameplay = {
   getFrame: () => ({round, sessionId: session?.sessionId, phase: phase === 'tutorial' ? 'setup' : phase, canvas: $('world'), video: $('camera'), skeleton: $('skeleton'),
-    isAR: true, score: `${game.getState().score} points`, source: session?.source}),
+    isAR: true, score: `${game.getState().score} points`, source: session?.source,
+    recognition:{action,gesture:lastHands,start:startGate.diagnostics,baseline:recognizer.baseline}}),
   subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
   subscribeTracking: trackingPublisher.subscribe,
   configureHost({homeURL, recordingNote}) { hosted = true; $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },

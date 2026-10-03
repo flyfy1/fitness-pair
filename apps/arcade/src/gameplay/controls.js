@@ -13,12 +13,15 @@ export function mountConversationControls(doc,connect){
  .hopmodo-conversation[data-state=recording] [data-conversation]{background:#a92020;color:#fff}
  .hopmodo-conversation[data-state=ready] [data-conversation],.hopmodo-conversation[data-state=pending] [data-conversation]{background:#2347ee;color:#fff}
  .hopmodo-conversation button[aria-pressed=true] .mic-off{display:none}
+ .hopmodo-conversation [data-debug-report][data-voice=on]{background:#d0eadb;border:2px solid #277e78;box-shadow:0 0 0 3px #277e7833}
  .hopmodo-conversation>span:not([data-replay-status]){position:absolute;right:0;top:calc(100% + 6px);width:max-content;max-width:min(260px,calc(100vw - 24px));padding:8px;border:1px solid #18234655;border-radius:8px;background:#fff;line-height:1.4}
  .hopmodo-conversation [data-replay-share]{position:fixed;right:12px;bottom:12px;width:auto;height:44px;padding:6px 16px;border-radius:22px;background:#fff;color:#2347ee;border:2px solid #2347ee;font-size:16px}
  .hopmodo-conversation [data-replay-status]{position:fixed;right:12px;bottom:64px;max-width:min(300px,calc(100vw - 24px));padding:8px 12px;border-radius:8px;background:#fff;color:#182346;line-height:1.4;box-shadow:0 2px 12px #0003}
  .hopmodo-conversation [data-replay-share]:disabled{opacity:1;cursor:default;color:#182346;border-color:#18234655}
  .hopmodo-conversation [hidden]{display:none}
  .hopmodo-conversation button:focus-visible{outline:3px solid #ff795e;outline-offset:2px}
+ .hopmodo-hosted.game-entry-pending .hopmodo-conversation{display:flex!important;top:auto!important;bottom:12px}
+ .hopmodo-hosted.game-entry-pending .hopmodo-conversation>*:not([data-debug-report]){display:none!important}
  .hopmodo-native-hud{padding-right:calc(var(--hopmodo-native-padding,0px) + var(--hopmodo-controls-reserve,0px))!important;padding-top:calc(var(--hopmodo-native-top,0px) + var(--hopmodo-controls-offset,0px))!important;gap:min(12px,2vw)!important;box-sizing:border-box}
  .hopmodo-native-hud button{white-space:nowrap}
  .hopmodo-native-hud>*{min-width:0;flex-shrink:1}

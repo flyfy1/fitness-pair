@@ -1,0 +1,182 @@
+[
+  {
+    "id": "debugCapture.0",
+    "en": "Debug capture",
+    "zh": "调试捕获"
+  },
+  {
+    "id": "debugCapture.1",
+    "en": "Record 5-second debug",
+    "zh": "录制 5 秒调试视频"
+  },
+  {
+    "id": "debugCapture.2",
+    "en": "Disable voice command",
+    "zh": "关闭语音指令"
+  },
+  {
+    "id": "debugCapture.3",
+    "en": "Enable voice command",
+    "zh": "启用语音指令"
+  },
+  {
+    "id": "debugCapture.4",
+    "en": "Send captures to the private debug server",
+    "zh": "将捕获发送到私有调试服务器"
+  },
+  {
+    "id": "debugCapture.5",
+    "en": "Recognition diagnostics",
+    "zh": "识别诊断"
+  },
+  {
+    "id": "debugCapture.6",
+    "en": "Record the next five seconds of this game's camera view and movement data. Works during setup, start gestures, pauses and gameplay. No microphone audio is saved.",
+    "zh": "录制接下来五秒的游戏摄像头画面和动作数据，可在校准、开始手势、暂停或游玩时使用，不保存麦克风音频。"
+  },
+  {
+    "id": "debugCapture.7",
+    "en": "Uploads video, named body joints and recognition context to this website. The video can show your face or home. Reports expire after 30 days and never appear in the public gallery. Leave off to save only on this device.",
+    "zh": "将视频、身体关节点和识别状态上传到本网站。视频可能包含你的脸或家中画面。报告保留 30 天，不会出现在公开画廊。不勾选则仅保存在本机。"
+  },
+  {
+    "id": "debugCapture.8",
+    "en": "Optional voice trigger",
+    "zh": "可选语音触发"
+  },
+  {
+    "id": "debugCapture.9",
+    "en": "Enable once, then say “debug please” or “我要上传 debug”. Your browser's speech provider may process command audio.",
+    "zh": "启用后，说“debug please”或“我要上传 debug”即可触发。浏览器的语音服务可能处理指令音频。"
+  },
+  {
+    "id": "debugCapture.10",
+    "en": "Latest local debug capture",
+    "zh": "最近的本地调试捕获"
+  },
+  {
+    "id": "debugCapture.11",
+    "en": "Download debug video",
+    "zh": "下载调试视频"
+  },
+  {
+    "id": "debugCapture.12",
+    "en": "Download diagnostic JSON",
+    "zh": "下载诊断 JSON"
+  },
+  {
+    "id": "debugCapture.13",
+    "en": "Upload this capture privately",
+    "zh": "私有上传此捕获"
+  },
+  {
+    "id": "debugCapture.14",
+    "en": "The latest three captures stay on this device, separately from game replays.",
+    "zh": "本机保留最近三次调试捕获，与游戏回放分开存储。"
+  },
+  {
+    "id": "debugCapture.15",
+    "en": "Record a five-second video and movement diagnostics, even before the game starts.",
+    "zh": "录制五秒视频及动作诊断，尚未开始游戏时也能使用。"
+  },
+  {
+    "id": "debugCapture.16",
+    "en": "Cancel debug",
+    "zh": "取消调试录制"
+  },
+  {
+    "id": "debugCapture.17",
+    "en": "Debug recording · {0}s remaining",
+    "zh": "正在调试录制 · 剩余 {0} 秒"
+  },
+  {
+    "id": "debugCapture.18",
+    "en": "Debug saved on this device. Reference: {0}",
+    "zh": "调试已保存到本机。编号：{0}"
+  },
+  {
+    "id": "debugCapture.19",
+    "en": "Debug uploaded privately. Reference: {0}",
+    "zh": "调试已私有上传。编号：{0}"
+  },
+  {
+    "id": "debugCapture.20",
+    "en": "Local debug reference: {0}",
+    "zh": "本地调试编号：{0}"
+  },
+  {
+    "id": "debugCapture.21",
+    "en": "Voice command disabled.",
+    "zh": "语音指令已关闭。"
+  },
+  {
+    "id": "debugCapture.22",
+    "en": "Voice commands are unavailable in this browser. Use Record 5-second debug instead.",
+    "zh": "此浏览器不支持语音指令，请使用“录制 5 秒调试视频”。"
+  },
+  {
+    "id": "debugCapture.23",
+    "en": "Listening. Say “debug please” to record five seconds.",
+    "zh": "正在聆听。说“debug please”即可录制五秒。"
+  },
+  {
+    "id": "debugCapture.24",
+    "en": "Microphone permission was denied or unavailable. Use Record 5-second debug instead.",
+    "zh": "麦克风权限被拒绝或不可用，请使用“录制 5 秒调试视频”。"
+  },
+  {
+    "id": "debugCapture.25",
+    "en": "Waiting for microphone permission…",
+    "zh": "正在等待麦克风权限…"
+  },
+  {
+    "id": "debugCapture.26",
+    "en": "Voice recognition paused. The manual debug button remains available.",
+    "zh": "语音识别已暂停，仍可使用手动调试按钮。"
+  },
+  {
+    "id": "debugCapture.27",
+    "en": "Voice command could not restart. Enable it again or use the manual button.",
+    "zh": "语音指令无法重新启动，请再次启用或使用手动按钮。"
+  },
+  {
+    "id": "debugCapture.28",
+    "en": "Voice command could not start. Use the manual debug button.",
+    "zh": "语音指令无法启动，请使用手动调试按钮。"
+  },
+  {
+    "id": "debugCapture.29",
+    "en": "Uploading private debug capture…",
+    "zh": "正在私有上传调试捕获…"
+  },
+  {
+    "id": "debugCapture.30",
+    "en": "Local storage is unavailable. Download the video and JSON before leaving.",
+    "zh": "本地存储不可用，请在离开前下载视频和 JSON。"
+  },
+  {
+    "id": "debugCapture.31",
+    "en": "Local video and JSON remain available.",
+    "zh": "本地视频和 JSON 仍可下载。"
+  },
+  {
+    "id": "debugCapture.32",
+    "en": "Start the camera or a game preview before recording debug.",
+    "zh": "请先开启摄像头或游戏预览，再录制调试视频。"
+  },
+  {
+    "id": "debugCapture.33",
+    "en": "Debug recording canceled.",
+    "zh": "调试录制已取消。"
+  },
+  {
+    "id": "debugCapture.34",
+    "en": "The game restarted during debug capture.",
+    "zh": "调试捕获期间游戏重新开始了。"
+  },
+  {
+    "id": "debugCapture.35",
+    "en": "The camera stopped during debug capture.",
+    "zh": "调试捕获期间摄像头已停止。"
+  }
+]

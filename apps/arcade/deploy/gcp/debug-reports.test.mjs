@@ -8,7 +8,7 @@ const origin='https://fitness.example.test',id='550e8400-e29b-41d4-a716-44665544
 const game={id:'motion-quest',title:'Motion Quest'};
 const report=(overrides={})=>({version:1,id,consent:'debug-data-v1',trigger:'voice',includeVideo:true,requestedAt:1700000000000,gameId:game.id,sourcePage:'/play/motion-quest',sessionId,
  gameState:{phase:'playing',score:'2 / 5 squats',round:sessionId,source:{kind:'camera',id:sessionId}},
- clip:{id:clipId,sessionId,createdAt:1699999999000,duration:3.2,width:640,height:480,bytes:12,mime:'video/webm',source:'replay',inputSource:{kind:'camera',id:sessionId},stopReason:'Debug report',finalScore:'2 / 5 squats'},
+ clip:{id:clipId,sessionId,createdAt:1699999999000,duration:3.2,width:640,height:480,bytes:24,mime:'video/webm',source:'replay',inputSource:{kind:'camera',id:sessionId},stopReason:'Debug report',finalScore:'2 / 5 squats'},
  tracking:null,client:{locale:'zh-CN',viewport:{width:390,height:844},devicePixelRatio:3},...overrides});
 const post=(body=report(),headers={})=>new Request(origin+'/api/debug-reports',{method:'POST',headers:{Origin:origin,Referer:origin+'/play/motion-quest?secret=query','Content-Type':'application/json','User-Agent':'Synthetic Browser 1',Cookie:'private-session',Authorization:'Bearer private-token',...headers},body:JSON.stringify(body)});
 
@@ -48,4 +48,33 @@ test('data-only reports reject video while malformed, cross-origin and unconsent
  ];
  for(const candidate of invalid)await assert.rejects(collector.handle(candidate),error=>[400,403,415].includes(error.status));
  await assert.rejects(collector.handle(upload({'X-Debug-Video-Consent':'automatic'})),{status:400});
+});
+
+test('short setup context is retained and malformed recognition timelines fail closed',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-debug-context-');t.after(()=>rm(directory,{recursive:true,force:true}));
+ const collector=createDebugReportCollector({directory,origin,games:[game],now:()=>1700000000100});
+ const diagnostics={format:'fitness-pair/debug-capture/1',durationMs:5000,contexts:[{videoMs:25,inputSeq:5,phase:'setup',recognition:{gesture:{tracked:false,missingJoints:['leftWrist']},start:{stage:'waiting'}}}]};
+ assert.equal((await collector.handle(post(report({diagnostics})))).status,201);
+ assert.deepEqual(JSON.parse(await readFile(directory+'/debug-reports/events/'+id+'.json','utf8')).diagnostics,diagnostics);
+ for(const patch of [{durationMs:90000},{contexts:[null]},{contexts:[{videoMs:-1,inputSeq:0,phase:'setup',recognition:null}]},{contexts:[{videoMs:10,inputSeq:0,phase:'setup'}]},{contexts:[{videoMs:5001,inputSeq:0,phase:'foreign',recognition:{}}]}])await assert.rejects(collector.handle(post(report({diagnostics:{...diagnostics,...patch}}))),{status:400});
+});
+test('private storage caps include pending videos, serialize concurrent requests and keep retries idempotent',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-debug-capacity-');t.after(()=>rm(directory,{recursive:true,force:true}));
+ const collector=createDebugReportCollector({directory,origin,games:[game],now:()=>1700000000100,reportLimit:2});
+ const second='550e8400-e29b-41d4-a716-446655440001',third='550e8400-e29b-41d4-a716-446655440002';
+ const results=await Promise.allSettled([collector.handle(post()),collector.handle(post(report({id:second}))),collector.handle(post(report({id:third})))]);
+ assert.equal(results.filter(result=>result.status==='fulfilled').length,2);assert.equal(results[2].reason.status,507);
+ assert.equal((await collector.handle(post())).status,200);
+ const bounded=createDebugReportCollector({directory,origin,games:[game],now:()=>1700000000100,storageLimit:200000});
+ await assert.rejects(bounded.handle(post(report({id:third,clip:{...report().clip,bytes:300000}}))),{status:507});
+});
+test('video limits match the proxy, reserved bytes cannot be exceeded, and expired uploads fail',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-debug-video-');t.after(()=>rm(directory,{recursive:true,force:true}));let clock=1700000000100;
+ const collector=createDebugReportCollector({directory,origin,games:[game],now:()=>clock});
+ await assert.rejects(collector.handle(post(report({clip:{...report().clip,bytes:21*1024*1024}}))),{status:413});
+ await collector.handle(post());
+ const upload=body=>new Request(origin+'/api/debug-reports/'+id+'/video',{method:'PUT',headers:{Origin:origin,'Content-Type':'video/webm','X-Debug-Video-Consent':'debug-video-v1'},body});
+ await assert.rejects(collector.handle(upload(Buffer.alloc(100))),{status:413});
+ assert.deepEqual(await readdir(directory+'/debug-reports/videos'),[]);
+ clock+=DEBUG_RETENTION_MS+1;await assert.rejects(collector.handle(upload(Buffer.alloc(24))),{status:410});
 });

@@ -15,6 +15,7 @@ export function createFrameRuntime(frame, connect) {
  if(frame.contentDocument?.readyState==='complete')bind();
  return {
   getViewport:()=>({width:frame.contentWindow?.innerWidth||frame.clientWidth,height:frame.contentWindow?.innerHeight||frame.clientHeight}),
+  getInputTime:()=>frame.contentWindow.performance.now(),
   readFrame:()=>disposed?null:provider?.getFrame()||null,
   subscribe(callback){listeners.add(callback);return()=>listeners.delete(callback);},
   subscribeTracking(callback){trackingListeners.add(callback);return()=>trackingListeners.delete(callback);},

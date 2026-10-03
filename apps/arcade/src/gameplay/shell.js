@@ -20,7 +20,7 @@ export function mountGame(container,game){
  const stats=mountPlayStats(game,runtime);
  runtime.configureHost({homeURL:'/#arcade',recordingNote:'Your game and camera view record automatically during gameplay, with game sound when available. Only the latest two videos stay on this device; replays keep the latest 90 seconds at normal speed. Conversation recording is optional. Anonymous play counts and active time are sent to this site. Video is uploaded only when you choose to share.'});
  recorder=mountRecording(game,runtime,{panel:container.querySelector('#record-panel'),result:container.querySelector('#local-result'),onReturnToGame:()=>{frame.focus({preventScroll:true});frame.scrollIntoView({behavior:'instant',block:'start'});}});
- const feedback=mountGameFeedback(game,runtime,{container:container.querySelector('#game-feedback-root'),stopGame:()=>{stats.dispose('stopped');frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();const replay=recorder.stopRound();runtime.dispose();frame.src='about:blank';return replay;}});
+ const feedback=mountGameFeedback(game,runtime,{container:container.querySelector('#game-feedback-root'),stopGame:()=>{debug.stop();stats.dispose('stopped');frame.removeEventListener('load',controls);frame.removeEventListener('load',reload);disposeControls();const replay=recorder.stopRound();runtime.dispose();frame.src='about:blank';return replay;}});
  const debug=mountDebugReport(game,runtime,recorder,{container:container.querySelector('#debug-report-root')});
  let disposeControls=()=>{};
  function controls(){

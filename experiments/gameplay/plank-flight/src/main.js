@@ -185,6 +185,8 @@ window.addEventListener('keydown',event=>{
   if(event.code==='Escape')interrupt(t('You paused the flight. Take your time.'));
 });
 window.addEventListener('blur',()=>{
+  // A same-tab host dialog is still local gameplay, including debug capture.
+  try{if(window.parent!==window&&window.parent.document.hasFocus())return;}catch{/* Cross-origin hosts cannot keep camera access on blur. */}
   sound.stop();
   if(camera.active||['countdown','flying'].includes(state.status))interrupt(t('The window lost focus. Your camera has been stopped.'));
 });

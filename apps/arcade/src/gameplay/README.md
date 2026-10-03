@@ -116,12 +116,21 @@ Layouts with a movement-status row place the shared toolbar below that row and
 retain the native header's full width for the title, lives and score. Only
 layouts sharing the header row reserve horizontal space for the toolbar.
 
-The host also owns one Debug report control. Recording keeps the latest 90 seconds
-of UUID-linked named-joint data locally. The player must explicitly confirm each
-private diagnostic upload; the video checkbox is off by default. The optional
-voice command is separately opt-in and opens the same confirmation dialog when
-the browser recognizes “我要上传 debug”. Browser speech processing is disclosed
-before it is enabled, and command audio is not added to the diagnostic report.
+The host also owns one Debug report control, available even on the entry page.
+Its separate five-second recorder works during camera setup and start gestures,
+without stopping the regular replay or opening another camera/model. Named-joint
+tracking and optional recognition context share the source iframe's sampling clock,
+so video offsets do not mix different `performance.timeOrigin` values. All nine
+game routes expose this common capture/review/download panel.
+
+The latest three debug captures stay in a separate, bounded local library. Voice
+is opt-in per page: “debug please” and “我要上传 debug” start capture directly after
+enabling it. A visible notice counts down five seconds, with Cancel available.
+The optional private-server checkbox explicitly selects video and diagnostics
+for subsequent captures; upload is off by default, failures retain downloads,
+and private references never publish to the gallery. Browser speech processing
+is disclosed before enabling it; command audio is never added to the debug video.
+See [capture, destination and evidence](../../../../docs/debug-capture.md).
 
 ```mermaid
 flowchart LR

@@ -13,6 +13,8 @@ export interface GameplayFrame {
  isAR?: boolean;
  score: string;
  source?: Source;
+ /** Optional local recognition context; never credentials or model-index arrays. */
+ recognition?: Record<string,unknown>;
  hud?: {health?:string;cue?:string;charge?:string;elapsed?:string};
  layout?: {width:number;height:number;x:number;y:number;canvasWidth:number;canvasHeight:number};
 }
@@ -25,6 +27,8 @@ export interface GamePresentation {
 }
 export interface GameplayRuntime {
  getViewport?():{width:number;height:number};
+ /** Current sampling clock in the source frame's performance time origin. */
+ getInputTime?():number;
  readFrame():GameplayFrame|null;
  subscribe(changed:()=>void):()=>void;
  subscribeTracking(tracked:(frame:PoseFrame)=>void):()=>void;

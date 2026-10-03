@@ -5,7 +5,9 @@ import path from 'node:path';
 import {assertPoseFrame,sameSource} from '../../../../contracts/index.js';
 
 const JSON_LIMIT=16*1024*1024;
-export const DEBUG_VIDEO_LIMIT=105*1024*1024;
+export const DEBUG_VIDEO_LIMIT=20*1024*1024;
+export const DEBUG_STORAGE_LIMIT=256*1024*1024;
+export const DEBUG_REPORT_LIMIT=1000;
 export const DEBUG_RETENTION_MS=30*86400000;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const headers={'Cache-Control':'no-store','Content-Type':'application/json','X-Content-Type-Options':'nosniff'};
@@ -58,7 +60,19 @@ function validateReport(body,allowed,now){
  const source=state.source;
  if(source!==null&&(!['camera','replay','synthetic'].includes(source?.kind)||!text(source.id,160)))throw fail(400,'Invalid diagnostic game source.');
  const round=state.round===null?null:text(state.round,160);if(state.round!==null&&!round)throw fail(400,'Invalid diagnostic round.');
- return {game,tracking:validateTracking(body.tracking,body.sessionId,game.id),
+ const diagnostics=body.diagnostics??null;
+ if(diagnostics!==null){
+  if(diagnostics.format!=='fitness-pair/debug-capture/1'||!Number.isFinite(diagnostics.durationMs)||diagnostics.durationMs<=0||diagnostics.durationMs>6500||!Array.isArray(diagnostics.contexts)||diagnostics.contexts.length>400)throw fail(400,'Invalid diagnostic capture context.');
+  let previous=-Infinity;
+  for(const sample of diagnostics.contexts){
+   if(!sample||typeof sample!=='object'||Array.isArray(sample))throw fail(400,'Invalid diagnostic recognition timeline.');
+   const encoded=JSON.stringify(sample.recognition);
+   if(!Number.isFinite(sample.videoMs)||sample.videoMs<0||sample.videoMs<previous||sample.videoMs>diagnostics.durationMs+50||!Number.isSafeInteger(sample.inputSeq)||!['setup','playing','paused','ending','complete','idle',null].includes(sample.phase)||!encoded||encoded.length>8192||sample.recognition!==null&&(typeof sample.recognition!=='object'||Array.isArray(sample.recognition)))throw fail(400,'Invalid diagnostic recognition timeline.');
+   previous=sample.videoMs;
+  }
+ }
+ if(body.includeVideo&&clip.bytes>DEBUG_VIDEO_LIMIT)throw fail(413,'Debug video exceeds the 20 MiB limit.');
+ return {game,diagnostics,tracking:validateTracking(body.tracking,body.sessionId,game.id),
   clip:{id:clip.id,sessionId:clip.sessionId,createdAt:clip.createdAt,duration:clip.duration,width:clip.width,height:clip.height,bytes:clip.bytes,mime,source:clip.source,inputSource:input,stopReason:clip.stopReason===null?null:text(clip.stopReason,160),finalScore:clip.finalScore===null?null:text(clip.finalScore,160)},
   gameState:{phase:state.phase,score:state.score,round,source},client:{locale:client.locale,viewport:{width:viewport.width,height:viewport.height},devicePixelRatio:client.devicePixelRatio}};
 }
@@ -74,10 +88,27 @@ async function replaceJSON(target,value){
 }
 async function fileHash(filename){const hash=createHash('sha256');for await(const chunk of createReadStream(filename))hash.update(chunk);return hash.digest('hex');}
 
-export function createDebugReportCollector({directory,origin,games,release={},getUser=async()=>null,now=Date.now}={}){
+export function createDebugReportCollector({directory,origin,games,release={},getUser=async()=>null,now=Date.now,storageLimit=DEBUG_STORAGE_LIMIT,reportLimit=DEBUG_REPORT_LIMIT}={}){
  if(!directory)throw Error('A durable diagnostic directory is required.');
  const allowed=new Map(games.map(game=>[game.id,game]));
  const root=path.join(directory,'debug-reports'),events=path.join(root,'events'),videos=path.join(root,'videos');
+ let queue=Promise.resolve();
+ const serialize=work=>{const result=queue.then(work);queue=result.catch(()=>{});return result;};
+ async function capacity(id,bytes){
+  let names;try{names=await readdir(events);}catch(error){if(error.code==='ENOENT')names=[];else throw error;}
+  if(names.includes(id+'.json'))return;
+  let used=0,count=0;
+  for(const name of names){
+   if(!UUID.test(name.replace(/\.json$/,''))||!name.endsWith('.json')){used+=(await stat(path.join(events,name))).size;continue;}
+   const file=path.join(events,name),record=JSON.parse(await readFile(file,'utf8'));count++;
+   // Reserve selected video bytes before accepting the report, including pending uploads.
+   used+=(await stat(file)).size+4096+(record.includeVideo?Math.max(record.clip?.bytes||0,record.video?.bytes||0):0);
+  }
+  let videoNames;try{videoNames=await readdir(videos);}catch(error){if(error.code==='ENOENT')videoNames=[];else throw error;}
+  // Count unfinished/orphaned files from an interrupted process, without deleting private evidence.
+  for(const name of videoNames)if(!names.includes(name.replace(/\.(mp4|webm)$/,'.json')))used+=(await stat(path.join(videos,name))).size;
+  if(count>=reportLimit||used+bytes>storageLimit)throw fail(507,'Private debug storage is full. Keep the local downloads and try again later.');
+ }
  async function prune(){
   let names;try{names=await readdir(events);}catch(error){if(error.code==='ENOENT')return;throw error;}
   for(const name of names){
@@ -93,17 +124,20 @@ export function createDebugReportCollector({directory,origin,games,release={},ge
   if(request.headers.get('X-Debug-Video-Consent')!=='debug-video-v1')throw fail(400,'Confirm the diagnostic video upload.');
   const targetRecord=path.join(events,id+'.json');let record;
   try{record=JSON.parse(await readFile(targetRecord,'utf8'));}catch(error){if(error.code==='ENOENT')throw fail(404,'Diagnostic report not found.');throw error;}
+  if(record.expiresAt<=now())throw fail(410,'This diagnostic report has expired.');
   if(!record.includeVideo)throw fail(409,'This report did not request a video.');
   const mime=(request.headers.get('Content-Type')||'').split(';',1)[0];if(!['video/mp4','video/webm'].includes(mime))throw fail(415,'Use an MP4 or WebM diagnostic video.');
   if(record.clip.mime!==mime)throw fail(415,'Diagnostic video type does not match the report.');
-  const length=request.headers.get('Content-Length'),declared=length===null?null:Number(length);if(declared!==null&&(!Number.isSafeInteger(declared)||declared<=0||declared>DEBUG_VIDEO_LIMIT))throw fail(413,'Diagnostic video exceeds the 105 MiB limit.');
+  const length=request.headers.get('Content-Length'),declared=length===null?null:Number(length);if(declared!==null&&(!Number.isSafeInteger(declared)||declared<=0||declared>DEBUG_VIDEO_LIMIT))throw fail(413,'Diagnostic video exceeds the 20 MiB limit.');
+  if(declared!==null&&declared!==record.clip.bytes)throw fail(400,'Diagnostic video size does not match the report.');
   if(!request.body)throw fail(400,'Diagnostic video is required.');
   await mkdir(videos,{recursive:true,mode:0o700});
   const extension=mime==='video/mp4'?'.mp4':'.webm',target=path.join(videos,id+extension),temporary=target+'.'+randomBytes(8).toString('hex');
   const file=await open(temporary,'wx',0o600),hash=createHash('sha256'),head=[];let bytes=0,complete=false;
   try{
-   for await(const chunk of request.body){bytes+=chunk.byteLength;if(bytes>DEBUG_VIDEO_LIMIT)throw fail(413,'Diagnostic video exceeds the 105 MiB limit.');if(head.reduce((sum,item)=>sum+item.length,0)<12)head.push(Buffer.from(chunk).subarray(0,12));hash.update(chunk);await file.write(chunk);}
+   for await(const chunk of request.body){bytes+=chunk.byteLength;if(bytes>DEBUG_VIDEO_LIMIT||bytes>record.clip.bytes)throw fail(413,'Diagnostic video exceeds its reserved size.');if(head.reduce((sum,item)=>sum+item.length,0)<12)head.push(Buffer.from(chunk).subarray(0,12));hash.update(chunk);await file.write(chunk);}
    if(!bytes)throw fail(400,'Diagnostic video is empty.');
+   if(bytes!==record.clip.bytes)throw fail(400,'Diagnostic video size does not match the report.');
    const prefix=Buffer.concat(head).subarray(0,12),valid=mime==='video/webm'?prefix.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])):prefix.subarray(4,8).toString('ascii')==='ftyp';
    if(!valid)throw fail(415,'Diagnostic video contents do not match the selected format.');
    await file.sync();complete=true;
@@ -114,7 +148,7 @@ export function createDebugReportCollector({directory,origin,games,release={},ge
   record={...record,video:{status:'ready',mime,bytes,sha256:digest,storedAt:now()}};await replaceJSON(targetRecord,record);
   return json({ok:true,id,video:{bytes,mime}},linked?201:200);
  }
- return {prune,async handle(request){
+ async function handle(request){
   const url=new URL(request.url),match=/^\/api\/debug-reports\/([0-9a-f-]+)\/video$/.exec(url.pathname);
   if(match){if(request.method!=='PUT')return json({error:'Method not allowed.'},405);if(!UUID.test(match[1]))throw fail(404,'Diagnostic report not found.');return uploadVideo(request,match[1]);}
   if(url.pathname!=='/api/debug-reports')return null;
@@ -122,16 +156,18 @@ export function createDebugReportCollector({directory,origin,games,release={},ge
   if(request.headers.get('Origin')!==origin)throw fail(403,'Debug uploads must come from this website.');
   if(request.headers.get('Content-Type')?.split(';',1)[0].trim().toLowerCase()!=='application/json')throw fail(415,'Diagnostic data must use JSON.');
   await prune();
-  const body=await readJSON(request),{game,tracking,clip,gameState,client}=validateReport(body,allowed,now());
+  const body=await readJSON(request),{game,tracking,clip,gameState,client,diagnostics}=validateReport(body,allowed,now());
   await mkdir(events,{recursive:true,mode:0o700});
   const session=await getUser(request);
   const receivedAt=now();const record={version:1,id:body.id,consent:'debug-data-v1',trigger:body.trigger,includeVideo:body.includeVideo,requestedAt:body.requestedAt,receivedAt,expiresAt:receivedAt+DEBUG_RETENTION_MS,
    game:{id:game.id,title:game.title},sourcePage:body.sourcePage,sessionId:body.sessionId,gameState,
-   clip,tracking,client,video:{status:body.includeVideo?'pending':'not-requested'},
+   clip,tracking,diagnostics,client,video:{status:body.includeVideo?'pending':'not-requested'},
    request:{origin,referer:refererPath(request,origin),userAgent:text(request.headers.get('User-Agent'),1024),secFetchSite:text(request.headers.get('Sec-Fetch-Site'),32)},
    user:session?{id:session.userId,email:session.email}:null,
    serviceRelease:{commit:text(release.commit,160),builtAt:text(release.builtAt,80)}};
+  await capacity(record.id,Buffer.byteLength(JSON.stringify(record))+4096+(record.includeVideo?clip.bytes:0));
   const saved=await writeNew(path.join(events,record.id+'.json'),record);
   return json({ok:true,id:saved.id,receivedAt:saved.receivedAt,video:saved.video},saved===record?201:200);
- }};
+ }
+ return {prune:()=>serialize(prune),handle:request=>new URL(request.url).pathname.startsWith('/api/debug-reports')?serialize(()=>handle(request)):Promise.resolve(null)};
 }
