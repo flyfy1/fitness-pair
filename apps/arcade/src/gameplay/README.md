@@ -130,3 +130,18 @@ flowchart LR
   Library --> Export[Selected video export]
   Export --> Share[Authenticated publication]
 ```
+
+## Footer clearance
+
+Games with a separate recording note and native bottom toolbar can mark them
+with `data-game-note` and `data-game-footer`. The shared shell measures their
+rendered sizes and publishes `--hopmodo-footer-bottom` and
+`--hopmodo-guidance-bottom` on the game document. Native CSS takes the maximum
+of its existing spacing and these values. This retains original controls and
+layout ownership without adding game-name selectors to the host.
+
+The note stays visible in hosted portrait and landscape play. ResizeObserver
+updates clearance when localized text wraps or text size changes; viewport and
+fullscreen changes also reposition it. Disposal disconnects the observer and
+restores earlier CSS variable values. Games without these markers keep their
+existing layout. See [the loop and evidence](../../../../docs/game-footer-layout.md).

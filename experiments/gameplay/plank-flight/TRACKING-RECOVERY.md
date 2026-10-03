@@ -39,8 +39,9 @@ Audio resumes its existing stream without repeating the takeoff announcement.
 The native Finish & rest action resumes audio before playing the ending so that
 a replay finished during a tracking pause retains its encouragement.
 
-## Later
+## Footer follow-up
 
-The hosted Flight privacy disclosure overlaps the native toolbar at 390×844.
-The finish/recording flow passes, but the shared shell needs to reserve footer
-space so its disclosure and game controls remain readable on narrow screens.
+The recorded 390×844 overlap between the hosted disclosure and native toolbar
+is addressed by [shared footer clearance](../../../docs/game-footer-layout.md).
+The shell reserves measured space through language, text size, viewport and
+fullscreen changes while retaining the original round and recorder.

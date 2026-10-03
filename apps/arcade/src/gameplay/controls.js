@@ -22,6 +22,7 @@ export function mountConversationControls(doc,connect){
  .hopmodo-native-hud{padding-right:calc(var(--hopmodo-native-padding,0px) + var(--hopmodo-controls-reserve,176px))!important;gap:min(12px,2vw)!important;box-sizing:border-box}
  .hopmodo-native-hud button{white-space:nowrap}
  .hopmodo-native-hud>*{min-width:0;flex-shrink:1}
+ .hopmodo-hosted [data-game-note]{display:block;right:16px;max-width:1000px;line-height:1.35}
  @media(max-width:420px){.hopmodo-native-hud button{padding-inline:4px}.hopmodo-native-hud small{letter-spacing:0}}
  `;
  const hud=doc.querySelector('header,.hud');
@@ -38,13 +39,29 @@ export function mountConversationControls(doc,connect){
  language.querySelector('option[value=zh]').textContent='中文';
  element.prepend(language);
  localizeDocument(doc);
+ const note=doc.querySelector('[data-game-note]'),footer=doc.querySelector('[data-game-footer]');
+ const layout=doc.documentElement.style;
+ const previousFooter=layout.getPropertyValue('--hopmodo-footer-bottom'),previousGuidance=layout.getPropertyValue('--hopmodo-guidance-bottom');
  const position=()=>{
   const tracking=doc.querySelector('.movement-hud');
   element.style.top=tracking?`${Math.ceil(tracking.getBoundingClientRect().bottom+8)}px`:'12px';
   hud?.style.setProperty('--hopmodo-controls-reserve',tracking?'0px':'176px');
+  if(note&&footer){
+   const bounds=note.getBoundingClientRect();
+   const reserve=bounds.height?Math.max(0,view.innerHeight-bounds.top+12):0;
+   layout.setProperty('--hopmodo-footer-bottom',`${Math.ceil(reserve)}px`);
+   layout.setProperty('--hopmodo-guidance-bottom',`${Math.ceil(view.innerHeight-footer.getBoundingClientRect().top+12)}px`);
+  }
  };position();
+ const observer=note&&footer&&view.ResizeObserver?new view.ResizeObserver(position):null;
+ observer?.observe(note);observer?.observe(footer);
  const place=()=>{(doc.fullscreenElement||doc.body).append(element);position();};place();
  view?.addEventListener('resize',position);
  doc.addEventListener('fullscreenchange',place);connect(element);
- return ()=>{view?.removeEventListener('resize',position);doc.removeEventListener('fullscreenchange',place);hud?.classList.remove('hopmodo-native-hud');element.remove();style.remove();};
+ return ()=>{observer?.disconnect();view?.removeEventListener('resize',position);doc.removeEventListener('fullscreenchange',place);hud?.classList.remove('hopmodo-native-hud');
+  if(note&&footer){
+   if(previousFooter)layout.setProperty('--hopmodo-footer-bottom',previousFooter);else layout.removeProperty('--hopmodo-footer-bottom');
+   if(previousGuidance)layout.setProperty('--hopmodo-guidance-bottom',previousGuidance);else layout.removeProperty('--hopmodo-guidance-bottom');
+  }
+  element.remove();style.remove();};
 }

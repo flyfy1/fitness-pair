@@ -26,9 +26,9 @@ document.querySelector('#app').innerHTML = `
 <label for="opening"><span>Gate opening <output id="opening-value">4.0× plane</output></span><input id="opening" type="range" min="2" max="6" step="0.1" value="4"></label>
 <label for="speed"><span>Speed <output id="speed-value">1.0×</output></span><input id="speed" type="range" min="0.4" max="6" step="0.1" value="1"></label>
 <label for="acceleration"><span>Acceleration <output id="acceleration-value">+0.4×/min</output></span><input id="acceleration" type="range" min="0" max="1.5" step="0.1" value="0.4"></label>
-</div><div class="toolbar"><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><label class="language-control" data-no-i18n><select id="language" aria-label="Language / 语言"><option value="en">English</option><option value="zh">中文</option></select></label><button id="sound" aria-pressed="true" aria-label="Mute sound">Sound on</button><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
+</div><div class="toolbar" data-game-footer><div class="flight-controls"><button id="stop" hidden>Stop camera</button></div><label class="language-control" data-no-i18n><select id="language" aria-label="Language / 语言"><option value="en">English</option><option value="zh">中文</option></select></label><button id="sound" aria-pressed="true" aria-label="Mute sound">Sound on</button><button id="fullscreen" aria-label="Enter fullscreen" aria-pressed="false">⛶</button></div>
 
-<span class="privacy">Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
+<span class="privacy" data-game-note>Local camera · No recording or uploads</span><span id="view-status" role="status"></span></section></main>`;
 
 const $ = id => document.getElementById(id);
 const video=$('video'),canvas=$('scene'),ctx=canvas.getContext('2d'),stage=document.querySelector('.stage');

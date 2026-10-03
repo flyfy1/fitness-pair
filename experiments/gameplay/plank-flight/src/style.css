@@ -59,7 +59,7 @@ button:disabled { opacity: .5; cursor: default; }
 progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
 .toolbar {
   position: absolute; left: max(28px, env(safe-area-inset-left)); right: max(28px, env(safe-area-inset-right));
-  bottom: max(34px, calc(env(safe-area-inset-bottom) + 20px));
+  bottom: max(34px, calc(env(safe-area-inset-bottom) + 20px), var(--hopmodo-footer-bottom, 0px));
   display: flex; justify-content: space-between; gap: 12px; pointer-events: none;
 }
 .toolbar button { pointer-events: auto; }
@@ -99,7 +99,7 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
   .panel .instructions { display: none; }
   .cue { bottom: 157px; }
   .cue span { padding: 5px 12px; font-size: 11px; }
-  .toolbar { bottom: max(16px, env(safe-area-inset-bottom)); }
+  .toolbar { bottom: max(16px, env(safe-area-inset-bottom), var(--hopmodo-footer-bottom, 0px)); }
   .privacy { display: none; }
 }
 
@@ -157,9 +157,9 @@ progress { margin-top: 9px; width: 220px; height: 6px; accent-color: #f3cd8e; }
 .orientation-controls p:empty { display: none; }
 
 /* Setup controls disappear on entry; keep guidance near the remaining toolbar. */
-.stage.session-started .cue { bottom: max(94px, calc(env(safe-area-inset-bottom) + 80px)); }
+.stage.session-started .cue { bottom: max(94px, calc(env(safe-area-inset-bottom) + 80px), var(--hopmodo-guidance-bottom, 0px)); }
 .stage.session-started .panel { max-height: calc(100% - 220px); }
 @media (max-height: 520px) {
-  .stage.session-started .cue { bottom: max(76px, calc(env(safe-area-inset-bottom) + 60px)); }
+  .stage.session-started .cue { bottom: max(76px, calc(env(safe-area-inset-bottom) + 60px), var(--hopmodo-guidance-bottom, 0px)); }
   .stage.session-started .panel { bottom: 80px; max-height: none; }
 }
