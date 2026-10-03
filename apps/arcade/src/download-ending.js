@@ -2,6 +2,7 @@ import {Input,ALL_FORMATS,BlobSource,EncodedPacket,EncodedPacketSink,VideoSample
 import {loadRecordingLogo,drawClipEnding} from './clip-compositor.js';
 import {createShareCopy} from './share-copy.js';
 import {MAX_BYTES} from './local-clips.js';
+import {combineAvcEnding,UnsupportedAvcError} from './avc-ending.js';
 
 const ENDING_SECONDS=3;
 class CompatibilityError extends Error {}
@@ -14,9 +15,8 @@ function abortable(promise,signal){
  });
 }
 
-// A single AVC encoder keeps gameplay and the invitation under one avc1
-// configuration. Independently encoded SPS/PPS required avc3, which macOS
-// native players rejected. Frames are processed locally without timed playback.
+// Compatibility fallback for legacy AVC3 or unsupported AVC configurations.
+// Normal Baseline avc1 replays copy packets with stable parameter IDs below.
 async function encodeMp4Download(clip,input,video,audio,canvas,config,{signal,onProgress}){
  const codec=config.codec.replace(/^avc3/,'avc1'),bitrate=2200000;
  const options={codec:'avc',bitrate,fullCodecString:codec,latencyMode:'realtime'};
@@ -69,11 +69,11 @@ async function encodeMp4Download(clip,input,video,audio,canvas,config,{signal,on
 
 async function encodeEnding(canvas,config,signal){
  if(typeof VideoEncoder==='undefined')throw new CompatibilityError('Fast encoding is unavailable.');
- const settings={codec:config.codec,width:canvas.width,height:canvas.height,bitrate:1500000,framerate:24,latencyMode:'realtime'};
+ const settings={codec:config.codec.replace(/^avc3/,'avc1'),width:canvas.width,height:canvas.height,bitrate:1500000,framerate:24,latencyMode:'realtime',...(config.codec.startsWith('avc')?{avc:{format:'avc'}}:{})};
  if(!(await abortable(VideoEncoder.isConfigSupported(settings),signal)).supported)throw new CompatibilityError('The replay codec cannot encode an ending.');
  let encoder,frame,endingConfig,failure;const packets=[];
- // WebM needs timed frames to keep the final picture playing for three seconds.
- const count=72;
+ // MP4 holds one sample for three seconds; WebM needs timed frames.
+ const count=config.codec.startsWith('avc')?1:72;
  try{
   encoder=new VideoEncoder({error:error=>{failure=error;},output:(chunk,metadata)=>{
    if(metadata.decoderConfig)endingConfig=metadata.decoderConfig;
@@ -107,9 +107,21 @@ async function appendEnding(clip,{signal,onProgress}){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
   const logo=await abortable(loadRecordingLogo(),signal);
   drawClipEnding(canvas.getContext('2d'),clip.gameTitle||clip.title.split(' · ')[0],clip.finalScore||'Replay highlights',logo,clip.includesCamera,'Replay highlights');
-  if(codec==='avc')return await encodeMp4Download(clip,input,video,audio,canvas,config,{signal,onProgress});
+  if(codec==='avc'&&!config.codec.startsWith('avc1')){
+   onProgress('Compatibility export · encoding legacy MP4…');
+   return await encodeMp4Download(clip,input,video,audio,canvas,config,{signal,onProgress});
+  }
   const ending=await encodeEnding(canvas,config,signal);signal.throwIfAborted();
-  const target=new BufferTarget();output=new Output({format:new WebMOutputFormat(),target});
+  let avc;
+  if(codec==='avc'){
+   try{avc=combineAvcEnding(config,ending.config);ending.packets=ending.packets.map(packet=>avc.packet(packet));}
+   catch(error){
+    if(!(error instanceof UnsupportedAvcError))throw error;
+    onProgress('Compatibility export · encoding unsupported AVC…');
+    return await encodeMp4Download(clip,input,video,audio,canvas,config,{signal,onProgress});
+   }
+  }
+  const target=new BufferTarget();output=new Output({format:codec==='avc'?new Mp4OutputFormat():new WebMOutputFormat(),target});
   const videoSource=new EncodedVideoPacketSource(codec);output.addVideoTrack(videoSource);
   const audioSource=audio?new EncodedAudioPacketSource(audioCodec):null;if(audioSource)output.addAudioTrack(audioSource);
   await output.start();
@@ -117,7 +129,7 @@ async function appendEnding(clip,{signal,onProgress}){
   onProgress('Appending the ending · keeping the original video and sound…');
   for(const [track,source] of [[video,videoSource],[audio,audioSource]]){
    if(!track)continue;
-   const metadata={decoderConfig:await track.getDecoderConfig()};
+   const metadata={decoderConfig:track===video&&avc?avc.config:await track.getDecoderConfig()};
    for await(const packet of new EncodedPacketSink(track).packets()){
     signal.throwIfAborted();
     total+=packet.data.byteLength;if(total>MAX_BYTES)throw new Error('The download exceeds the device file limit.');
@@ -131,10 +143,12 @@ async function appendEnding(clip,{signal,onProgress}){
   signal.throwIfAborted();
   for(const packet of ending.packets){
    signal.throwIfAborted();
-   await videoSource.add(packet.clone({timestamp:end+packet.timestamp}),{decoderConfig:config});
+   total+=packet.data.byteLength;if(total>MAX_BYTES)throw new Error('The download exceeds the device file limit.');
+   await videoSource.add(packet.clone({timestamp:end+packet.timestamp}),{decoderConfig:avc?.config||config});
   }
   await output.finalize();signal.throwIfAborted();
-  return {...clip,id:crypto.randomUUID(),parentId:clip.id,blob:new Blob([target.buffer],{type:'video/webm'}),duration:end+ENDING_SECONDS,hasEnding:true,endingSeconds:ENDING_SECONDS,branded:true};
+  const blob=new Blob([target.buffer],{type:codec==='avc'?'video/mp4':'video/webm'});
+  return {...clip,id:crypto.randomUUID(),parentId:clip.id,blob,duration:end+ENDING_SECONDS,hasEnding:true,endingSeconds:ENDING_SECONDS,branded:true};
  }catch(error){await output?.cancel();throw error;}finally{input.dispose();}
 }
 

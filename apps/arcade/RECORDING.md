@@ -20,42 +20,53 @@
 ## Download ending
 
 `src/download-ending.js` reuses `drawClipEnding` for the existing portrait or
-landscape invitation. MP4 downloads decode the selected replay locally and encode
-gameplay and the three-second ending through one AVC encoder. The output uses
-`avc1` with one stable decoder configuration, preserving dimensions and sample
-timestamps relative to the common video/audio origin. AAC packets are copied
-unchanged. The browser processes frames without waiting for media-element
-playback; the original saved replay is not re-encoded or replaced.
+landscape invitation. Normal Baseline AVC MP4 exports copy every compressed
+gameplay and AAC audio packet unchanged, encoding only one invitation frame held
+for three seconds. Export does not decode or play gameplay, and it preserves
+recorded dimensions and timestamps relative to the common video/audio origin.
+No footer is added to gameplay.
 
-The previous independent ending encoder required AVC3 with changing in-band
-SPS/PPS. A player-supplied export failed macOS AVFoundation's `isPlayable` and
-native decoding despite decoding in FFmpeg. The new path avoids that format
-rather than relabeling a stream with changing decoder parameters. Downloaded
-MP4 video is now re-encoded, so compressed video bytes can change; this is the
-compatibility tradeoff. No footer is added to gameplay.
+`src/avc-ending.js` gives the independent ending unused SPS/PPS identifiers and
+rewrites only its IDR slice headers to reference them. Both original and ending
+parameter sets are declared out of band in one stable `avc1` configuration. The
+ending's PPS ID is chosen to keep the slice-header length change a whole number
+of bytes, preserving I_PCM alignment. Original parameter sets and gameplay
+picture NALs are untouched. Optional ending SEI is omitted because it may refer
+to the ending encoder's former SPS identifier.
 
-VP8/VP9 WebM retains its fast compressed-packet copying and original audio. MP4
-holds one encoded invitation frame for three seconds; WebM uses 72 timed frames.
-The original audio ends with gameplay; the invitation is silent.
+This avoids both the AVC3 format rejected by macOS native decoding and player
+failures when switching multiple sample descriptions. The original file stays
+unchanged. There is no whole-replay re-encoding on the normal recording path.
+Legacy AVC3, non-Baseline profiles, unsupported parameter layouts or exhausted
+compatible parameter identifiers use an explicitly labeled single-encoder MP4
+compatibility export. Missing WebCodecs and transformed legacy media retain the
+existing explicitly labeled playback-length fallback.
 
-Preparation has a 120-second deadline and a bounded encoded-byte budget. Samples,
-encoders, inputs and outputs are released on cancellation, failure, hidden tab or
-page exit. Unsupported WebCodecs, codecs or transformed legacy media use the
-existing playback-length export with explicit progress. A prepared download is
-reused by its clip card. Neither path changes the stored replay, thumbnail,
-gallery source, native file-sharing source or two-clip retention budget.
-Conversation mixing remains a separate, explicit operation before download.
+VP8/VP9 WebM retains compressed-packet copying and its original audio; its
+invitation uses 72 timed frames. The original audio ends with gameplay and the
+invitation is silent. Preparation has a 120-second deadline and bounded encoded
+bytes, with encoder/input/output cleanup on cancellation, failure, hidden tab or
+page exit. A prepared download is reused by its clip card. The stored replay,
+thumbnail, gallery source, native file-sharing source and two-clip retention
+budget are preserved. Conversation mixing remains a separate explicit operation.
 
 Synthetic browser checks in `tests/download-ending.spec.js` repeat actual
 browser-encoded segments into roughly 60-second inputs. They verify MP4 portrait
-with audio, MP4 landscape without audio, and WebM with audio: original source
-preservation, unchanged audio packets, dimensions, timing, no footer, the playable
+with audio, MP4 landscape without audio, and WebM with audio: exact original
+compressed video/audio preservation, dimensions, timing, no footer, the playable
 three-second invitation, seeking back across the join, cancellation, fallback,
-and audible game sound. Media-element playback is blocked during export; WebM
-also blocks decoding. On macOS, `scripts/check-mp4-native.swift` independently
-checks complete AVFoundation video/audio decoding and native seeks into the
-ending and back to gameplay. No participant video is stored in test artifacts.
-These checks do not establish physical-phone or messaging-app compatibility.
+and audible game sound. Playback and VideoDecoder are blocked during normal
+export. On macOS, `scripts/check-mp4-native.swift` independently checks complete
+AVFoundation video/audio decoding and native seeks into the ending and back to
+gameplay. Unit checks cover identifier collisions, whole-byte slice alignment,
+source preservation, unsupported profiles/entropy coding and malformed NALs.
+No participant video is stored in test artifacts. These checks do not establish
+physical-phone or messaging-app compatibility.
+
+Local macOS/Chrome measurements on 2026-10-03: roughly 60-second MP4 exports took
+66.5 ms (landscape, silent) and 172.3 ms (portrait, AAC). Both passed Chrome and
+AVFoundation decoding, including the ending and backward seeks. These are local
+synthetic-fixture measurements, not performance guarantees on other devices.
 
 ## Rolling capture
 
