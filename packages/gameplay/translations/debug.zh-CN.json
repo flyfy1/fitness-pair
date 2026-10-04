@@ -178,5 +178,90 @@
     "id": "debugCapture.35",
     "en": "The camera stopped during debug capture.",
     "zh": "调试捕获期间摄像头已停止。"
+  },
+  {
+    "id": "debugCapture.36",
+    "en": "Record debug now",
+    "zh": "立即录制调试视频"
+  },
+  {
+    "id": "debugCapture.37",
+    "en": "Turn voice off",
+    "zh": "关闭语音"
+  },
+  {
+    "id": "debugCapture.38",
+    "en": "Dismiss voice status",
+    "zh": "关闭语音状态"
+  },
+  {
+    "id": "debugCapture.39",
+    "en": "Voice command language",
+    "zh": "语音指令语言"
+  },
+  {
+    "id": "debugCapture.40",
+    "en": "Debug report · voice unavailable",
+    "zh": "调试报告 · 语音不可用"
+  },
+  {
+    "id": "debugCapture.41",
+    "en": "Voice service started. Waiting for microphone audio…",
+    "zh": "语音服务已启动，正在等待麦克风音频…"
+  },
+  {
+    "id": "debugCapture.42",
+    "en": "Speech detected. Waiting for recognized words…",
+    "zh": "检测到说话，正在等待识别文字…"
+  },
+  {
+    "id": "debugCapture.43",
+    "en": "Speech was not understood. Say “debug please” again, or use Record debug now.",
+    "zh": "没有听懂，请再说一次“debug please”，或点击“立即录制调试视频”。"
+  },
+  {
+    "id": "debugCapture.44",
+    "en": "No speech detected. Check your microphone, then say “debug please” or use Record debug now.",
+    "zh": "未检测到说话，请检查麦克风后说“debug please”，或点击“立即录制调试视频”。"
+  },
+  {
+    "id": "debugCapture.45",
+    "en": "Voice service connection failed (network). Use manual debug or open this game in Chrome or Edge.",
+    "zh": "语音服务连接失败（network）。请手动录制调试视频，或在 Chrome / Edge 中打开游戏。"
+  },
+  {
+    "id": "debugCapture.46",
+    "en": "Voice microphone did not start (audio-start-timeout). Use manual debug or open this game in Chrome or Edge.",
+    "zh": "语音麦克风未启动（audio-start-timeout）。请手动录制调试视频，或在 Chrome / Edge 中打开游戏。"
+  },
+  {
+    "id": "debugCapture.47",
+    "en": "Voice service returned no words (result-timeout). Use manual debug or open this game in Chrome or Edge.",
+    "zh": "语音服务未返回文字（result-timeout）。请手动录制调试视频，或在 Chrome / Edge 中打开游戏。"
+  },
+  {
+    "id": "debugCapture.48",
+    "en": "Voice recognition failed ({0}). Use Record debug now.",
+    "zh": "语音识别失败（{0}），请点击“立即录制调试视频”。"
+  },
+  {
+    "id": "debugCapture.49",
+    "en": "Heard “{0}”. Say “debug please” again or use Record debug now.",
+    "zh": "听到“{0}”。请再说一次“debug please”，或点击“立即录制调试视频”。"
+  },
+  {
+    "id": "debugCapture.50",
+    "en": "Hearing “{0}”…",
+    "zh": "正在听到“{0}”…"
+  },
+  {
+    "id": "debugCapture.51",
+    "en": "Debug command recognized. Recording five seconds…",
+    "zh": "已识别调试指令，正在录制五秒…"
+  },
+  {
+    "id": "debugCapture.52",
+    "en": "Continue playing",
+    "zh": "继续游戏"
   }
 ]

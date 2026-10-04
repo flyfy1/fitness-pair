@@ -114,6 +114,12 @@
 .debug-capture-notice { position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:1200;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff8e9;color:#203d39;border:2px solid #e88e72;border-radius:18px;box-shadow:0 4px 20px #173c3650;font:600 14px system-ui; }
 .debug-capture-notice[hidden] { display:none; }
 .debug-capture-notice button { min-height:40px;white-space:nowrap;flex-shrink:0; }
+.debug-voice-notice { position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:1190;width:min(580px,calc(100vw - 24px));box-sizing:border-box;display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;background:#fff8e9;color:#203d39;border:2px solid #277e78;border-radius:18px;box-shadow:0 4px 20px #173c3650;font:600 13px/1.4 system-ui; }
+.debug-voice-notice[hidden] { display:none; }
+.debug-voice-notice span { flex:1 0 100%;overflow-wrap:anywhere; }
+.debug-voice-notice button { min-height:40px;padding:5px 10px; }
+.debug-report-voice select { max-width:100%;font:inherit;min-height:36px; }
+.debug-report-voice label { align-items:center;flex-wrap:wrap;margin-bottom:12px; }
 @media (max-width: 420px) {
   .game-feedback-rating button { min-width: 0; flex: 1; }
   .game-feedback-actions { flex-direction: column; gap: 8px; }

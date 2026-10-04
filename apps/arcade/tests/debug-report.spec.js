@@ -8,9 +8,11 @@ async function speechMock(page){await page.addInitScript(()=>{
  if(window!==top)return;
  window.debugSpeechStarts=0;window.debugSpeechStops=0;
  window.SpeechRecognition=class {
-  start(){window.debugSpeech=this;window.debugSpeechStarts++;this.started=true;if(window.debugSpeechDeny)this.onerror?.({error:'not-allowed'});else this.onstart?.();}
+  start(){window.debugSpeech=this;window.debugSpeechStarts++;this.started=true;if(window.debugSpeechDeny)this.onerror?.({error:'not-allowed'});else{this.onstart?.();if(!window.debugSpeechNoAudio)this.onaudiostart?.();}}
   stop(){this.started=false;window.debugSpeechStops++;}abort(){this.stop();}
   emit(transcript){const result=Object.assign([{transcript}],{isFinal:true});this.onresult?.({resultIndex:0,results:[result]});}
+  alternatives(words,isFinal=true){const result=Object.assign(words.map(transcript=>({transcript})),{isFinal});this.onresult?.({resultIndex:0,results:[result]});}
+  fail(error){this.onerror?.({error});this.onend?.();}
  };
 });}
 async function openDebug(page,game){await game.getByRole('button',{name:'Debug report',exact:true}).click();const panel=page.getByRole('dialog',{name:'Debug capture'});await expect(panel).toBeVisible();return panel;}
@@ -85,9 +87,64 @@ test('unsupported speech and an inactive camera explain the manual path without 
 
 test('Chinese UI and voice use the selected language while the five-second notice leaves the game visible',async({page},info)=>{
  await page.setViewportSize({width:390,height:844});await speechMock(page);await page.addInitScript(()=>localStorage.setItem('hopmodo.language','zh'));await camera(page);await page.goto('/play/ar-breakout');const game=page.frameLocator('#game-frame');await game.locator('#start').click();await expect(game.locator('.hands-start')).toBeVisible();await game.locator('[data-debug-report]').click();
- const panel=page.getByRole('dialog',{name:'调试捕获'});await panel.getByRole('button',{name:'启用语音指令'}).click();await expect(panel.getByRole('status')).toContainText('正在聆听');expect(await page.evaluate(()=>window.debugSpeech.lang)).toBe('zh-CN');await panel.locator('[data-cancel]').click();
+ const panel=page.getByRole('dialog',{name:'调试捕获'});await panel.getByRole('button',{name:'启用语音指令'}).click();await expect(panel.getByRole('status')).toContainText('正在聆听');expect(await page.evaluate(()=>window.debugSpeech.lang)).toBe('zh-CN');
+ await page.evaluate(()=>window.debugSpeech.emit('测试麦克风'));await expect(panel.getByRole('status')).toContainText('听到“测试麦克风”');await panel.locator('[data-cancel]').click();
  await page.evaluate(()=>window.debugSpeech.emit('我要上传 debug'));await expect(page.locator('.debug-capture-notice')).toContainText('正在调试录制');await expect(game.locator('.hands-start')).toBeVisible();await page.screenshot({path:info.outputPath('debug-capture-phone.png')});
  const review=page.getByRole('dialog',{name:'调试捕获'});await expect(review.getByRole('link',{name:'下载诊断 JSON'})).toBeVisible({timeout:15000});await page.screenshot({path:info.outputPath('debug-review-phone.png')});
+});
+
+test('unmatched words remain visible and an exact final alternative triggers once',async({page})=>{
+ await speechMock(page);const game=await brokenStart(page),panel=await openDebug(page,game);
+ await panel.getByRole('button',{name:'Enable voice command'}).click();await panel.getByRole('button',{name:'Continue playing'}).click();
+ await page.evaluate(()=>window.debugSpeech.alternatives(['debug police'],false));
+ await expect(page.locator('.debug-voice-notice')).toContainText('Hearing “debug police”');
+ await expect(page.locator('.debug-capture-notice')).toBeHidden();
+ await page.evaluate(()=>window.debugSpeech.emit('do not debug please'));
+ await expect(page.locator('.debug-voice-notice')).toContainText('Heard “do not debug please”');
+ await expect(page.locator('.debug-capture-notice')).toBeHidden();
+ await page.evaluate(()=>window.debugSpeech.alternatives(['debug police','debug please']));
+ await expect(page.locator('.debug-capture-notice')).toBeVisible();
+ await page.getByRole('button',{name:'Cancel debug'}).click();
+ await expect(page.getByRole('dialog',{name:'Debug capture'}).getByRole('status')).toContainText('Debug recording canceled.');
+});
+
+test('service network errors turn off the green indicator and expose manual recording outside the panel',async({page},info)=>{
+ await page.setViewportSize({width:390,height:844});await speechMock(page);const game=await brokenStart(page),panel=await openDebug(page,game);
+ await panel.getByRole('button',{name:'Enable voice command'}).click();await panel.getByRole('button',{name:'Continue playing'}).click();
+ await expect(game.locator('[data-debug-report]')).toHaveAttribute('data-voice','on');
+ await page.evaluate(()=>window.debugSpeech.fail('network'));
+ await expect(game.locator('[data-debug-report]')).toHaveAttribute('data-voice','error');
+ await expect(page.locator('.debug-voice-notice')).toContainText('Voice service connection failed (network)');
+ await page.waitForTimeout(1000);expect(await page.evaluate(()=>window.debugSpeechStarts)).toBe(1);
+ await page.screenshot({path:info.outputPath('voice-network-phone.png')});
+ await page.getByRole('button',{name:'Record debug now'}).click();
+ await expect(page.locator('.debug-capture-notice')).toBeVisible();
+ const review=page.getByRole('dialog',{name:'Debug capture'});await expect(review.locator('video')).toBeVisible({timeout:15000});
+ expect((await readReport(page,review)).trigger).toBe('button');
+ await review.getByRole('button',{name:'Enable voice command'}).click();await expect(game.locator('[data-debug-report]')).toHaveAttribute('data-voice','on');
+});
+
+test('service start without microphone audio times out instead of claiming Listening',async({page})=>{
+ await page.clock.install();await speechMock(page);await page.addInitScript(()=>window.debugSpeechNoAudio=true);
+ await page.goto('/play/ar-breakout');const game=page.frameLocator('#game-frame'),panel=await openDebug(page,game);
+ await panel.getByRole('button',{name:'Enable voice command'}).click();
+ await expect(panel.getByRole('status')).toContainText('Waiting for microphone audio');
+ await expect(game.locator('[data-debug-report]')).toHaveAttribute('data-voice','starting');
+ await page.clock.fastForward(8100);
+ await expect(panel.getByRole('status')).toContainText('audio-start-timeout');
+ await expect(game.locator('[data-debug-report]')).toHaveAttribute('data-voice','error');
+ expect(await page.evaluate(()=>window.debugSpeech.started)).toBe(false);
+});
+
+test('speech without returned words has a bounded failure and voice language can differ from UI',async({page})=>{
+ await page.clock.install();await speechMock(page);await page.addInitScript(()=>localStorage.setItem('hopmodo.language','zh'));
+ await page.goto('/play/ar-breakout');await page.frameLocator('#game-frame').locator('[data-debug-report]').click();
+ const panel=page.getByRole('dialog',{name:'调试捕获'});
+ await panel.getByLabel('语音指令语言').selectOption('en-US');await panel.getByRole('button',{name:'启用语音指令'}).click();
+ expect(await page.evaluate(()=>window.debugSpeech.lang)).toBe('en-US');
+ await page.evaluate(()=>{window.debugSpeech.onspeechstart();window.debugSpeech.onspeechend();});await page.clock.fastForward(6100);
+ await expect(panel.getByRole('status')).toContainText('result-timeout');
+ await expect(panel.getByRole('button',{name:'启用语音指令'})).toBeVisible();
 });
 
 test('opt-in live gateway persists a synthetic short debug capture',async({page},info)=>{

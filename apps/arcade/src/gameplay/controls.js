@@ -14,6 +14,8 @@ export function mountConversationControls(doc,connect){
  .hopmodo-conversation[data-state=ready] [data-conversation],.hopmodo-conversation[data-state=pending] [data-conversation]{background:#2347ee;color:#fff}
  .hopmodo-conversation button[aria-pressed=true] .mic-off{display:none}
  .hopmodo-conversation [data-debug-report][data-voice=on]{background:#d0eadb;border:2px solid #277e78;box-shadow:0 0 0 3px #277e7833}
+ .hopmodo-conversation [data-debug-report][data-voice=starting]{background:#fff0bc;border:2px solid #a87c24}
+ .hopmodo-conversation [data-debug-report][data-voice=error]{background:#fbd3cb;border:2px solid #af453b}
  .hopmodo-conversation>span:not([data-replay-status]){position:absolute;right:0;top:calc(100% + 6px);width:max-content;max-width:min(260px,calc(100vw - 24px));padding:8px;border:1px solid #18234655;border-radius:8px;background:#fff;line-height:1.4}
  .hopmodo-conversation [data-replay-share]{position:fixed;right:12px;bottom:12px;width:auto;height:44px;padding:6px 16px;border-radius:22px;background:#fff;color:#2347ee;border:2px solid #2347ee;font-size:16px}
  .hopmodo-conversation [data-replay-status]{position:fixed;right:12px;bottom:64px;max-width:min(300px,calc(100vw - 24px));padding:8px 12px;border-radius:8px;background:#fff;color:#182346;line-height:1.4;box-shadow:0 2px 12px #0003}

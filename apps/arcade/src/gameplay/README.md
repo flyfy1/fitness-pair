@@ -130,6 +130,13 @@ The optional private-server checkbox explicitly selects video and diagnostics
 for subsequent captures; upload is off by default, failures retain downloads,
 and private references never publish to the gallery. Browser speech processing
 is disclosed before enabling it; command audio is never added to the debug video.
+Speech-service startup and actual microphone capture have separate states. A
+compact status stays visible after closing the panel, including unrecognized
+words and provider error codes. Voice failures stop instead of keeping the green
+indicator or retrying indefinitely. The same status offers manual debug recording.
+Voice language defaults to UI language and can be selected separately before
+enabling speech. Only final explicit commands across returned alternatives trigger
+capture; displayed transcripts are never included in diagnostic uploads.
 See [capture, destination and evidence](../../../../docs/debug-capture.md).
 
 ```mermaid

@@ -30,7 +30,25 @@ A manual capture explicitly records the next five seconds. Speech is disabled
 until the player enables it in the Debug panel, and automatically stops on exit,
 page reload or hiding the page. The browser's speech provider may process the
 spoken command; the app does not record command audio. English and Chinese
-commands are accepted, with the recognition language matching the selected UI.
+commands are accepted. Recognition language defaults to the selected UI, with
+an explicit English/Chinese voice-language choice before enabling the microphone.
+This does not change the game's UI language.
+
+The service's `start` event is not treated as proof of microphone input. Only
+`audiostart` or a recognition result turns the indicator green. Startup without
+audio times out after eight seconds; speech without returned text times out after
+six seconds. Provider/permission failures turn voice off and show the error code,
+including after closing the panel. They do not continuously retry a broken
+provider. A compact status with a manual recording button remains in the game.
+Recognized interim/final words are shown only in page memory, never logged,
+saved or uploaded. Only a final, explicit command in a returned alternative can
+trigger capture; interim or negated/non-command text does not record.
+
+The in-app browser initialization trial on 2026-10-04 reached the old Listening
+state and then a generic paused/error state without recording video. It did not
+prove recognition of a human command. Browser speech availability is a separate
+boundary from the shared video recorder; a failed browser speech service requires
+manual capture or trying a supported Chrome/Edge installation.
 
 Each capture stays in a separate local IndexedDB store, retaining the latest
 three captures within a 25 MiB budget, without evicting ordinary game replays.

@@ -17,45 +17,76 @@ function diagnosticPayload({game,bundle,trigger,includeVideo}){
 }
 
 export function mountDebugReport(game,runtime,_recorder,{container}){
- let controls,dialog,recognition,armed=false,listening=false,disposed=false,restartTimer=0,busy=false,uploadEnabled=false,lastCapture=null,urls=[],cooldownUntil=0,uploadController=null,message='Record a five-second video and movement diagnostics, even before the game starts.';
+ let controls,dialog,recognition,armed=false,listening=false,disposed=false,restartTimer=0,startTimer=0,resultTimer=0,busy=false,uploadEnabled=false,lastCapture=null,urls=[],cooldownUntil=0,uploadController=null,message='Record a five-second video and movement diagnostics, even before the game starts.';
+ let voiceLanguage=readLanguage()==='zh'?'zh-CN':'en-US',voiceError=false,voiceMessage='',heard=false;
+ const voiceNotice=document.createElement('aside');voiceNotice.className='debug-voice-notice';voiceNotice.hidden=true;
+ voiceNotice.innerHTML='<span role="status" aria-label="Voice command status"></span><button type="button" data-voice-record>Record debug now</button><button type="button" data-voice-dismiss>Turn voice off</button>';container.append(voiceNotice);
  const notice=document.createElement('aside');notice.className='debug-capture-notice';notice.hidden=true;notice.innerHTML='<span role="status"></span><button type="button">Cancel debug</button>';container.append(notice);
  const capture=createDebugCapture(game,runtime,{onProgress:remaining=>{notice.querySelector('span').textContent=translateText(`Debug recording · ${remaining}s remaining`);}});
  const focusControl=()=>controls?.querySelector('[data-debug-report]')?.focus();
  const setMessage=text=>{message=text;const status=dialog?.querySelector('.debug-report-status');if(status)status.textContent=translateText(text);};
+ const setVoiceMessage=text=>{voiceMessage=text;setMessage(text);updateControl();};
+ const failVoice=text=>{stopVoice();voiceError=true;setVoiceMessage(text);};
  function updateControl(){
-  const button=controls?.querySelector('[data-debug-report]');if(!button)return;
-  button.dataset.voice=armed?'on':'off';button.title=translateText(armed?'Debug report · voice command on':'Debug report');
+  const button=controls?.querySelector('[data-debug-report]');
+  if(button){button.dataset.voice=voiceError?'error':listening?'on':armed?'starting':'off';button.title=translateText(voiceError?'Debug report · voice unavailable':armed?'Debug report · voice command on':'Debug report');}
   const voice=dialog?.querySelector('[data-voice]');if(voice){voice.textContent=translateText(armed?'Disable voice command':'Enable voice command');voice.setAttribute('aria-pressed',String(armed));}
+  voiceNotice.hidden=!!dialog||busy||disposed||(!armed&&!voiceError);
+  voiceNotice.querySelector('span').textContent=translateText(voiceMessage);
+  voiceNotice.querySelector('[data-voice-dismiss]').textContent=translateText(armed?'Turn voice off':'Dismiss voice status');
+  const select=dialog?.querySelector('[data-voice-language]');if(select)select.disabled=armed;
  }
  function revoke(){for(const url of urls)URL.revokeObjectURL(url);urls=[];}
- function close(){dialog?.querySelector('video')?.pause();dialog?.remove();dialog=null;revoke();focusControl();}
+ function close(){dialog?.querySelector('video')?.pause();dialog?.remove();dialog=null;revoke();focusControl();updateControl();}
  function stopVoice(){
-  armed=false;listening=false;clearTimeout(restartTimer);restartTimer=0;
+  armed=false;listening=false;voiceError=false;clearTimeout(restartTimer);clearTimeout(startTimer);clearTimeout(resultTimer);restartTimer=startTimer=resultTimer=0;
   const previous=recognition;recognition=null;
-  if(previous){previous.onresult=previous.onend=previous.onerror=previous.onstart=null;try{if(previous.abort)previous.abort();else previous.stop();}catch{/* Already stopped. */}}
+  if(previous){for(const key of ['onresult','onend','onerror','onstart','onaudiostart','onaudioend','onspeechstart','onspeechend','onnomatch'])previous[key]=null;try{if(previous.abort)previous.abort();else previous.stop();}catch{/* Already stopped. */}}
   updateControl();
  }
  function startVoice(){
   if(armed){stopVoice();setMessage('Voice command disabled.');return;}
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!Recognition){setMessage('Voice commands are unavailable in this browser. Use Record 5-second debug instead.');return;}
-  const instance=new Recognition();recognition=instance;armed=true;
-  instance.lang=readLanguage()==='zh'?'zh-CN':'en-US';instance.continuous=true;instance.interimResults=false;
-  instance.onstart=()=>{if(!armed||recognition!==instance)return;listening=true;setMessage('Listening. Say “debug please” to record five seconds.');};
+  if(!Recognition){failVoice('Voice commands are unavailable in this browser. Use Record 5-second debug instead.');return;}
+  let instance;try{instance=new Recognition();}catch{failVoice('Voice command could not start. Use the manual debug button.');return;}
+  recognition=instance;armed=true;voiceError=false;
+  const current=()=>armed&&recognition===instance&&!disposed&&!document.hidden;
+  instance.lang=voiceLanguage;instance.continuous=true;instance.interimResults=true;instance.maxAlternatives=5;
+  const begin=()=>{
+   if(!current())return;
+   listening=false;clearTimeout(startTimer);
+   startTimer=setTimeout(()=>{if(current())failVoice('Voice microphone did not start (audio-start-timeout). Use manual debug or open this game in Chrome or Edge.');},8000);
+   try{instance.start();updateControl();}catch{failVoice('Voice command could not start. Use the manual debug button.');}
+  };
+  instance.onstart=()=>{if(current()&&!listening)setVoiceMessage('Voice service started. Waiting for microphone audio…');};
+  instance.onaudiostart=()=>{if(!current())return;clearTimeout(startTimer);listening=true;setVoiceMessage('Listening. Say “debug please” to record five seconds.');};
+  instance.onaudioend=()=>{if(!current())return;listening=false;updateControl();};
+  instance.onspeechstart=()=>{if(!current())return;clearTimeout(resultTimer);heard=false;setVoiceMessage('Speech detected. Waiting for recognized words…');};
+  instance.onspeechend=()=>{if(!current()||heard)return;clearTimeout(resultTimer);resultTimer=setTimeout(()=>{if(current()&&!heard)failVoice('Voice service returned no words (result-timeout). Use manual debug or open this game in Chrome or Edge.');},6000);};
+  instance.onnomatch=()=>{if(current())setVoiceMessage('Speech was not understood. Say “debug please” again, or use Record debug now.');};
   instance.onresult=event=>{
-   if(!armed||!listening||disposed||document.hidden)return;
-   for(let i=event.resultIndex;i<event.results.length;i++)if(event.results[i].isFinal&&isDebugCommand(event.results[i][0].transcript)){void record('voice');break;}
+   if(!current())return;
+   clearTimeout(startTimer);clearTimeout(resultTimer);listening=true;heard=true;
+   for(let i=event.resultIndex;i<event.results.length;i++){
+    const result=event.results[i],words=String(result[0]?.transcript||'').trim().slice(0,100);
+    // Recognizers can put the deliberate command in a lower-ranked alternative.
+    const match=result.isFinal&&Array.from(result).some(candidate=>isDebugCommand(candidate.transcript));
+    if(match){setVoiceMessage('Debug command recognized. Recording five seconds…');void record('voice');return;}
+    if(words)setVoiceMessage(result.isFinal?`Heard “${words}”. Say “debug please” again or use Record debug now.`:`Hearing “${words}”…`);
+   }
   };
   instance.onerror=event=>{
-   if(['not-allowed','service-not-allowed','audio-capture'].includes(event.error)){stopVoice();setMessage('Microphone permission was denied or unavailable. Use Record 5-second debug instead.');}
-   else setMessage('Voice recognition paused. The manual debug button remains available.');
+   if(!current())return;
+   if(['not-allowed','service-not-allowed','audio-capture'].includes(event.error))failVoice('Microphone permission was denied or unavailable. Use Record 5-second debug instead.');
+   else if(event.error==='no-speech')setVoiceMessage('No speech detected. Check your microphone, then say “debug please” or use Record debug now.');
+   else if(event.error==='network')failVoice('Voice service connection failed (network). Use manual debug or open this game in Chrome or Edge.');
+   else failVoice(`Voice recognition failed (${String(event.error||'unknown').slice(0,80)}). Use Record debug now.`);
   };
   instance.onend=()=>{
-   listening=false;
-   if(armed&&!disposed&&!document.hidden)restartTimer=setTimeout(()=>{if(!armed||recognition!==instance)return;try{instance.start();}catch{stopVoice();setMessage('Voice command could not restart. Enable it again or use the manual button.');}},400);
+   if(!current())return;listening=false;clearTimeout(startTimer);updateControl();
+   restartTimer=setTimeout(begin,800);
   };
-  try{setMessage('Waiting for microphone permission…');instance.start();updateControl();}
-  catch{stopVoice();setMessage('Voice command could not start. Use the manual debug button.');}
+  setVoiceMessage('Waiting for microphone permission…');begin();
  }
  function renderLatest(){
   const preview=dialog?.querySelector('[data-preview]');if(!preview||!lastCapture)return;
@@ -75,12 +106,14 @@ export function mountDebugReport(game,runtime,_recorder,{container}){
   dialog.innerHTML=`<div class="debug-report-card"><p class="kicker">Recognition diagnostics</p><h1 id="debug-report-title" tabindex="-1">Debug capture</h1>
    <p>Record the next five seconds of this game's camera view and movement data. Works during setup, start gestures, pauses and gameplay. No microphone audio is saved.</p>
    <label><input type="checkbox" data-auto-upload><span><b>Send captures to the private debug server</b><br>Uploads video, named body joints and recognition context to this website. The video can show your face or home. Reports expire after 30 days and never appear in the public gallery. Leave off to save only on this device.</span></label>
-   <div class="debug-report-voice"><b>Optional voice trigger</b><p>Enable once, then say “debug please” or “我要上传 debug”. Your browser's speech provider may process command audio.</p><button type="button" data-voice></button></div>
+   <div class="debug-report-voice"><b>Optional voice trigger</b><p>Enable once, then say “debug please” or “我要上传 debug”. Your browser's speech provider may process command audio.</p><label><span>Voice command language</span><select data-voice-language aria-label="Voice command language"><option value="en-US">English</option><option value="zh-CN">简体中文</option></select></label><button type="button" data-voice></button></div>
    <p class="debug-report-status" role="status"></p><div class="debug-report-actions"><button type="button" data-record>Record 5-second debug</button><button type="button" data-cancel>Continue playing</button></div>
    <div data-preview hidden><h2>Latest local debug capture</h2><video controls playsinline preload="metadata"></video><small></small><div class="debug-report-actions"><a data-download-video>Download debug video</a><a data-download-json>Download diagnostic JSON</a><button type="button" data-upload>Upload this capture privately</button></div><p>The latest three captures stay on this device, separately from game replays.</p></div></div>`;
   container.append(dialog);dialog.querySelector('[data-auto-upload]').checked=uploadEnabled;
   dialog.querySelector('[data-auto-upload]').onchange=event=>{uploadEnabled=event.target.checked;};
   dialog.querySelector('[data-voice]').onclick=startVoice;
+  dialog.querySelector('[data-voice-language]').value=voiceLanguage;
+  dialog.querySelector('[data-voice-language]').onchange=event=>{voiceLanguage=event.target.value;};
   dialog.querySelector('[data-record]').disabled=busy;dialog.querySelector('[data-record]').onclick=()=>record('button');
   dialog.querySelector('[data-cancel]').onclick=close;
   dialog.querySelector('[data-upload]').onclick=async()=>{if(busy||!lastCapture)return;busy=true;try{await upload(lastCapture);}catch(error){setMessage(`${error.message} Local video and JSON remain available.`);}finally{busy=false;renderLatest();}};
@@ -114,6 +147,8 @@ export function mountDebugReport(game,runtime,_recorder,{container}){
   finally{busy=false;notice.hidden=true;cooldownUntil=performance.now()+1200;if(!disposed)await open();}
  }
  notice.querySelector('button').onclick=()=>capture.cancel();
+ voiceNotice.querySelector('[data-voice-record]').onclick=()=>record('button');
+ voiceNotice.querySelector('[data-voice-dismiss]').onclick=()=>{stopVoice();setMessage('Voice command disabled.');};
  const hidden=()=>{if(document.hidden){stopVoice();capture.cancel();}};document.addEventListener('visibilitychange',hidden);
  let hadCamera=false;
  const ended=()=>{const frame=runtime.readFrame(),live=!!frame?.video?.srcObject?.getVideoTracks().some(track=>track.readyState==='live');if(live)hadCamera=true;if(armed&&(frame?.phase==='complete'||hadCamera&&!live)){stopVoice();hadCamera=false;}};
@@ -122,6 +157,6 @@ export function mountDebugReport(game,runtime,_recorder,{container}){
  return {
   connectControls(element){if(controls){stopVoice();capture.cancel();}controls=element;element.querySelector('[data-debug-report]').onclick=open;updateControl();},
   stop(){stopVoice();capture.cancel();uploadController?.abort();},
-  dispose(){if(disposed)return;disposed=true;clearInterval(lifecycleTimer);unsubscribe();document.removeEventListener('visibilitychange',hidden);stopVoice();uploadController?.abort();capture.dispose();close();notice.remove();},
+  dispose(){if(disposed)return;disposed=true;clearInterval(lifecycleTimer);unsubscribe();document.removeEventListener('visibilitychange',hidden);stopVoice();uploadController?.abort();capture.dispose();close();notice.remove();voiceNotice.remove();},
  };
 }
