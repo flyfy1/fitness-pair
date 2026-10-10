@@ -1,4 +1,4 @@
-import {games} from './games.js';
+import {gameRuntimes as games} from './game-runtimes.js';
 import {mountPlayStats} from './gameplay/play-stats.js';
 if(window===window.top){
  const id=location.pathname.split('/')[2],game=games.find(g=>g.id===id||g.aliases?.includes(id));
