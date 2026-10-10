@@ -24,6 +24,17 @@ and rejects mismatched/expired uploads. Video is capped at 20 MiB, matching this
 origin proxy; the browser's shorter captures are bounded to 8 MiB. Full storage
 returns a visible error while the browser retains local downloads.
 
+Anonymous feedback is capped at 20,000 event files and new records expire after
+180 days; records written before expiry existed are counted but kept until an
+operator removes them. Both collectors keep an in-memory usage tally rebuilt from
+disk at startup and on the hourly prune, instead of rescanning on each request.
+The gateway applies in-memory fixed-window limits to these anonymous writes, keyed
+on Cloudflare's `CF-Connecting-IP` (falling back to the loopback proxy address):
+feedback 30 per 10 minutes per client and 600 per hour overall; debug reports 6
+per hour per client and 30 per hour overall; debug video uploads 8 per hour per
+client and 60 per hour overall. Limits reset on restart and only slow down abuse;
+a client with many addresses can still fill the shared debug quota.
+
 Reports have no public read endpoint. An authorized local operator can inspect
 the event JSON and video using the report UUID over the existing SSH connection;
 never copy participant data into Git or release archives. Localhost previews

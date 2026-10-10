@@ -92,33 +92,39 @@ export function createDebugReportCollector({directory,origin,games,release={},ge
  if(!directory)throw Error('A durable diagnostic directory is required.');
  const allowed=new Map(games.map(game=>[game.id,game]));
  const root=path.join(directory,'debug-reports'),events=path.join(root,'events'),videos=path.join(root,'videos');
- let queue=Promise.resolve();
+ let queue=Promise.resolve(),usage=null;
  const serialize=work=>{const result=queue.then(work);queue=result.catch(()=>{});return result;};
- async function capacity(id,bytes){
+ // Reserve selected video bytes before accepting the report, including pending uploads.
+ const reserved=(record,size)=>size+4096+(record.includeVideo?Math.max(record.clip?.bytes||0,record.video?.bytes||0):0);
+ const track=record=>usage?.reports.set(record.id,{bytes:reserved(record,Buffer.byteLength(JSON.stringify(record))+1),expiresAt:record.expiresAt});
+ // Rebuild the cached usage tally from disk at startup and on the periodic prune; submissions use the cache.
+ async function scan(){
   let names;try{names=await readdir(events);}catch(error){if(error.code==='ENOENT')names=[];else throw error;}
-  if(names.includes(id+'.json'))return;
-  let used=0,count=0;
+  const reports=new Map();let other=0;
   for(const name of names){
-   if(!UUID.test(name.replace(/\.json$/,''))||!name.endsWith('.json')){used+=(await stat(path.join(events,name))).size;continue;}
-   const file=path.join(events,name),record=JSON.parse(await readFile(file,'utf8'));count++;
-   // Reserve selected video bytes before accepting the report, including pending uploads.
-   used+=(await stat(file)).size+4096+(record.includeVideo?Math.max(record.clip?.bytes||0,record.video?.bytes||0):0);
+   const file=path.join(events,name),id=name.slice(0,-5),size=(await stat(file)).size;
+   let record=null;if(name.endsWith('.json')&&UUID.test(id))try{record=JSON.parse(await readFile(file,'utf8'));}catch{}
+   if(record)reports.set(id,{bytes:reserved(record,size),expiresAt:record.expiresAt});else other+=size;
   }
   let videoNames;try{videoNames=await readdir(videos);}catch(error){if(error.code==='ENOENT')videoNames=[];else throw error;}
   // Count unfinished/orphaned files from an interrupted process, without deleting private evidence.
-  for(const name of videoNames)if(!names.includes(name.replace(/\.(mp4|webm)$/,'.json')))used+=(await stat(path.join(videos,name))).size;
-  if(count>=reportLimit||used+bytes>storageLimit)throw fail(507,'Private debug storage is full. Keep the local downloads and try again later.');
+  for(const name of videoNames)if(!reports.has(name.replace(/\.(mp4|webm)$/,'')))other+=(await stat(path.join(videos,name))).size;
+  return {reports,other};
  }
- async function prune(){
-  let names;try{names=await readdir(events);}catch(error){if(error.code==='ENOENT')return;throw error;}
-  for(const name of names){
-   if(!UUID.test(name.replace(/\.json$/,''))||!name.endsWith('.json'))continue;
-   const target=path.join(events,name);let record;try{record=JSON.parse(await readFile(target,'utf8'));}catch{continue;}
-   if(!Number.isFinite(record.expiresAt)||record.expiresAt>now())continue;
-   const id=name.slice(0,-5);for(const extension of ['.mp4','.webm'])await unlink(path.join(videos,id+extension)).catch(error=>{if(error.code!=='ENOENT')throw error;});
-   await unlink(target).catch(error=>{if(error.code!=='ENOENT')throw error;});
+ function capacity(id,bytes){
+  if(usage.reports.has(id))return;
+  let used=usage.other;for(const entry of usage.reports.values())used+=entry.bytes;
+  if(usage.reports.size>=reportLimit||used+bytes>storageLimit)throw fail(507,'Private debug storage is full. Keep the local downloads and try again later.');
+ }
+ async function removeExpired(){
+  for(const [id,entry] of usage.reports){
+   if(!Number.isFinite(entry.expiresAt)||entry.expiresAt>now())continue;
+   for(const extension of ['.mp4','.webm'])await unlink(path.join(videos,id+extension)).catch(error=>{if(error.code!=='ENOENT')throw error;});
+   await unlink(path.join(events,id+'.json')).catch(error=>{if(error.code!=='ENOENT')throw error;});
+   usage.reports.delete(id);
   }
  }
+ async function prune(){usage=await scan();await removeExpired();}
  async function uploadVideo(request,id){
   if(request.headers.get('Origin')!==origin)throw fail(403,'Debug uploads must come from this website.');
   if(request.headers.get('X-Debug-Video-Consent')!=='debug-video-v1')throw fail(400,'Confirm the diagnostic video upload.');
@@ -145,19 +151,17 @@ export function createDebugReportCollector({directory,origin,games,release={},ge
   const digest=hash.digest('hex');let linked=false;
   try{await link(temporary,target);linked=true;}catch(error){if(error.code!=='EEXIST')throw error;}finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
   if(!linked){const info=await stat(target);if(info.size!==bytes||await fileHash(target)!==digest)throw fail(409,'A different video already exists for this report.');}
-  record={...record,video:{status:'ready',mime,bytes,sha256:digest,storedAt:now()}};await replaceJSON(targetRecord,record);
+  record={...record,video:{status:'ready',mime,bytes,sha256:digest,storedAt:now()}};await replaceJSON(targetRecord,record);track(record);
   return json({ok:true,id,video:{bytes,mime}},linked?201:200);
  }
  async function handle(request){
   const url=new URL(request.url),match=/^\/api\/debug-reports\/([0-9a-f-]+)\/video$/.exec(url.pathname);
-  if(match){if(request.method!=='PUT')return json({error:'Method not allowed.'},405);if(!UUID.test(match[1]))throw fail(404,'Diagnostic report not found.');return uploadVideo(request,match[1]);}
+  if(match){if(request.method!=='PUT')return json({error:'Method not allowed.'},405);if(!UUID.test(match[1]))throw fail(404,'Diagnostic report not found.');return serialize(()=>uploadVideo(request,match[1]));}
   if(url.pathname!=='/api/debug-reports')return null;
   if(request.method!=='POST')return json({error:'Method not allowed.'},405);
   if(request.headers.get('Origin')!==origin)throw fail(403,'Debug uploads must come from this website.');
   if(request.headers.get('Content-Type')?.split(';',1)[0].trim().toLowerCase()!=='application/json')throw fail(415,'Diagnostic data must use JSON.');
-  await prune();
   const body=await readJSON(request),{game,tracking,clip,gameState,client,diagnostics}=validateReport(body,allowed,now());
-  await mkdir(events,{recursive:true,mode:0o700});
   const session=await getUser(request);
   const receivedAt=now();const record={version:1,id:body.id,consent:'debug-data-v1',trigger:body.trigger,includeVideo:body.includeVideo,requestedAt:body.requestedAt,receivedAt,expiresAt:receivedAt+DEBUG_RETENTION_MS,
    game:{id:game.id,title:game.title},sourcePage:body.sourcePage,sessionId:body.sessionId,gameState,
@@ -165,9 +169,14 @@ export function createDebugReportCollector({directory,origin,games,release={},ge
    request:{origin,referer:refererPath(request,origin),userAgent:text(request.headers.get('User-Agent'),1024),secFetchSite:text(request.headers.get('Sec-Fetch-Site'),32)},
    user:session?{id:session.userId,email:session.email}:null,
    serviceRelease:{commit:text(release.commit,160),builtAt:text(release.builtAt,80)}};
-  await capacity(record.id,Buffer.byteLength(JSON.stringify(record))+4096+(record.includeVideo?clip.bytes:0));
-  const saved=await writeNew(path.join(events,record.id+'.json'),record);
+  // Read bodies outside the queue so a slow client cannot stall other writers.
+  const saved=await serialize(async()=>{
+   usage??=await scan();await removeExpired();
+   capacity(record.id,Buffer.byteLength(JSON.stringify(record))+4096+(record.includeVideo?clip.bytes:0));
+   await mkdir(events,{recursive:true,mode:0o700});
+   const stored=await writeNew(path.join(events,record.id+'.json'),record);if(!usage.reports.has(stored.id))track(stored);return stored;
+  });
   return json({ok:true,id:saved.id,receivedAt:saved.receivedAt,video:saved.video},saved===record?201:200);
  }
- return {prune:()=>serialize(prune),handle:request=>new URL(request.url).pathname.startsWith('/api/debug-reports')?serialize(()=>handle(request)):Promise.resolve(null)};
+ return {prune:()=>serialize(prune),handle:request=>new URL(request.url).pathname.startsWith('/api/debug-reports')?handle(request):Promise.resolve(null)};
 }

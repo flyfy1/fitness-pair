@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,readdir,rm,stat} from 'node:fs/promises';
+import {mkdir,mkdtemp,readFile,readdir,rm,stat,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {createDebugReportCollector,DEBUG_RETENTION_MS} from './debug-reports.mjs';
 
@@ -77,4 +77,18 @@ test('video limits match the proxy, reserved bytes cannot be exceeded, and expir
  await assert.rejects(collector.handle(upload(Buffer.alloc(100))),{status:413});
  assert.deepEqual(await readdir(directory+'/debug-reports/videos'),[]);
  clock+=DEBUG_RETENTION_MS+1;await assert.rejects(collector.handle(upload(Buffer.alloc(24))),{status:410});
+});
+test('capacity uses a cached usage tally that the periodic prune rebuilds from disk',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-debug-tally-');t.after(()=>rm(directory,{recursive:true,force:true}));
+ const collector=createDebugReportCollector({directory,origin,games:[game],now:()=>1700000000100,storageLimit:200000});
+ assert.equal((await collector.handle(post(report({includeVideo:false})))).status,201);
+ // An orphaned video written outside the collector is not seen until the next rescan.
+ await mkdir(directory+'/debug-reports/videos',{recursive:true});await writeFile(directory+'/debug-reports/videos/orphan.webm',Buffer.alloc(150000));
+ assert.equal((await collector.handle(post(report({id:'550e8400-e29b-41d4-a716-446655440001',includeVideo:false})))).status,201);
+ await collector.prune();
+ await assert.rejects(collector.handle(post(report({id:'550e8400-e29b-41d4-a716-446655440002',clip:{...report().clip,bytes:50000}}))),{status:507});
+ // Corrupt event files count as used bytes instead of failing every submission.
+ await writeFile(directory+'/debug-reports/events/550e8400-e29b-41d4-a716-446655440003.json','{not json');
+ const restarted=createDebugReportCollector({directory,origin,games:[game],now:()=>1700000000100});
+ assert.equal((await restarted.handle(post(report({id:'550e8400-e29b-41d4-a716-446655440004',includeVideo:false})))).status,201);
 });

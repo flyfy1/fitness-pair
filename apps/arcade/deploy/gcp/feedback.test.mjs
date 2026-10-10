@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp, readFile, readdir, rm, stat} from 'node:fs/promises';
+import {mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {createFeedbackCollector} from './feedback.mjs';
+import {createFeedbackCollector,FEEDBACK_RETENTION_MS} from './feedback.mjs';
 
 const origin='https://fitness.example.test';
 const game={id:'motion-quest',title:'Motion Quest'};
@@ -46,4 +46,34 @@ test('anonymous feedback is accepted while invalid origins, games, ratings, dura
  ];
  for(const [candidate,status] of cases)await assert.rejects(collector.handle(candidate),{status});
  const saved=JSON.parse(await readFile(directory+'/feedback/events/'+id+'.json','utf8'));assert.equal(saved.user,null);
+});
+
+test('feedback storage is capped, expires after retention and keeps legacy records counted',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-feedback-cap-');t.after(()=>rm(directory,{recursive:true,force:true}));let clock=1700000000100;
+ const ids=['550e8400-e29b-41d4-a716-446655440001','550e8400-e29b-41d4-a716-446655440002','550e8400-e29b-41d4-a716-446655440003'];
+ const collector=createFeedbackCollector({directory,origin,games:[game],now:()=>clock,eventLimit:2});
+ const results=await Promise.allSettled(ids.map(value=>collector.handle(request(body({id:value,stoppedAt:clock})))));
+ assert.equal(results.filter(result=>result.status==='fulfilled').length,2);assert.equal(results[2].reason.status,507);
+ assert.equal((await collector.handle(request(body({id:ids[0],stoppedAt:clock})))).status,201);
+ const saved=JSON.parse(await readFile(directory+'/feedback/events/'+ids[0]+'.json','utf8'));assert.equal(saved.expiresAt,saved.receivedAt+FEEDBACK_RETENTION_MS);
+ clock+=FEEDBACK_RETENTION_MS+1;
+ assert.equal((await collector.handle(request(body({id:ids[2],stoppedAt:clock})))).status,201);
+ assert.deepEqual(await readdir(directory+'/feedback/events'),[ids[2]+'.json']);
+ // A record from before retention existed is counted by the startup scan and never expires automatically.
+ await writeFile(directory+'/feedback/events/'+ids[0]+'.json',JSON.stringify({version:1,id:ids[0],receivedAt:1}),{mode:0o600});
+ const restarted=createFeedbackCollector({directory,origin,games:[game],now:()=>clock,eventLimit:2});
+ await assert.rejects(restarted.handle(request(body({id:ids[1],stoppedAt:clock}))),{status:507});
+ clock+=FEEDBACK_RETENTION_MS+1;await restarted.prune();
+ assert.deepEqual(await readdir(directory+'/feedback/events'),[ids[0]+'.json']);
+});
+
+test('feedback uses a cached tally between periodic rescans',async t=>{
+ const directory=await mkdtemp(tmpdir()+'/hopmodo-feedback-tally-');t.after(()=>rm(directory,{recursive:true,force:true}));
+ const collector=createFeedbackCollector({directory,origin,games:[game],now:()=>1700000000100,eventLimit:2});
+ assert.equal((await collector.handle(request())).status,201);
+ const other='550e8400-e29b-41d4-a716-446655440009';
+ await writeFile(directory+'/feedback/events/'+other+'.json',JSON.stringify({version:1,id:other}),{mode:0o600});
+ assert.equal((await collector.handle(request(body({id:'550e8400-e29b-41d4-a716-446655440008'})))).status,201);
+ await collector.prune();
+ await assert.rejects(collector.handle(request(body({id:'550e8400-e29b-41d4-a716-446655440007'}))),{status:507});
 });

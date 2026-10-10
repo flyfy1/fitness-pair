@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {mkdtemp, readdir, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {createGateway} from './gateway.mjs';
+import {createGateway,createRateLimiter,clientKey} from './gateway.mjs';
 
 test('GCP gateway reports its release, preserves disabled gallery and rejects uploads',async()=>{
   const server=createGateway({release:{commit:'verified-test-commit'}});
@@ -39,5 +39,35 @@ test('GCP gateway routes same-origin feedback to durable state',async t=>{
   try{
     const response=await fetch(base+'/api/feedback',{method:'POST',headers:{Origin:'http://127.0.0.1','Content-Type':'application/json'},body:JSON.stringify({version:1,id:'550e8400-e29b-41d4-a716-446655440000',rating:'up',gameId:'motion-quest',sourcePage:'/play/motion-quest',durationMs:5000,stoppedAt:Date.now(),endReason:'completed',inputSource:'synthetic',score:'1 / 5 squats'})});
     assert.equal(response.status,201);assert.deepEqual(await readdir(directory+'/feedback/events'),['550e8400-e29b-41d4-a716-446655440000.json']);
+  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
+test('rate limiter bounds each client and the whole endpoint, then resets after its window',()=>{
+  let clock=0;
+  const rules=[{name:'feedback',match:(method,pathname)=>method==='POST'&&pathname==='/api/feedback',perClient:{limit:2,windowMs:1000},global:{limit:3,windowMs:1000}}];
+  const limiter=createRateLimiter({rules,now:()=>clock,maxKeys:3});
+  assert.equal(limiter.check('POST','/api/feedback','a'),0);assert.equal(limiter.check('POST','/api/feedback','a'),0);
+  assert.equal(limiter.check('POST','/api/feedback','a'),1);
+  assert.equal(limiter.check('GET','/api/feedback','a'),0);assert.equal(limiter.check('POST','/api/clips','a'),0);
+  assert.equal(limiter.check('POST','/api/feedback','b'),0);assert.equal(limiter.check('POST','/api/feedback','c'),1);
+  clock=1000;assert.equal(limiter.check('POST','/api/feedback','a'),0);
+  for(const client of ['d','e','f','g'])limiter.check('POST','/api/feedback',client);
+  assert.equal(clientKey({headers:{'cf-connecting-ip':' 203.0.113.7 '},socket:{remoteAddress:'127.0.0.1'}}),'203.0.113.7');
+  assert.equal(clientKey({headers:{},socket:{remoteAddress:'127.0.0.1'}}),'127.0.0.1');
+  assert.equal(clientKey({headers:{'cf-connecting-ip':'x'.repeat(65)},socket:{remoteAddress:'::1'}}),'::1');
+});
+
+test('GCP gateway rate limits anonymous writes per CF-Connecting-IP before storage',async t=>{
+  const directory=await mkdtemp(tmpdir()+'/hopmodo-rate-gateway-');t.after(()=>rm(directory,{recursive:true,force:true}));
+  const rules=[{name:'feedback',match:(method,pathname)=>method==='POST'&&pathname==='/api/feedback',perClient:{limit:1,windowMs:60000},global:{limit:10,windowMs:60000}}];
+  const server=createGateway({origin:'http://127.0.0.1',env:{FITNESS_STATE_DIR:directory},rateLimiter:createRateLimiter({rules})});
+  server.listen(0,'127.0.0.1');await once(server,'listening');const base=`http://127.0.0.1:${server.address().port}`;
+  const send=(client,id)=>fetch(base+'/api/feedback',{method:'POST',headers:{Origin:'http://127.0.0.1','Content-Type':'application/json','CF-Connecting-IP':client},body:JSON.stringify({version:1,id,rating:'up',gameId:'motion-quest',sourcePage:'/play/motion-quest',durationMs:5000,stoppedAt:Date.now(),endReason:'completed',inputSource:'synthetic',score:null})});
+  try{
+    assert.equal((await send('203.0.113.1','550e8400-e29b-41d4-a716-446655440000')).status,201);
+    const limited=await send('203.0.113.1','550e8400-e29b-41d4-a716-446655440001');
+    assert.equal(limited.status,429);assert.ok(Number(limited.headers.get('Retry-After'))>0);
+    assert.equal((await send('203.0.113.2','550e8400-e29b-41d4-a716-446655440002')).status,201);
+    assert.deepEqual((await readdir(directory+'/feedback/events')).sort(),['550e8400-e29b-41d4-a716-446655440000.json','550e8400-e29b-41d4-a716-446655440002.json']);
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
