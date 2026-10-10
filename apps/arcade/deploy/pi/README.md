@@ -36,8 +36,8 @@ client and 60 per hour overall. Per-client limits with no overall ceiling also
 cover login start (30 per 10 minutes), play-session heartbeats (300 per 10
 minutes), upload-rejection reports (10 per hour) and clip, poster and direct-upload
 writes (60 per hour). Limits reset on restart and only slow down abuse; a client
-with many addresses can still fill the shared debug quota, and one anonymous
-client can still hold the single direct-upload slot for its 10-minute lifetime.
+with many addresses can still fill the shared debug quota. Direct-upload slots
+are bounded separately (below).
 
 Reports have no public read endpoint. An authorized local operator can inspect
 the event JSON and video using the report UUID over the existing SSH connection;
@@ -86,13 +86,20 @@ Private videos remain private; permanent copies clear staging expiry metadata.
 The server rechecks quota at publication, so another concurrent legacy upload
 can require the user to free storage even after preparation succeeded.
 
-There is at most one pending direct upload, capped at 200 MB and ten minutes.
-The mode-0600 pending record survives restarts and contains no credentials.
+Pending direct uploads are capped at 200 MB and ten minutes each, in two pools:
+three for signed-in accounts and three for anonymous publishers, so at most
+1.2 GB is staged. Each account or device management key holds one slot, and a
+new attempt from the same owner replaces its earlier one. Each anonymous network
+(SHA-256 of `CF-Connecting-IP`) holds one slot, so rotating management keys from
+one address cannot take more. A client with many addresses can still fill the
+anonymous pool for ten minutes at a time, but cannot block signed-in uploads.
+The mode-0600 pending records survive restarts and contain no credentials,
+session URLs or raw addresses; a version 1 single-record file is migrated.
 Cancellation revokes the GCS session when available and deletes staged bytes.
 Expired pending state is cleaned on the next direct request; staged objects have
 custom-time expiry under the existing bucket lifecycle. A restart does not
 persist the session URL, so an abandoned session can remain valid at Google for
-up to its one-week maximum; its single temporary object is never published after
+up to its one-week maximum; its temporary object is never published after
 the application deadline and remains subject to lifecycle cleanup. Completion
 retries recognize already published clips without duplicating quota or objects.
 

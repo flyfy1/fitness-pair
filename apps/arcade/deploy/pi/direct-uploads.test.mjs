@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,readFile} from 'node:fs/promises';
+import {mkdtemp,rm,readFile,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import vm from 'node:vm';
 import {directUploadWorker} from './direct-uploads.mjs';
@@ -97,4 +97,48 @@ test('browser transport sends the Blob only to GCS and never forwards app creden
  const result=await context.window.fetch('/api/clips/'+id+query,{method:'PUT',headers:{'X-CSRF-Token':'private','X-Sharing-Consent':'gallery-v1'},body:blob,credentials:'same-origin'});
  assert.equal(result.status,200);assert.equal(calls.length,3);assert.equal(calls[1].options.body,blob);
  assert.ok(!calls[0].options.body&&!calls[2].options.body);
+});
+test('anonymous key rotation cannot lock other uploaders out of direct upload slots',async()=>{
+ const f=await fixture(),clip=n=>'/api/direct-uploads/12345678-1234-4234-8234-'+String(n).padStart(12,'0');
+ const anonymous=(n,key,ip)=>f.adapter.fetch(request(clip(n)+query,'POST',{'X-Management-Key':key.repeat(32),'CF-Connecting-IP':ip}),f.env);
+ const account=(n,player)=>f.adapter.fetch(request(clip(n)+query.replace('public','private').replace('retention=7','retention=never'),'POST',{'X-Player':player,'X-CSRF-Token':'valid','X-Sharing-Consent':'private-v1'}),f.env);
+ try{
+  assert.equal((await anonymous(1,'a','203.0.113.1')).status,201);
+  // Rotating management keys from the same network neither replaces nor adds a slot.
+  for(const key of ['b','c','d'])assert.equal((await anonymous(10,key,'203.0.113.1')).status,429);
+  assert.equal((await account(2,'b')).status,201);
+  assert.equal((await anonymous(3,'e','198.51.100.7')).status,201);
+  // Another publisher cannot take over a clip ID that is already uploading.
+  assert.equal((await anonymous(3,'f','198.51.100.8')).status,409);
+  // A distributed attacker can fill only the anonymous pool; accounts keep their own slots.
+  assert.equal((await anonymous(4,'g','203.0.113.2')).status,201);
+  assert.equal((await anonymous(5,'h','203.0.113.3')).status,429);
+  assert.equal((await account(6,'c')).status,201);
+  assert.equal((await account(7,'d')).status,201);
+  assert.equal((await account(8,'e')).status,429);
+  assert.equal(f.stats().preparations,6);
+  const stored=await readFile(f.dir+'/direct/pending.json','utf8');assert.ok(!stored.includes('capability')&&!stored.includes('203.0.113'));
+  await f.restart();
+  assert.equal((await f.adapter.fetch(request(clip(2)+'/complete','POST',{'X-Player':'b','X-CSRF-Token':'valid','X-Sharing-Consent':'private-v1'}),f.env)).status,201);
+  assert.equal((await account(8,'e')).status,201);
+  // The newest attempt from the same owner replaces that owner's earlier slot.
+  assert.equal((await anonymous(9,'e','198.51.100.7')).status,201);
+  assert.equal((await f.adapter.fetch(request(clip(3)+'/complete','POST',{'X-Management-Key':'e'.repeat(32)}),f.env)).status,404);
+  assert.equal((await anonymous(5,'h','203.0.113.3')).status,429);
+  f.advance();
+  assert.equal((await anonymous(5,'h','203.0.113.3')).status,201);
+  assert.equal([...f.objects.keys()].filter(x=>x.startsWith('videos/.pending/')).length,1);
+ }finally{await f.close();}
+});
+test('direct uploads migrate a version 1 pending record',async()=>{
+ const f=await fixture(),path='/api/direct-uploads/'+id;
+ try{
+  assert.equal((await f.adapter.fetch(request(path+query),f.env)).status,201);
+  const {uploads:[record]}=JSON.parse(await readFile(f.dir+'/direct/pending.json','utf8'));
+  const {kind,network,...legacy}=record;
+  await writeFile(f.dir+'/direct/pending.json',JSON.stringify(legacy));
+  await f.restart();
+  assert.equal((await f.adapter.fetch(request(path+'/complete'),f.env)).status,201);
+  await assert.rejects(readFile(f.dir+'/direct/pending.json'),{code:'ENOENT'});
+ }finally{await f.close();}
 });

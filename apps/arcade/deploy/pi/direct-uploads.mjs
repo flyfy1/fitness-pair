@@ -2,7 +2,8 @@ import {mkdir,readFile,writeFile,rename,unlink} from 'node:fs/promises';
 import {createHash,randomUUID} from 'node:crypto';
 import {validateUpload} from '../../server/worker.js';
 
-const MAX=200_000_000,TTL=10*60*1000;
+// Separate small pools keep anonymous clients from locking out accounts; staged bytes stay within 6 x 200 MB.
+const MAX=200_000_000,TTL=10*60*1000,SLOTS={account:3,anonymous:3};
 const fail=(status,message)=>Object.assign(Error(message),{status});
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
 const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -10,27 +11,38 @@ const validSession=value=>{
  try {const u=new URL(value);return u.origin==='https://storage.googleapis.com'&&u.pathname.startsWith('/upload/storage/v1/b/')&&u.searchParams.has('upload_id');}catch{return false;}
 };
 
-// A bounded, durable pending record contains no credential or upload session URL.
+// Bounded, durable pending records contain no credential or upload session URL.
+// Each owner holds at most one slot; an anonymous network (hashed CF-Connecting-IP) holds at most one.
 // GCS owns video bytes; this adapter reads only metadata and the first 12 bytes.
 export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=>Date.now()}={}) {
  await mkdir(directory,{recursive:true,mode:0o700});
- const filename=directory+'/pending.json';let pending=null,sessionURL=null,busy=false;
- try{pending=JSON.parse(await readFile(filename,'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
- async function save(value){await writeFile(filename+'.new',JSON.stringify(value),{mode:0o600});await rename(filename+'.new',filename);pending=value;}
- async function forget(){await unlink(filename).catch(error=>{if(error.code!=='ENOENT')throw error;});pending=null;sessionURL=null;}
+ const filename=directory+'/pending.json',uploads=new Map(),sessions=new Map();let busy=false;
+ try{
+  const stored=JSON.parse(await readFile(filename,'utf8'));
+  // Version 1 stored a single record without a pool.
+  for(const record of Array.isArray(stored.uploads)?stored.uploads:[stored])uploads.set(record.id,{kind:'anonymous',...record});
+ }catch(error){if(error.code!=='ENOENT')throw error;}
+ async function save(){
+  if(!uploads.size){await unlink(filename).catch(error=>{if(error.code!=='ENOENT')throw error;});return;}
+  await writeFile(filename+'.new',JSON.stringify({version:2,uploads:[...uploads.values()]}),{mode:0o600});await rename(filename+'.new',filename);
+ }
  async function cloud(env,url,options={}){
   const token=await env.GCP_ACCESS_TOKEN_PROVIDER();
   return fetcher(url,{...options,headers:{Authorization:'Bearer '+token,...options.headers},redirect:'error',signal:AbortSignal.timeout(30000)});
  }
  const objectURL=(env,name)=>`https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(env.GCP_BUCKET)}/o/${encodeURIComponent(name)}`;
- async function discard(env){
+ async function discard(env,record){
+  const sessionURL=sessions.get(record.id);
   if(sessionURL){
    const response=await fetcher(sessionURL,{method:'DELETE',redirect:'error',signal:AbortSignal.timeout(15000)});
    if(![200,204,404,410,499].includes(response.status))throw fail(503,'Could not cancel this upload. Try again shortly.');
+   sessions.delete(record.id);
   }
-  if(pending){const response=await cloud(env,objectURL(env,pending.object),{method:'DELETE'});if(!response.ok&&response.status!==404)throw fail(503,'Could not remove the unfinished upload.');}
-  await forget();
+  const response=await cloud(env,objectURL(env,record.object),{method:'DELETE'});if(!response.ok&&response.status!==404)throw fail(503,'Could not remove the unfinished upload.');
+  uploads.delete(record.id);await save();
  }
+ // A failed cleanup keeps the record, so its slot and staged bytes stay counted until a later retry.
+ async function expire(env){for(const record of [...uploads.values()])if(record.until<=now())await discard(env,record).catch(()=>{});}
  return {async fetch(request,env){
   const url=new URL(request.url);
   if(!url.pathname.startsWith('/api/direct-uploads/'))return worker.fetch(request,env);
@@ -47,7 +59,8 @@ export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=
    const match=/^\/api\/direct-uploads\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(\/complete)?$/.exec(url.pathname);
    if(!match)throw fail(404,'Upload not found.');
    const id=match[1];
-   if(pending&&pending.until<=now())await discard(env);
+   await expire(env);
+   const pending=uploads.get(id);
    if(request.method==='POST'&&!match[2]){
     const total=Number(request.headers.get('X-Upload-Bytes'));
     if(!Number.isSafeInteger(total)||total<12||total>MAX)throw fail(413,'Use a video no larger than 200 MB.');
@@ -56,10 +69,10 @@ export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=
     const info=validateUpload(new Request(target,{headers}),target);
     if(!user&&(info.visibility!=='public'||info.retention!=='7'))throw fail(403,'Log in for private clips or a different expiry.');
     if(!user&&!/^[A-Za-z0-9_-]{32,128}$/.test(managementKey))throw fail(400,'A device management key is required.');
-    if(pending){
-     if(pending.owner!==owner||pending.id!==id)throw fail(429,'Another clip is uploading. Please retry shortly.');
-     await discard(env);
-    }
+    if(pending&&pending.owner!==owner)throw fail(409,'This clip belongs to another publisher.');
+    // The newest attempt replaces the owner's earlier slot, so a crashed tab cannot block its own retry.
+    const own=[...uploads.values()].find(record=>record.owner===owner);
+    if(own)await discard(env,own);
     // Existing publication retries retain original ownership and never issue another capability.
     const existing=await cloud(env,objectURL(env,'gallery/'+id+'.json')+'?alt=media');
     if(existing.ok){
@@ -74,6 +87,10 @@ export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=
     const account=await env.ACCOUNTS.list(user?.userId||null);
     if(user&&account.usedBytes+total>account.limitBytes)throw fail(413,'Your storage is full. Remove a shared clip first.');
     if(account.clips.some(clip=>clip.id===id))throw fail(409,'Remove the unfinished shared clip before retrying.');
+    const kind=user?'account':'anonymous',network=user?undefined:hash('network:'+(request.headers.get('CF-Connecting-IP')||'direct'));
+    const pool=[...uploads.values()].filter(record=>record.kind===kind);
+    if(network&&pool.some(record=>record.network===network))throw fail(429,'Another upload from your network is in progress. Please retry shortly.');
+    if(pool.length>=SLOTS[kind])throw fail(429,'Too many clips are uploading. Please retry shortly.');
     const object='videos/.pending/'+randomUUID(),until=now()+TTL;
     const response=await cloud(env,`https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(env.GCP_BUCKET)}/o?uploadType=resumable&ifGenerationMatch=0`,{
      method:'POST',headers:{Origin:url.origin,'Content-Type':'application/json','X-Upload-Content-Type':info.mime,'X-Upload-Content-Length':String(total)},
@@ -81,16 +98,17 @@ export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=
     });
     const location=response.headers.get('Location');
     if(!response.ok||!validSession(location))throw fail(503,'Could not prepare the cloud upload.');
-    sessionURL=location;
-    await save({id,owner,object,total,until,target:target.href,mime:info.mime,consent:headers.get('X-Sharing-Consent')});
-    return json({uploadURL:sessionURL,expiresAt:until},201);
+    sessions.set(id,location);
+    uploads.set(id,{id,owner,kind,network,object,total,until,target:target.href,mime:info.mime,consent:headers.get('X-Sharing-Consent')});
+    await save();
+    return json({uploadURL:location,expiresAt:until},201);
    }
-   if(!pending||pending.id!==id){
+   if(!pending){
     if(request.method==='POST'&&match[2])return worker.fetch(new Request(new URL('/api/clips/'+id,url.origin),{headers:request.headers}),env);
     throw fail(404,'Upload not found or expired.');
    }
    if(pending.owner!==owner)throw fail(404,'Upload not found or expired.');
-   if(request.method==='DELETE'&&!match[2]){await discard(env);return json({cancelled:true});}
+   if(request.method==='DELETE'&&!match[2]){await discard(env,pending);return json({cancelled:true});}
    if(request.method!=='POST'||!match[2])throw fail(405,'Unsupported upload method.');
    if(request.headers.get('X-Sharing-Consent')!==pending.consent)throw fail(400,'Confirm the selected visibility before publishing.');
    const metadata=await cloud(env,objectURL(env,pending.object));
@@ -98,7 +116,7 @@ export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=
    if(!metadata.ok)throw fail(503,'Could not verify the uploaded video.');
    const object=await metadata.json();
    if(object.name!==pending.object||Number(object.size)!==pending.total||object.contentType!==pending.mime||!/^\d+$/.test(object.generation||'')){
-    await discard(env);throw fail(400,'Uploaded video size or type does not match.');
+    await discard(env,pending);throw fail(400,'Uploaded video size or type does not match.');
    }
    const headResponse=await cloud(env,objectURL(env,pending.object)+'?alt=media&generation='+object.generation,{headers:{Range:'bytes=0-11'}});
    if(headResponse.status!==206||Number(headResponse.headers.get('Content-Length'))!==12){await headResponse.body?.cancel();throw fail(503,'Could not inspect the uploaded video.');}
@@ -119,8 +137,8 @@ export async function directUploadWorker(worker,{directory,fetcher=fetch,now=()=
    }};
    const headers=new Headers(request.headers);headers.set('Content-Type',pending.mime);headers.set('Content-Length',String(pending.total));
    const result=await worker.fetch(new Request(pending.target,{method:'PUT',headers}),{...env,PREPARED_UPLOAD:prepared});
-   if(result.ok){sessionURL=null;await discard(env);}
-   else if(result.status===415){await discard(env);}
+   if(result.ok){sessions.delete(id);await discard(env,pending);}
+   else if(result.status===415){await discard(env,pending);}
    return result;
   }catch(error){return json({error:error.status?error.message:'Direct upload is unavailable. Please retry.'},error.status||503);}
   finally{busy=false;}
