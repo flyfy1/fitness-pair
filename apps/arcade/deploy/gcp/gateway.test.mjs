@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {mkdtemp, readdir, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {createGateway,createRateLimiter,clientKey} from './gateway.mjs';
+import {createGateway,createRateLimiter,clientKey,WRITE_RATE_LIMITS} from './gateway.mjs';
 
 test('GCP gateway reports its release, preserves disabled gallery and rejects uploads',async()=>{
   const server=createGateway({release:{commit:'verified-test-commit'}});
@@ -70,4 +70,15 @@ test('GCP gateway rate limits anonymous writes per CF-Connecting-IP before stora
     assert.equal((await send('203.0.113.2','550e8400-e29b-41d4-a716-446655440002')).status,201);
     assert.deepEqual((await readdir(directory+'/feedback/events')).sort(),['550e8400-e29b-41d4-a716-446655440000.json','550e8400-e29b-41d4-a716-446655440002.json']);
   }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
+test('default limits cover every anonymous write and login start without a global lockout on login',()=>{
+  const limiter=createRateLimiter();
+  const covered=[['POST','/api/feedback'],['POST','/api/debug-reports'],['PUT','/api/debug-reports/550e8400-e29b-41d4-a716-446655440000/video'],['GET','/api/auth/start'],['POST','/api/play-sessions'],['POST','/api/upload-rejections'],
+    ['PUT','/api/clips/550e8400-e29b-41d4-a716-446655440000'],['PATCH','/api/clips/550e8400-e29b-41d4-a716-446655440000'],['DELETE','/api/clips/550e8400-e29b-41d4-a716-446655440000'],['PUT','/api/posters/550e8400-e29b-41d4-a716-446655440000'],['POST','/api/direct-uploads/550e8400-e29b-41d4-a716-446655440000/complete']];
+  for(const [method,pathname] of covered)assert.ok(WRITE_RATE_LIMITS.some(rule=>rule.match(method,pathname)),method+' '+pathname);
+  for(const [method,pathname] of [['GET','/api/clips'],['GET','/api/clips/550e8400-e29b-41d4-a716-446655440000'],['GET','/api/auth/session'],['GET','/healthz']])assert.ok(!WRITE_RATE_LIMITS.some(rule=>rule.match(method,pathname)),method+' '+pathname);
+  for(let index=0;index<30;index++)assert.equal(limiter.check('GET','/api/auth/start','a'),0);
+  assert.ok(limiter.check('GET','/api/auth/start','a')>0);
+  for(let index=0;index<200;index++)assert.equal(limiter.check('GET','/api/auth/start','client-'+index),0);
 });

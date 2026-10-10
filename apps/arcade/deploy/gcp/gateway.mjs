@@ -16,10 +16,17 @@ import {gameCatalog,playableGames} from '../../game-catalog.js';
 globalThis.crypto ??= webcrypto;
 
 // Anonymous write endpoints. Origin checks only stop browsers; these bound non-browser clients too.
+// A global ceiling is set only where a full shared quota would otherwise lock real users out for days.
+const writes=new Set(['POST','PUT','PATCH','DELETE']);
 export const WRITE_RATE_LIMITS=[
   {name:'feedback',match:(method,pathname)=>method==='POST'&&pathname==='/api/feedback',perClient:{limit:30,windowMs:600000},global:{limit:600,windowMs:3600000}},
   {name:'debug-report',match:(method,pathname)=>method==='POST'&&pathname==='/api/debug-reports',perClient:{limit:6,windowMs:3600000},global:{limit:30,windowMs:3600000}},
   {name:'debug-video',match:(method,pathname)=>method==='PUT'&&pathname.startsWith('/api/debug-reports/'),perClient:{limit:8,windowMs:3600000},global:{limit:60,windowMs:3600000}},
+  // Login transactions share a 1,000-entry table; heartbeats arrive about every 15 seconds per round.
+  {name:'auth-start',match:(method,pathname)=>method==='GET'&&pathname==='/api/auth/start',perClient:{limit:30,windowMs:600000}},
+  {name:'play-session',match:(method,pathname)=>method==='POST'&&pathname==='/api/play-sessions',perClient:{limit:300,windowMs:600000}},
+  {name:'upload-rejection',match:(method,pathname)=>method==='POST'&&pathname==='/api/upload-rejections',perClient:{limit:10,windowMs:3600000}},
+  {name:'clip-write',match:(method,pathname)=>writes.has(method)&&/^\/api\/(clips|posters|direct-uploads)\//.test(pathname),perClient:{limit:60,windowMs:3600000}},
 ];
 
 // Cloudflare Tunnel overwrites CF-Connecting-IP; without it every client shares the proxy's loopback address.
@@ -48,7 +55,7 @@ export function createRateLimiter({rules=WRITE_RATE_LIMITS,now=Date.now,maxKeys=
     check(method,pathname,client){
       const rule=rules.find(candidate=>candidate.match(method,pathname));
       if(!rule)return 0;
-      return take(rule.name+' '+client,rule.perClient)||take(rule.name,rule.global);
+      return take(rule.name+' '+client,rule.perClient)||(rule.global?take(rule.name,rule.global):0);
     },
   };
 }

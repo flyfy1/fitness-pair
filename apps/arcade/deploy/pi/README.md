@@ -32,8 +32,12 @@ The gateway applies in-memory fixed-window limits to these anonymous writes, key
 on Cloudflare's `CF-Connecting-IP` (falling back to the loopback proxy address):
 feedback 30 per 10 minutes per client and 600 per hour overall; debug reports 6
 per hour per client and 30 per hour overall; debug video uploads 8 per hour per
-client and 60 per hour overall. Limits reset on restart and only slow down abuse;
-a client with many addresses can still fill the shared debug quota.
+client and 60 per hour overall. Per-client limits with no overall ceiling also
+cover login start (30 per 10 minutes), play-session heartbeats (300 per 10
+minutes), upload-rejection reports (10 per hour) and clip, poster and direct-upload
+writes (60 per hour). Limits reset on restart and only slow down abuse; a client
+with many addresses can still fill the shared debug quota, and one anonymous
+client can still hold the single direct-upload slot for its 10-minute lifetime.
 
 Reports have no public read endpoint. An authorized local operator can inspect
 the event JSON and video using the report UUID over the existing SSH connection;
