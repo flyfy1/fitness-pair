@@ -132,7 +132,16 @@ Smoke-check output is not a model benchmark or human recognition evidence.
 npm test
 npm run build
 CI=1 PREVIEW=1 npm run test:browser
+npm run test:experiments
 ```
+
+`npm test` runs the root contract tests plus every package and app unit suite,
+including the arcade gateway (auth, account store, upload boundary, debug
+reports) and its GCP/Pi deploy checks. `npm run test:experiments` runs the
+experiment suites separately; `npm run test:all` runs both. GitHub Actions
+(`.github/workflows/ci.yml`) runs `npm ci`, `npm test`, and `npm run build` on
+Node 22.12 for every push and pull request to `main`. Browser tests stay local
+because they need installed Google Chrome and a camera-capable environment.
 
 2026-09-13 migration checks: **15 unit/contract tests and 6 production-browser
 tests passed**, including actual local inference on a public image, synthetic

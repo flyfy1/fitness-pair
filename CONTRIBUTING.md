@@ -35,7 +35,7 @@ Choose one of the [four tracks](experiments/README.md). Keep the baseline playab
 
 Keep private input, generated runs, and downloaded weights under ignored `data/`, `runs/`, `models/`, or `.local/` paths. Check ignore coverage before storing anything. Commit small public or synthetic fixtures only when redistribution is permitted and they contain no private information. Participant recording requires consent; ordinary local implementation and testing do not require additional permission.
 
-Run the smallest relevant checks. Shared module or contract changes require `npm test` and `npm run build`; playable-path changes also require a browser check from this checkout. Distinguish camera trials from replay and synthetic checks. Review the diff, stage only owned files, commit the verified unit, and push its branch. Report what changed, the evidence, and remaining limitations.
+Run the smallest relevant checks. Shared module or contract changes require `npm test` (all package and app unit suites; CI runs it with `npm run build` on every push to `main`) and `npm run build`; experiment changes also run `npm run test:experiments`; playable-path changes also require a browser check from this checkout. Distinguish camera trials from replay and synthetic checks. Review the diff, stage only owned files, commit the verified unit, and push its branch. Report what changed, the evidence, and remaining limitations.
 
 ## Deliver each checkpoint
 
