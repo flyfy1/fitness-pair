@@ -27,14 +27,15 @@ export function drawClipFrame(c,{canvas,video,skeleton,skeletonMirrored=false,is
  const w=sourceWidth*scale,h=sourceHeight*scale,x=(width-w)/2,y=(playHeight-h)/2;
  const videoReady=video&&(video.readyState>=2||video instanceof HTMLCanvasElement&&video.width>0);
  if(isAR&&includesCamera&&videoReady)coverVideo(c,video,x,y,w,h);
+ if(layout)c.drawImage(canvas,x+layout.x*scale,y+layout.y*scale,layout.canvasWidth*scale,layout.canvasHeight*scale);
+ else c.drawImage(canvas,x,y,w,h);
+ // Match the live stage: body outlines sit above the game objects.
  if(isAR&&skeleton?.width){
   c.save();
   if(skeletonMirrored)c.drawImage(skeleton,x,y,w,h);
   else{c.translate(x+w,y);c.scale(-1,1);c.drawImage(skeleton,0,0,w,h);}
   c.restore();
  }
- if(layout)c.drawImage(canvas,x+layout.x*scale,y+layout.y*scale,layout.canvasWidth*scale,layout.canvasHeight*scale);
- else c.drawImage(canvas,x,y,w,h);
  if(!isAR&&includesCamera&&videoReady){
   const insetWidth=Math.min(258,width*.32),insetHeight=insetWidth*192/258;
   const insetX=width-insetWidth-28,insetY=height>width?playHeight-insetHeight-38:490;
