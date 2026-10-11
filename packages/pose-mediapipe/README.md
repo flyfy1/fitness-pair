@@ -53,3 +53,12 @@ keeps MediaPipe indices inside the provider, preserves named-joint frame identit
 and releases owned tracks and workers on cancellation, errors and hidden tabs.
 Camera frames stay on the device. Run `node --test tests/pose-camera.test.mjs`
 from the repository root for lifecycle regression coverage.
+
+The optional `players: 2` mode requests two poses from the same local model and
+camera. `onPlayers([left, right])` emits two ordinary v1 PoseFrames, each with
+its own session ID and shared camera provenance/input timestamp. Left/right here
+means fixed lanes in the mirrored preview, never detector array order. Both
+shoulders must stay inside a half; the center buffer, absent detections and
+multiple candidates in one lane emit missing joints. Players must keep their
+chosen sides; this is lane ownership, not person re-identification after crossing.
+Single-player `onPose` behavior and contracts are unchanged.

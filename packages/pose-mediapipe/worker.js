@@ -22,7 +22,7 @@ self.onmessage = async ({ data }) => {
       const files = { wasmLoaderPath: blobURL(buffers[selected[0]]),
         wasmBinaryPath: blobURL(buffers[selected[1]], 'application/wasm') };
       const options = { baseOptions: { modelAssetBuffer: new Uint8Array(buffers['pose_landmarker_lite.task']), delegate: 'CPU' },
-        runningMode: 'VIDEO', numPoses: 1, minPoseDetectionConfidence: .6,
+        runningMode: 'VIDEO', numPoses: data.numPoses === 2 ? 2 : 1, minPoseDetectionConfidence: .6,
         minPosePresenceConfidence: .6, minTrackingConfidence: .6 };
       landmarker = await self.exports.PoseLandmarker.createFromOptions(files, options);
       self.postMessage({ type: 'ready', delegate: 'CPU' });
@@ -32,7 +32,7 @@ self.onmessage = async ({ data }) => {
     try {
       const start = performance.now();
       const result = landmarker.detectForVideo(data.bitmap, data.time);
-      self.postMessage({ type: 'pose', landmarks: result.landmarks[0] ?? [], time: data.time,
+      self.postMessage({ type: 'pose', landmarks: result.landmarks[0] ?? [], poses: result.landmarks, time: data.time,
         inferenceMs: performance.now() - start });
     } catch (error) { self.postMessage({ type: 'error', message: String(error.message) }); }
     finally { data.bitmap.close(); }

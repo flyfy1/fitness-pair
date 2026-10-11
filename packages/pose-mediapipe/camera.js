@@ -1,4 +1,5 @@
 import { fromMediaPipe } from './index.js';
+import { assignPoseLanes } from './players.js';
 
 const INITIALIZATION_TIMEOUT_MS = 330_000;
 const INFERENCE_TIMEOUT_MS = 1_000;
@@ -6,7 +7,10 @@ const FRAME_INTERVAL_MS = 1000 / 30;
 
 /** A single local camera session; the host explicitly starts each new attempt. */
 export class PoseCamera {
-  constructor({ video, onPose = () => {}, onStatus = () => {}, onError = () => {}, onStop = () => {}, inferenceTimeoutMs = INFERENCE_TIMEOUT_MS }) {
+  constructor({ video, onPose = () => {}, onPlayers = () => {}, players = 1, onStatus = () => {}, onError = () => {}, onStop = () => {}, inferenceTimeoutMs = INFERENCE_TIMEOUT_MS }) {
+    if (![1, 2].includes(players)) throw new RangeError('Camera supports one or two players');
+    this.players = players;
+    this.onPlayers = onPlayers;
     if (!Number.isFinite(inferenceTimeoutMs) || inferenceTimeoutMs < 1000 || inferenceTimeoutMs > 10000) throw new RangeError('Inference timeout must be between 1000 and 10000 ms');
     this.inferenceTimeoutMs = inferenceTimeoutMs;
     this.video = video;
@@ -24,6 +28,7 @@ export class PoseCamera {
   async start() {
     if (this.attempt) return this.attempt.promise;
     const session = { sessionId: crypto.randomUUID(), source: { kind: 'camera', id: crypto.randomUUID() } };
+    if (this.players === 2) session.players = [0, 1].map(() => ({sessionId: crypto.randomUUID(), source: {...session.source}}));
     const attempt = { session, ready: false, stream: null, worker: null, seq: 0,
       pending: null, lastVideoTime: -1, lastSampleTime: -Infinity, lastResultAt: 0 };
     attempt.promise = new Promise(resolve => { attempt.resolve = resolve; });
@@ -65,7 +70,7 @@ export class PoseCamera {
       worker.onerror = () => this.fail(attempt, new Error('The local pose model worker failed. Please try again.'));
       worker.onmessageerror = () => this.fail(attempt, new Error('The local pose model returned an unreadable result.'));
       this.onStatus({ state: 'loading', ...attempt.session });
-      worker.postMessage({ type: 'init', base: base.href });
+      worker.postMessage({ type: 'init', base: base.href, numPoses: this.players });
     } catch (error) { this.fail(attempt, error); }
   }
 
@@ -91,8 +96,12 @@ export class PoseCamera {
       attempt.pending = null;
       attempt.lastResultAt = performance.now();
       try {
-        this.onPose(fromMediaPipe({ landmarks: data.landmarks, ...attempt.session,
-          seq: input.seq, tMs: input.tMs, width: input.width, height: input.height }));
+        const adapt = landmarks => fromMediaPipe({ landmarks, ...attempt.session,
+          seq: input.seq, tMs: input.tMs, width: input.width, height: input.height });
+        if (this.players === 2) {
+          const empty = adapt([]);
+          this.onPlayers(assignPoseLanes((data.poses ?? []).map(adapt), attempt.session.players, empty));
+        } else this.onPose(adapt(data.landmarks));
       } catch (error) { this.fail(attempt, error); }
     }
   }

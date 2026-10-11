@@ -9,7 +9,7 @@ const deferred = () => {
 };
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 
-function environment(t, { media, bitmap, inferenceTimeoutMs } = {}) {
+function environment(t, { media, bitmap, inferenceTimeoutMs, players } = {}) {
   const track = new EventTarget();
   track.stops = 0;
   track.stop = () => { track.stops += 1; };
@@ -37,11 +37,11 @@ function environment(t, { media, bitmap, inferenceTimeoutMs } = {}) {
     Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
     restoreGlobals.push(() => descriptor ? Object.defineProperty(globalThis, name, descriptor) : delete globalThis[name]);
   }
-  const poses = [], statuses = [], errors = [], stops = [];
-  const camera = new PoseCamera({ video, inferenceTimeoutMs, onPose: pose => poses.push(pose), onStatus: status => statuses.push(status),
+  const poses = [], playerFrames = [], statuses = [], errors = [], stops = [];
+  const camera = new PoseCamera({ video, players, inferenceTimeoutMs, onPlayers: frames => playerFrames.push(frames), onPose: pose => poses.push(pose), onStatus: status => statuses.push(status),
     onError: error => errors.push(error), onStop: stop => stops.push(stop) });
   t.after(() => { camera.stop(); restoreGlobals.forEach(restore => restore()); });
-  return { camera, track, stream, video, workers, document, poses, statuses, errors, stops,
+  return { camera, track, stream, video, workers, document, poses, playerFrames, statuses, errors, stops,
     frame(time) { const callbacks = [...raf.values()]; raf.clear(); callbacks.forEach(callback => callback(time)); } };
 }
 
@@ -58,6 +58,32 @@ test('cancelling pending permission resolves promptly and stops a late camera gr
   assert.equal(env.workers.length, 0);
   assert.equal(env.stops.length, 1);
   assert.deepEqual(env.errors, []);
+});
+
+test('two-player camera keeps stable lane sessions when detection order changes or a player disappears', async t => {
+  const env = environment(t, {players: 2});
+  const ready = env.camera.start(); await flush();
+  const worker = env.workers[0];
+  assert.equal(worker.sent[0].numPoses, 2);
+  worker.emit({type: 'ready'}); const session = await ready;
+  assert.notEqual(session.players[0].sessionId, session.players[1].sessionId);
+  const person = x => { const joints = []; for (const id of [11,12]) joints[id] = {x: x + (id === 11 ? -.04 : .04), y: .3, visibility: .99}; return joints; };
+  for (const [i, poses] of [[person(.25),person(.75)], [person(.75),person(.25)], [person(.25)]].entries()) {
+    env.video.currentTime = i + 1; env.frame(100 + i * 50); await flush();
+    worker.emit({type: 'pose', poses, time: 100 + i * 50});
+  }
+  assert.equal(env.poses.length, 0);
+  for (const frames of env.playerFrames) {
+    assert.equal(frames[0].sessionId, session.players[0].sessionId);
+    assert.equal(frames[1].sessionId, session.players[1].sessionId);
+    assert.deepEqual(frames[0].source, session.source);
+    assert.equal(frames[0].tMs, frames[1].tMs);
+  }
+  assert.deepEqual(env.playerFrames[0].map(frame => frame.joints.leftShoulder.x), [.71, .21]);
+  assert.deepEqual(env.playerFrames[1].map(frame => frame.joints.leftShoulder.x), [.71, .21]);
+  assert.deepEqual(env.playerFrames[2][0].joints, {});
+  assert.equal(env.playerFrames[2][1].seq, 3);
+  env.camera.stop(); assert.equal(worker.terminated, true); assert.equal(env.track.stops, 1);
 });
 
 test('ready precedes named poses and output retains original input timestamp and provenance', async t => {
