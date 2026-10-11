@@ -4,6 +4,23 @@ Six original Integ Games adapted for camera-only AR play: Brick Pulse,
 Pixel Defense, Perfect Stack, Orbit Knife, Bubble Pop and Fruit Orbit.
 See [the complete matching and MVP boundary](../../docs/movement-game-mapping.md).
 
+Brick Pulse, Perfect Stack and Orbit Knife offer **Two players · side by side**
+on the existing entry screen. Both people share one camera and local model,
+calibrate independently, confirm with joined hands and start together. Each
+board receives only its player's action events. The 60-second active-time match
+compares scores; a finished board waits while the other continues. A tracking
+gap pauses both boards and the clock immediately. Resume requires both people
+visible on their chosen sides with hands lowered. The center line and two
+scores remain visible in the shared local replay, with default game audio.
+
+Standalone example: <http://127.0.0.1:5284/?game=stack&mode=duel>.
+This mode uses MediaPipe's native two-pose detection and fixed mirrored-screen
+lanes, not person identity tracking. Players must not swap sides. Other AR games
+retain their existing single-player mode. Duel presentation does not publish
+player samples into the single-person tracking sidecar; the shared recorder captures its composed video
+and audio without mixing the two PoseFrame session IDs. See
+[scope, implementation and evidence](../../docs/side-by-side-duels.md).
+
 The camera, game objects and live named-body skeleton share a full-window stage.
 The source game canvas is an inert offscreen render target, not an opaque iframe
 or a keyboard-controlled preview. Games receive semantic controls after

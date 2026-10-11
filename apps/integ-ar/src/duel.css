@@ -1,0 +1,9 @@
+.duel-stage #skeleton,.duel-stage #lives-hud{display:none}
+.duel-stage .header-actions .score{display:none}
+.duel-stage #source-game-right{position:absolute;left:-10000px;top:0;width:600px;height:600px;visibility:hidden;pointer-events:none}
+.duel-stage .movement-hud{display:grid;grid-template-columns:1fr 1fr;text-align:center;gap:14px}
+.duel-stage .movement-hud>span{border-radius:12px;white-space:normal}
+.duel-stage #panel{width:min(540px,calc(100% - 32px))}
+.duel-stage #solo-mode{color:inherit;display:inline-block;padding:12px;min-height:44px}
+.game-entry-options #duel-mode{display:block;color:inherit;padding:12px;border:1px solid currentColor;border-radius:12px;text-align:center}
+@media(max-width:600px){.duel-stage .movement-hud{gap:6px}.duel-stage .brand>strong{font-size:15px}.duel-stage .header-actions{gap:6px}}

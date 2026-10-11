@@ -17,7 +17,7 @@ export async function syntheticCamera(page) {
     window.Worker = class {
       constructor() { window.testWorker = this; }
       postMessage(data) {
-        if (data.type === 'init') { setTimeout(() => this.onmessage?.({data:{type:'ready'}}),0);return; }
+        if (data.type === 'init') { this.numPoses = data.numPoses; setTimeout(() => this.onmessage?.({data:{type:'ready'}}),0);return; }
         data.bitmap.close(); const points=[]; const s=window.poseTest;
         if (!s.missing) {
           for (const [indices,x] of [[[11,23],.44],[[12,24],.56]]) indices.forEach((id,i)=>{points[id]={x:x+s.x,y:[.28,.52][i]-s.rise,visibility:.99};});
@@ -39,7 +39,16 @@ export async function syntheticCamera(page) {
             if(s.hand==='together'){points[15]={x:.485+s.x,y:.32-s.rise,visibility:.99};points[16]={x:.515+s.x,y:.32-s.rise,visibility:.99};}
           }
         }
-        setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:points,time:data.time}});},s.delay);
+        const poses = this.numPoses === 2 ? (window.duelTest ?? [{x:.75},{x:.25}]).filter(person => !person.missing).map(person => {
+          const p = [];
+          for(const [id,x,y] of [[11,-.06,.28],[12,.06,.28],[13,-.07,.4],[14,.07,.4],[23,-.06,.52],[24,.06,.52]])p[id]={x:person.x+x,y,visibility:.99};
+          p[15]={x:person.x-.07,y:['up','both'].includes(person.hand) ? .12 : .59,visibility:.99};
+          p[16]={x:person.x+.07,y:person.hand==='both' ? .12 : .6,visibility:.99};
+          if(person.hand==='together'){p[15]={x:person.x-.015,y:.32,visibility:.99};p[16]={x:person.x+.015,y:.32,visibility:.99};}
+          return p;
+        }) : undefined;
+        if(window.duelReverse)poses?.reverse();
+        setTimeout(()=>{if(!this.terminated)this.onmessage?.({data:{type:'pose',landmarks:points,poses,time:data.time}});},s.delay);
       }
       terminate() { this.terminated=true; }
     };

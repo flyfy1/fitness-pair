@@ -4,6 +4,10 @@ A collaborative workspace for local camera-based movement controls and games.
 The current integrated baseline, Motion Quest, uses five squats to defeat a forest
 guardian over a full-viewport live camera view. Charge and attacks follow the
 player in a camera-overlay AR presentation. No multiplayer is implemented by this baseline.
+Perfect Stack AR, Orbit Knife AR and Brick Pulse AR also offer an optional local
+two-player duel from their entry screen. Two people share one camera, keep fixed
+left/right lanes and compete on independent boards for 60 seconds. See
+[side-by-side duels and validation limits](docs/side-by-side-duels.md).
 
 ## Run
 

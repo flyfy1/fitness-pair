@@ -2,6 +2,7 @@ import {mountGameEntry} from '../../../packages/gameplay/entry-view.js';
 import '../../../packages/gameplay/page-language.js';
 import {message,translateText} from '../../../packages/gameplay/i18n.js';
 import './style.css';
+import './duel.css';
 import '../../../packages/gameplay/play-style.css';
 import {createHandsStart} from '../../../packages/gameplay/hands-start-view.js';
 import {InvadersTutorial} from './invaders-tutorial.js';
@@ -16,7 +17,9 @@ import {BodyArcadeRecognizer} from '../../../experiments/action-recognition/body
 import {createBodyInput} from './input.js';
 import {TrackingRecovery,trackingGrace} from './tracking-recovery.js';
 import {createTrackingPublisher} from '../../../packages/gameplay/tracking.js';
+import {duelSlugs} from './duel-rules.js';
 
+export function mountSolo() {
 document.documentElement.classList.add('clay-play');
 const $ = id => document.getElementById(id);
 const selected = new URLSearchParams(location.search).get('game');
@@ -250,4 +253,10 @@ raf = requestAnimationFrame(render);
 
 if (tutorialWanted) { tutorialView.show(true); tutorialView.update('intro'); }
 
-mountGameEntry({root:$('arena'),gameId:config.id,title:config.title,description:config.action,buttons:tutorialWanted?[$('tutorial-start'),$('tutorial-skip')]:[$('start')]});
+const duelOption = document.createElement('a');
+duelOption.textContent = 'Two players · side by side';
+duelOption.id = 'duel-mode';
+const duelURL = new URL(location.href); duelURL.searchParams.set('mode', 'duel'); duelURL.searchParams.set('game', config.slug);
+duelOption.href = duelURL.href;
+mountGameEntry({root:$('arena'),gameId:config.id,title:config.title,description:config.action,buttons:tutorialWanted?[$('tutorial-start'),$('tutorial-skip')]:[$('start')],options:duelSlugs.includes(config.slug)?[duelOption]:[]});
+}

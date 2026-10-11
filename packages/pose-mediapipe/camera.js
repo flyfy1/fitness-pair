@@ -52,7 +52,7 @@ export class PoseCamera {
         throw new Error('Camera access requires localhost or HTTPS in a supported browser.');
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: false,
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
+        video: { facingMode: 'user', width: { ideal: this.players === 2 ? 1280 : 640 }, height: { ideal: this.players === 2 ? 720 : 480 } } });
       if (this.attempt !== attempt) {
         stream.getTracks().forEach(track => track.stop());
         return;
