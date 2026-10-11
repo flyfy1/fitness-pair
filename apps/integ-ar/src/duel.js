@@ -33,7 +33,7 @@ $('score').previousElementSibling.textContent = 'TIME'; $('score').textContent =
 const rightHost = document.createElement('div'); rightHost.id = 'source-game-right'; rightHost.inert = true; rightHost.setAttribute('aria-hidden','true'); $('arena').append(rightHost);
 const listeners = new Set(), audio = new DuelAudio();
 let phase = 'idle', session = null, round = crypto.randomUUID(), countdownAt = null, countdownId = 0;
-let elapsed = 0, previousTime = null, disposed = false, raf = 0, hosted = false;
+let elapsed = 0, previousTime = null, disposed = false, raf = 0;
 const storage = {get: (_key, fallback) => fallback, set() {}, remove() {}};
 const sound = {play(name) {audio.effect(name === 'fail' ? 'crash' : name === 'success' ? 'clear' : 'jump');}, stop() {}, setMuted(value) {audio.setMuted(value);}, get muted() {return audio.muted;}};
 const players = [0,1].map((lane) => {
@@ -186,7 +186,9 @@ function render(now) {
   }
   const footer = height - document.querySelector('.controls').getBoundingClientRect().top;
   $('cue').style.bottom = `${footer+12}px`;
-  const top = height < 550 ? 112 : hosted ? 200 : 150, bottom = footer + 66, available = Math.max(50,height-top-bottom);
+  const toolbarBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hopmodo-controls-bottom')) || 0;
+  const top = Math.max($('movement').parentElement.getBoundingClientRect().bottom, toolbarBottom) + 52;
+  const bottom = footer + 66, available = Math.max(50,height-top-bottom);
   ctx.strokeStyle = '#fff8e9aa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(width/2,top-24); ctx.lineTo(width/2,height-bottom); ctx.stroke();
   const values = scores();
   players.forEach((player,lane) => {
@@ -209,7 +211,7 @@ window.gameplay = {
   getFrame: () => ({round,sessionId:session?.sessionId,source:session?.source,phase,canvas:$('world'),video:$('camera'),isAR:true,audio:audio.getAudioStream(),
     score:`Left ${scores()[0]} · Right ${scores()[1]}`,recognition:{mode:'duel',players:players.map(player => ({sessionId:player.pose?.sessionId,action:player.action,start:player.gate.stage}))}}),
   subscribe(callback) {listeners.add(callback); return () => listeners.delete(callback);},
-  configureHost({homeURL,recordingNote}) {hosted=true; if(homeURL)$('home').href=homeURL; if(recordingNote)$('privacy-note').textContent=recordingNote;}, dispose,
+  configureHost({homeURL,recordingNote}) {if(homeURL)$('home').href=homeURL; if(recordingNote)$('privacy-note').textContent=recordingNote;}, dispose,
 };
 window.integAR = {getState: () => ({phase,round,elapsed,camera:camera.running,players:players.map(player => ({game:player.game.getState(),score:duelScore(config.slug,player.game.getState()),sessionId:player.gate.session?.sessionId,pose:player.pose,action:player.action,start:player.gate.stage,finished:player.finished}))})};
 const solo = document.createElement('a'); solo.id = 'solo-mode'; solo.textContent = 'One player';

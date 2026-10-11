@@ -35,7 +35,6 @@ $('hand').hidden = !config.primary;
 const tutorial = config.slug === 'invaders' ? new InvadersTutorial() : null;
 let tutorialWanted = !!tutorial;
 const tutorialView = tutorial ? mountTutorial($('arena'), {onStart: () => camera.start(), onSkip: leaveTutorial, onCancel: () => camera.stop('stopped')}) : null;
-let hosted = false;
 let phase = 'idle', session = null, round = crypto.randomUUID(), pose = null, action = null, feed = null, lastHands = null;
 let readySince = null, lastValidAt = -Infinity, pauseReason = null, disposed = false, raf = 0;
 const listeners = new Set(), changed = () => listeners.forEach(callback => callback());
@@ -207,7 +206,8 @@ function render(now) {
   const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
   const footerHeight = height - document.querySelector('.controls').getBoundingClientRect().top;
   $('cue').style.bottom = `${footerHeight + 12}px`;
-  const top = height < 550 ? 102 : hosted ? 202 : 130;
+  const toolbarBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hopmodo-controls-bottom')) || 0;
+  const top = Math.max($('movement').parentElement.getBoundingClientRect().bottom, toolbarBottom) + 24;
   const bottom = footerHeight + $('cue').getBoundingClientRect().height + 28;
   const available = Math.max(80, height - top - bottom), scale = Math.min((width - 32) / sourceCanvas.width, available / sourceCanvas.height);
   const w = sourceCanvas.width * scale, h = sourceCanvas.height * scale;
@@ -245,7 +245,7 @@ window.gameplay = {
     recognition:{action,gesture:lastHands,start:startGate.diagnostics,baseline:recognizer.baseline}}),
   subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
   subscribeTracking: trackingPublisher.subscribe,
-  configureHost({homeURL, recordingNote}) { hosted = true; $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
+  configureHost({homeURL, recordingNote}) { $('home').setAttribute('aria-label','Back to the Hopmodo arcade'); if (homeURL) $('home').href = homeURL; if (recordingNote) $('privacy-note').textContent = recordingNote; },
   dispose,
 };
 window.integAR = {getState: () => ({phase, round, pauseReason, recovery: recovery.read(performance.now()), trackingGrace: trackingGrace(lastValidAt, performance.now()), game: game.getState(), action, tutorial: tutorial?.snapshot(), camera: camera.running})};

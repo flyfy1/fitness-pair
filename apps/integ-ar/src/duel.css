@@ -5,5 +5,6 @@
 .duel-stage .movement-hud>span{border-radius:12px;white-space:normal}
 .duel-stage #panel{width:min(540px,calc(100% - 32px))}
 .duel-stage #solo-mode{color:inherit;display:inline-block;padding:12px;min-height:44px}
-.game-entry-options #duel-mode{display:block;color:inherit;padding:12px;border:1px solid currentColor;border-radius:12px;text-align:center}
+.game-entry-options #duel-mode,.game-entry-options #solo-mode{display:inline-flex;align-items:center;justify-content:center;color:#277e78;padding:12px 18px;min-height:48px;border:1px solid #a8c4b5;border-radius:14px;text-decoration:none;background:#eef3e9;font-weight:650;line-height:1.5}
+.game-entry-options #duel-mode:hover,.game-entry-options #solo-mode:hover{background:#e2edde}
 @media(max-width:600px){.duel-stage .movement-hud{gap:6px}.duel-stage .brand>strong{font-size:15px}.duel-stage .header-actions{gap:6px}}

@@ -18,3 +18,52 @@
 @media(max-height:520px) and (min-width:551px){.game-entry-card.has-cover{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.3fr);max-width:1040px;gap:24px;padding-top:8px}.game-entry-cover{max-height:240px;margin:0}.game-entry-card.has-cover h1{font-size:30px}}
 
 .game-entry-framing{display:flex;flex-direction:column;gap:6px;background:#e7efe0;color:#203d39;border-radius:14px;padding:12px 16px;font-size:14px;line-height:1.5}.game-entry-framing strong{font-size:13px}
+
+/* Give the introduction the same comfortable rhythm on every game route. */
+.game-entry{padding:28px clamp(20px,4vw,56px) 40px;background:radial-gradient(ellipse at 15% 20%,#e6eee0 0,transparent 55%),#f8f6ef}
+.game-entry-back{min-height:44px;display:inline-flex;align-items:center;padding:8px 0}
+.game-entry>.language-control{top:28px;right:clamp(20px,4vw,56px)}
+.game-entry-card{padding:36px;margin:32px auto;background:#fffdf7;border:1px solid #e0e4d8;border-radius:28px;box-shadow:0 12px 40px #203d390a}
+.game-entry-card.has-cover{gap:clamp(28px,4vw,48px);padding:36px}
+.game-entry-cover{border-radius:20px;box-shadow:none}
+.game-entry .game-entry-card h1{font-size:clamp(32px,3.5vw,48px);line-height:1.12}
+.game-entry-eyebrow{margin:0 0 12px}
+.game-entry-description{font-size:18px;line-height:1.65;margin:0 0 20px;color:#435d55}
+.game-entry-framing{padding:16px 18px;margin:20px 0;background:#eef3e9;gap:6px}
+.game-entry-steps{gap:18px;margin:24px 0}
+.game-entry-steps li{padding:16px 0;gap:8px;border-top-width:2px;grid-template-rows:auto 1fr;align-content:start}
+.game-entry-steps span{line-height:1.6;color:#435d55}
+.game-entry-actions,.game-entry-options{gap:12px;margin:20px 0}
+.game-entry .game-entry-actions button{min-height:52px;padding:14px 24px}
+.game-entry-note{margin:22px 0 0;font-size:12px;line-height:1.7;color:#64756b}
+@media(max-width:760px){
+ .game-entry-card,.game-entry-card.has-cover{padding:24px;margin:20px auto}
+ .game-entry .game-entry-card.has-cover h1{font-size:34px;line-height:1.12}
+ .game-entry-cover{margin-bottom:28px;max-height:200px}
+ .game-entry-description{font-size:16px}
+}
+@media(max-width:550px){
+ .game-entry{padding:18px 16px 32px}
+ .game-entry>.language-control{top:18px;right:16px}
+ .game-entry-card,.game-entry-card.has-cover{padding:20px;margin:24px auto 0;border-radius:24px}
+ .game-entry .game-entry-card.has-cover h1{font-size:30px;margin:10px 0 16px}
+ .game-entry-cover{margin-bottom:24px;max-height:180px}
+ .game-entry-framing{padding:14px 16px}
+ .game-entry-steps{gap:0;margin:22px 0}
+ .game-entry-steps li{padding:14px 0;gap:6px;border-top-width:1px}
+ .game-entry-actions{gap:10px}
+ .game-entry-note{margin-top:20px}
+}
+@media(max-height:550px) and (min-width:551px){
+ .game-entry{padding:12px 24px 24px}
+ .game-entry>.language-control{top:12px;right:24px}
+ .game-entry-card,.game-entry-card.has-cover{padding:20px;margin:16px auto 0;gap:24px}
+ .game-entry .game-entry-card.has-cover h1{font-size:28px;margin:8px 0 12px}
+ .game-entry-cover{max-height:240px;margin:0}
+ .game-entry-description{font-size:14px;margin-bottom:12px}
+ .game-entry-framing{padding:12px 14px;margin:12px 0;font-size:12px}
+ .game-entry-steps{margin:14px 0;gap:12px}
+ .game-entry-steps li{padding:10px 0;gap:4px}
+ .game-entry-actions,.game-entry-options{margin:14px 0}
+ .game-entry-note{margin-top:14px}
+}
