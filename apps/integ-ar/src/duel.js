@@ -186,6 +186,7 @@ function render(now) {
   }
   const footer = height - document.querySelector('.controls').getBoundingClientRect().top;
   $('cue').style.bottom = `${footer+12}px`;
+  $('arena').style.setProperty('--ar-hud-bottom', `${document.querySelector('.hud').getBoundingClientRect().bottom}px`);
   const toolbarBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hopmodo-controls-bottom')) || 0;
   const top = Math.max($('movement').parentElement.getBoundingClientRect().bottom, toolbarBottom) + 52;
   const bottom = footer + 66, available = Math.max(50,height-top-bottom);

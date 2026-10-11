@@ -206,6 +206,7 @@ function render(now) {
   const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
   const footerHeight = height - document.querySelector('.controls').getBoundingClientRect().top;
   $('cue').style.bottom = `${footerHeight + 12}px`;
+  $('arena').style.setProperty('--ar-hud-bottom', `${document.querySelector('.hud').getBoundingClientRect().bottom}px`);
   const toolbarBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hopmodo-controls-bottom')) || 0;
   const top = Math.max($('movement').parentElement.getBoundingClientRect().bottom, toolbarBottom) + 24;
   const bottom = footerHeight + $('cue').getBoundingClientRect().height + 28;

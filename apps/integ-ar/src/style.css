@@ -8,6 +8,9 @@
 #arena .hud .brand{background:transparent;border-radius:0;gap:6px}
 #arena .brand>strong{font-size:clamp(18px,2vw,23px);line-height:1.25}
 #arena .header-actions{gap:20px;flex-shrink:0}
+#arena [data-game-language-slot]:empty{display:none}
+#arena [data-game-language-slot] .language-control>span{display:none}
+#arena [data-game-language-slot] select{width:88px;font-size:12px;padding:6px}
 #arena .movement-hud{top:calc(var(--hopmodo-hud-bottom,var(--ar-hud-bottom)) + 12px);left:var(--arena-gutter);right:var(--arena-gutter);gap:10px;font-size:11px}
 #arena .movement-hud>span{padding:9px 14px;line-height:1.4}
 #arena #panel{padding:32px;max-height:calc(100% - 340px);border:1px solid #ffffff90;border-radius:26px}
@@ -26,6 +29,9 @@
  #arena .hud{padding:12px 14px;gap:12px}
  #arena .brand>strong{font-size:17px}
  #arena .header-actions{gap:10px}
+ #arena [data-game-language-slot] select{width:72px;font-size:11px}
+ #arena .hud:has(#lives-hud:not([hidden])):has([data-game-language-slot] select){flex-wrap:wrap}
+ #arena .hud:has(#lives-hud:not([hidden])):has([data-game-language-slot] select) .header-actions{width:100%;justify-content:flex-end}
  #arena .movement-hud{gap:7px;font-size:10px}
  #arena .movement-hud>span{padding:8px 10px}
  #arena #panel{padding:24px;max-height:calc(100% - 380px);width:calc(100% - 32px);border-radius:24px}
