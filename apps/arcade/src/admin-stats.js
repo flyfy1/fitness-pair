@@ -1,7 +1,7 @@
 import {loginURL} from './account.js';
+import {gameCatalog} from '../game-catalog.js';
 export async function renderGameStats(container){
  container.innerHTML=`<h1>Game statistics</h1><p>Players are deduplicated by account when logged in, otherwise by browser. Clearing browser storage or changing devices may count another player. Times and date filters use UTC. Active time excludes setup, pauses and hidden tabs. Interrupted sessions show the last received time; their end time is unknown.</p><form id="stats-filters"><label>From <input name="from" type="date" required></label><label>To <input name="to" type="date" required></label><label>Game <select name="game"><option value="">All games</option></select></label><label>Input <select name="source"><option value="">All inputs</option><option value="camera">Camera</option><option value="synthetic">Keyboard / demo</option><option value="replay">Replay</option><option value="unknown">Unknown</option></select></label><button>Refresh</button></form><p role="status"></p><div id="stats-summary" class="stats-table"></div><h2>Play sessions</h2><div id="stats-sessions" class="stats-table"></div><button id="stats-next" hidden>Next page</button>`;
- const {gameCatalog}=await import('../game-catalog.js');
  const form=container.querySelector('form'),status=container.querySelector('[role=status]'),next=container.querySelector('#stats-next');
  const day=value=>new Date(value).toISOString().slice(0,10);form.elements.from.value=day(Date.now()-6*86400000);form.elements.to.value=day(Date.now());
  for(const game of gameCatalog){const option=document.createElement('option');option.value=game.id;option.textContent=game.title;form.elements.game.append(option);}

@@ -7,7 +7,7 @@ import {promisify} from 'node:util';
 let helper;
 test.beforeAll(async()=>{
  const entry=new URL('./download-ending-fixture.js',import.meta.url).pathname;
- const bundle=await build({configFile:false,logLevel:'error',build:{write:false,lib:{entry,formats:['es']}}});
+ const bundle=await build({configFile:false,logLevel:'error',build:{write:false,lib:{entry,formats:['es']},rolldownOptions:{output:{codeSplitting:false}}}});
  helper=bundle[0].output[0].code;
 });
 

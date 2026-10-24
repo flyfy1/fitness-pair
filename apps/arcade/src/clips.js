@@ -1,4 +1,3 @@
-import {createDownloadCopy} from './download-ending.js';
 import {mountClipPreview,mountSharedPreview} from './clip-preview.js';
 import {mountShareMessage,shareMessage} from './social-sharing.js';
 import {thumbnailFromVideo} from './clip-thumbnail.js';
@@ -49,7 +48,7 @@ export function mountClipCard(container,clip){
   copyController=new AbortController();card.querySelector('[data-cancel-copy]').hidden=false;
   status.textContent='Preparing your download with a 3-second Hopmodo ending. Keep this tab open.';
   try{
-   if(downloadClip?.parentId!==source.id)downloadClip=await createDownloadCopy(source,{signal:copyController.signal,onProgress:text=>{status.textContent=text;}});
+   if(downloadClip?.parentId!==source.id){const {createDownloadCopy}=await import('./download-ending.js');downloadClip=await createDownloadCopy(source,{signal:copyController.signal,onProgress:text=>{status.textContent=text;}});}
    const exportURL=objectURL(downloadClip.blob);ownedURLs.push(exportURL);
    const link=document.createElement('a');link.href=exportURL;link.download=`hopmodo-${clip.game}${source.conversationEmbedded?'-with-conversation':''}.${videoExtension(downloadClip.blob)}`;document.body.append(link);link.click();link.remove();
    status.textContent='Download ready with the Hopmodo ending. Your replay and gallery video are unchanged.';

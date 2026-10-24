@@ -1,7 +1,9 @@
 import {startVideoRecorder} from '../video-format.js';
 import {captureClipThumbnail} from '../clip-thumbnail.js';
-import {probeDownloadEnding} from '../download-ending.js';
-import {Input,ALL_FORMATS,BlobSource,EncodedPacketSink,Output,BufferTarget,Mp4OutputFormat,WebMOutputFormat,EncodedVideoPacketSource,EncodedAudioPacketSource} from 'mediabunny';
+
+// Remuxing loads with the first recorder, keeping it out of the landing bundle.
+let mediaToolkit;
+const loadMedia=()=>mediaToolkit??=import('mediabunny').catch(error=>{mediaToolkit=null;throw error;});
 
 export const REPLAY_SECONDS=90;
 const SEGMENT_SECONDS=5;
@@ -10,6 +12,7 @@ const AUDIO_FORMATS=['audio/webm;codecs=opus','audio/webm','audio/mp4;codecs=mp4
 // Each segment has its own container header and initial keyframe. MediaRecorder
 // timeslice chunks alone cannot be discarded or concatenated into playable media.
 export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1024,onError=()=>{},maxSeconds=REPLAY_SECONDS,segmentSeconds=SEGMENT_SECONDS}={}){
+ loadMedia().catch(()=>{});
  const startedAt=performance.now();let segments=[],current,timer,stopped=false,failure=null,result,endingCompatibility=null,probe;
  const probeController=new AbortController();
  const elapsed=()=> (performance.now()-startedAt)/1000;
@@ -17,7 +20,7 @@ export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1
  function fail(error){if(failure)return;failure=error;clearTimeout(timer);probeController.abort();onError(error);}
  function inspect(segment){
   if(audioOnly||stopped||endingCompatibility!==null||probe||!segment.chunks.length)return probe;
-  probe=probeDownloadEnding(new Blob(segment.chunks),{signal:probeController.signal}).then(value=>{if(value!==null)endingCompatibility=value;}).finally(()=>{probe=null;});
+  probe=import('../download-ending.js').then(({probeDownloadEnding})=>probeDownloadEnding(new Blob(segment.chunks),{signal:probeController.signal}),()=>null).then(value=>{if(value!==null)endingCompatibility=value;}).finally(()=>{probe=null;});
   return probe;
  }
  function begin(){
@@ -88,6 +91,7 @@ export function startRollingRecorder(stream,{audioOnly=false,maxBytes=100*1024*1
 // Rebase both tracks against that same point so audio keeps its original timing.
 export async function assembleRecording(segments,{startSeconds,endSeconds,audioOnly=false}){
  let output,videoSource,audioSource,videoCodec,audioCodec,origin=null,duration=0,thumbnail=null;
+ const {Input,ALL_FORMATS,BlobSource,EncodedPacketSink,Output,BufferTarget,Mp4OutputFormat,WebMOutputFormat,EncodedVideoPacketSource,EncodedAudioPacketSource}=await loadMedia();
  try{
   for(const segment of segments){
    if(!segment.bytes||segment.end<=startSeconds)continue;

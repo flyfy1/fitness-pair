@@ -4,7 +4,7 @@ import {validateUpload} from '../server/worker.js';
 
 let helper;
 test.beforeAll(async()=>{
- const bundle=await build({configFile:false,logLevel:'error',build:{write:false,lib:{entry:new URL('../src/gameplay/rolling-media.js',import.meta.url).pathname,formats:['es']}}});
+ const bundle=await build({configFile:false,logLevel:'error',build:{write:false,lib:{entry:new URL('../src/gameplay/rolling-media.js',import.meta.url).pathname,formats:['es']},rolldownOptions:{output:{codeSplitting:false}}}});
  helper=bundle[0].output[0].code;
 });
 async function prepare(page){
