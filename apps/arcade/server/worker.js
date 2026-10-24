@@ -33,7 +33,7 @@ async function readBounded(request,maxBytes=MAX_BYTES){
 }
 function publicClip(record){const {id,title,source,game,duration,mime,createdAt,expiresAt,bytes}=record;return {id,title,source,game,duration,mime,createdAt,expiresAt,bytes,visibility:record.visibility||'public',publicationState:record.publicationState||'published',url:'/clips/'+id+(record.visibility==='private'?(record.shareToken?'?share='+record.shareToken:new URL(record.url||'/', 'https://arcade.invalid').search):'')};}
 export function createWorker({fetcher=fetch,now=()=>Date.now(),audit=event=>console.info(JSON.stringify(event))}={}){
- let tokenCache=null,uploadBusy=false,anonymousInventory=null;
+ let tokenCache=null,uploadBusy=false,anonymousInventory=null,inventoryRetryAt=0;
  function reportRejection(bytes,source){audit({event:'video_upload_rejected',timestamp:new Date(now()).toISOString(),reason:'file_too_large',bytes,limitBytes:MAX_BYTES,source});}
  async function accessToken(env){
   if(typeof env.GCP_ACCESS_TOKEN_PROVIDER==='function')return env.GCP_ACCESS_TOKEN_PROVIDER();
@@ -78,6 +78,8 @@ export function createWorker({fetcher=fetch,now=()=>Date.now(),audit=event=>cons
  // reservations remain in the ledger until deletion or expiry, including after restart.
  async function anonymousQuota(env){
   if(!anonymousInventory){
+   // Back off after a failed scan so unauthenticated config requests cannot repeat it.
+   if(now()<inventoryRetryAt)throw fail(503,'Anonymous storage inventory is unavailable.');
    anonymousInventory=(async()=>{
     const imported=[];let page='';const seen=new Set();
     do{
@@ -85,15 +87,16 @@ export function createWorker({fetcher=fetch,now=()=>Date.now(),audit=event=>cons
      const response=await gcp(env,'',{query:'?prefix=gallery%2F&maxResults=100'+(page?'&pageToken='+encodeURIComponent(page):'')});
      if(!response.ok)throw fail(503,'Anonymous storage inventory is unavailable.');
      const listing=await response.json();
-     for(const item of listing.items||[]){
-      if(!/^gallery\/[0-9a-f-]+\.json$/.test(item.name))continue;
-      try{const clip=await record(env,item.name.slice(8,-5));if(!clip.ownerId)imported.push({...publicClip(clip),keyHash:clip.keyHash});}
+     const ids=(listing.items||[]).map(item=>item.name).filter(name=>/^gallery\/[0-9a-f-]+\.json$/.test(name)).map(name=>name.slice(8,-5));
+     // Bound storage fan-out per listing page.
+     for(let start=0;start<ids.length;start+=12)await Promise.all(ids.slice(start,start+12).map(async id=>{
+      try{const clip=await record(env,id);if(!clip.ownerId)imported.push({...publicClip(clip),keyHash:clip.keyHash});}
       catch(error){if(error.status!==404)throw error;}
-     }
+     }));
      page=listing.nextPageToken||'';
     }while(page);
     await env.ACCOUNTS.syncAnonymous(imported);
-   })().catch(error=>{anonymousInventory=null;throw error;});
+   })().catch(error=>{anonymousInventory=null;inventoryRetryAt=now()+30000;throw error;});
   }
   await anonymousInventory;
   const {usedBytes,limitBytes}=await env.ACCOUNTS.list(null);return {usedBytes,limitBytes};

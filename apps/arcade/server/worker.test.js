@@ -75,3 +75,13 @@ test('retired prototypes are unplayable but existing clips can still be shared',
   assert.equal(validateUpload(new Request(target,{headers}),target).game,game);
  }
 });
+test('a failed anonymous inventory scan backs off before scanning storage again',async()=>{
+ let clock=1_000_000,listings=0,healthy=false;
+ const fetcher=async raw=>{const u=new URL(raw);if(u.pathname.endsWith('/o')){listings++;return healthy?Response.json({items:[]}):new Response('',{status:500});}throw Error('Unexpected request '+u.pathname);};
+ const worker=createWorker({fetcher,now:()=>clock}),env={GCP_BUCKET:'test-only',GCP_ACCESS_TOKEN_PROVIDER:async()=>'test-token',ACCOUNTS:{...accountFixture(),async syncAnonymous(){}}};
+ const config=()=>worker.fetch(new Request('https://arcade.test/api/config'),env);
+ assert.equal((await config()).status,503);assert.equal(listings,1);
+ healthy=true;clock+=10_000;assert.equal((await config()).status,503);assert.equal(listings,1);
+ clock+=30_000;const ready=await config();assert.equal(ready.status,200);assert.equal((await ready.json()).sharingEnabled,true);assert.equal(listings,2);
+ assert.equal((await config()).status,200);assert.equal(listings,2);
+});
