@@ -85,3 +85,23 @@ test('a failed anonymous inventory scan backs off before scanning storage again'
  clock+=30_000;const ready=await config();assert.equal(ready.status,200);assert.equal((await ready.json()).sharingEnabled,true);assert.equal(listings,2);
  assert.equal((await config()).status,200);assert.equal(listings,2);
 });
+test('ledger-backed gallery pages stay newest first and skip paused, private and unfinished clips',async()=>{
+ const objects=new Map(),ledger=[],base=1_700_000_000_000;let inventoryFails=false;
+ for(let i=0;i<30;i++){
+  const id=crypto.randomUUID(),createdAt=base+i*1000,visibility=i===29?'private':'public',publicationState=i===28?'paused':'published';
+  ledger.push({id,createdAt,visibility});
+  if(i!==27)objects.set(`gallery/${id}.json`,{id,title:'Clip '+i,source:'synthetic',game:'jump-game',duration:2,mime:'video/webm',createdAt,expiresAt:null,bytes:13,ownerId:owner,visibility,publicationState});
+ }
+ const fetcher=async raw=>{const u=new URL(raw),name=decodeURIComponent(u.pathname.split('/o/')[1]||'');
+  if(!name){if(inventoryFails&&u.searchParams.get('maxResults')==='100')return new Response('',{status:500});return Response.json({items:[...objects.keys()].map(name=>({name}))});}
+  return objects.has(name)?Response.json(objects.get(name)):new Response('',{status:404});};
+ const accounts={...accountFixture(),async syncAnonymous(){},async gallery(){return [...ledger].sort((a,b)=>b.createdAt-a.createdAt||b.id.localeCompare(a.id));}};
+ const env={GCP_BUCKET:'test-only',GCP_ACCESS_TOKEN_PROVIDER:async()=>'test-token',ACCOUNTS:accounts};
+ const gallery=async page=>(await createWorker({fetcher}).fetch(new Request('https://arcade.test/api/clips'+(page?'?page='+encodeURIComponent(page):'')),env)).json();
+ const first=await gallery();
+ assert.deepEqual(first.clips.map(clip=>clip.title),Array.from({length:24},(_,i)=>'Clip '+(26-i)));
+ assert.match(first.nextPageToken,/^c\d+-/);
+ const second=await gallery(first.nextPageToken);
+ assert.deepEqual(second.clips.map(clip=>clip.title),['Clip 2','Clip 1','Clip 0']);assert.equal(second.nextPageToken,null);
+ inventoryFails=true;const fallback=await gallery(first.nextPageToken);assert.equal(fallback.enabled,true);assert.ok(fallback.clips.length>0);
+});

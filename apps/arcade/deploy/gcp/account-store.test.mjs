@@ -60,3 +60,18 @@ test('permanent clips retain their quota across time and restart and release onl
  await assert.rejects(restarted.reserve(owner,{id:randomUUID(),bytes:1,expiresAt:null}),{status:413});
  await restarted.release(owner,id);assert.equal((await restarted.list(owner)).usedBytes,0);
 });
+
+test('gallery candidates are newest first across owners and exclude private or expired clips', async t => {
+  const directory = await mkdtemp(tmpdir() + '/hopmodo-gallery-');
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  let now = 1000;
+  const store = createAccountStore(directory, {now: () => now});
+  const [old, owned, hidden, legacy] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  await store.reserve(null, {id: old, bytes: 1, createdAt: 100, expiresAt: 5000, visibility: 'public'});
+  await store.reserve('a'.repeat(64), {id: owned, bytes: 1, createdAt: 300, expiresAt: null, visibility: 'public'});
+  await store.reserve('a'.repeat(64), {id: hidden, bytes: 1, createdAt: 400, expiresAt: null, visibility: 'private'});
+  await store.syncAnonymous([{id: legacy, bytes: 1, expiresAt: 1500}]);
+  assert.deepEqual((await store.gallery()).map(clip => clip.id), [owned, old, legacy]);
+  now = 2000;
+  assert.deepEqual((await store.gallery()).map(clip => clip.id), [owned, old]);
+});

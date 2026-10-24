@@ -55,6 +55,12 @@ export function createAccountStore(directory, {now = Date.now} = {}) {
         return {clips, usedBytes: clips.reduce((sum, clip) => sum + clip.bytes, 0), limitBytes: limitFor(userId)};
       });
     },
+    // Newest-first public candidates; the gallery still verifies each record before display.
+    async gallery() {
+      return serialized(ledgerKey, async () => (await entries()).filter(clip => clip.visibility !== 'private')
+        .map(clip => ({id: clip.id, createdAt: clip.createdAt ?? (clip.expiresAt === null ? 0 : clip.expiresAt - 7 * 86400000)}))
+        .sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id)));
+    },
     async syncAnonymous(imported) {
       return serialized(ledgerKey, async () => {
         const clips = await entries();

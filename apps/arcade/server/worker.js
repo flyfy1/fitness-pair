@@ -101,6 +101,22 @@ export function createWorker({fetcher=fetch,now=()=>Date.now(),audit=event=>cons
   await anonymousInventory;
   const {usedBytes,limitBytes}=await env.ACCOUNTS.list(null);return {usedBytes,limitBytes};
  }
+ // Storage lists objects by random id; the account ledger keeps every page newest first.
+ async function ledgerGallery(env,page){
+  try{await anonymousQuota(env);}catch(error){throw Object.assign(fail(503,error.message),{inventory:true});}
+  const cursor=/^c(\d+)-([0-9a-f-]{36})$/.exec(page);
+  let candidates=await env.ACCOUNTS.gallery();
+  if(cursor){const time=Number(cursor[1]),id=cursor[2];candidates=candidates.filter(clip=>clip.createdAt<time||(clip.createdAt===time&&clip.id<id));}
+  const clips=[];let last=null;
+  // Skip paused or unfinished publications without unbounded storage fan-out.
+  for(let round=0;round<4&&clips.length<24&&candidates.length;round++){
+   const batch=candidates.splice(0,24-clips.length),settled=await Promise.allSettled(batch.map(clip=>record(env,clip.id)));
+   for(const result of settled)if(result.status==='rejected'&&result.reason.status!==404)throw result.reason;
+   for(const result of settled)if(result.status==='fulfilled'&&result.value.visibility!=='private'&&result.value.publicationState!=='paused')clips.push(publicClip(result.value));
+   last=batch.at(-1);
+  }
+  return {enabled:true,clips,nextPageToken:candidates.length?`c${last.createdAt}-${last.id}`:null};
+ }
  async function writeUser(request,env,url){
   const user=await env.ACCOUNTS.user(request);
   if(user)return env.ACCOUNTS.requireUser(request,true);
@@ -139,7 +155,13 @@ export function createWorker({fetcher=fetch,now=()=>Date.now(),audit=event=>cons
   }
   if(path==='/api/clips'&&request.method==='GET'){
    if(!storageEnabled(env))return json({enabled:false,clips:[]});
-   const page=url.searchParams.get('page')||'';if(page.length>1500)throw fail(400,'Invalid gallery page.');
+   let page=url.searchParams.get('page')||'';if(page.length>1500)throw fail(400,'Invalid gallery page.');
+   if(env.ACCOUNTS?.gallery){
+    try{return json(await ledgerGallery(env,page));}
+    // Keep the gallery readable from storage while the anonymous inventory is unavailable.
+    catch(error){if(!error.inventory)throw error;}
+   }
+   if(/^c\d+-/.test(page))page='';
    const response=await gcp(env,'',{query:'?prefix=gallery%2F&maxResults=24'+(page?'&pageToken='+encodeURIComponent(page):'')});if(!response.ok)throw fail(503,'The gallery could not load. Please retry.');
    const listing=await response.json();const names=(listing.items||[]).map(x=>x.name).filter(n=>/^gallery\/[0-9a-f-]+\.json$/.test(n));
    const settled=await Promise.allSettled(names.map(n=>record(env,n.slice(8,-5))));for(const r of settled)if(r.status==='rejected'&&r.reason.status!==404)throw r.reason;
