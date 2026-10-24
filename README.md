@@ -82,12 +82,20 @@ for rollback; they are no longer the production application host.
 ## Team map
 
 ```text
+apps/arcade/                Landing page, shared game shell, recording, sharing gateway and deploys
 apps/motion-quest/          Playable host, camera lifecycle, UI wiring
+apps/camera-start/          Jump Game runner, guided camera setup and calibration
+apps/integ-ar/              Six movement AR games served by the arcade
+apps/gesture-lab/           Hand-gesture control POC
+apps/recognition-lab/       Local skeleton capture, annotation and replay cases
 contracts/                 v1 types, validators, semantics, fixtures
 packages/pose-mediapipe/    Local model and named-joint adapter
 packages/action-squat/      Temporal action recognition
 packages/action-jump-height/  Standing/max-jump calibration and continuous height
 packages/game-forest/       Pure game rules and separate canvas renderer
+packages/gameplay/          ActionFrame-to-control mapping, shared audio, locales
+assets/game-art/            Covers, sprites, pose illustrations and sources
+scripts/                   Arcade build and preview
 experiments/pose-models/    Model/runtime alternatives
 experiments/action-recognition/  Counting and movement algorithms
 experiments/gameplay/       Mechanics using mock action events
